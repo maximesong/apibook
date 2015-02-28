@@ -7,6 +7,6 @@ import com.cppdo.apibook.repository.MavenRepository
  */
 object APIBook extends App {
   println("Hi")
-  val repository = new MavenRepository
-  repository.getList()
+  val artifacts =  MavenRepository.getTopArtifacts()
+  artifacts.foreach(println)
 }
