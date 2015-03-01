@@ -19,3 +19,5 @@ class Artifacts(tag: Tag) extends Table[Artifact](tag, "ARTIFACTS") {
   def * = (id.?, name, group, version) <> (Artifact.tupled, Artifact.unapply)
 }
 
+
+
