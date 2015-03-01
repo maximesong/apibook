@@ -1,12 +1,8 @@
 package com.cppdo.apibook.repository
 
-import java.time.format.DateTimeFormatter
 
+import com.cppdo.apibook.repository.db.Artifact
 import org.joda.time.DateTime
-import org.joda.time.format.DateTimeFormat
-import org.jsoup.Jsoup
-import org.jsoup.parser.Parser
-import scala.collection.JavaConverters._
 
 import scala.io.Source
 
@@ -21,7 +17,7 @@ object MavenRepository {
 
   case class LibraryDetail(artifact: Artifact, downloadLink: String, releaseDateTime: DateTime)
 
-  case class Artifact(name: String, group: String, version: String)
+
 
   def getTopArtifacts(count: Int = 10) : Seq[Artifact] = {
     val pages = count / projectsPerPage
@@ -33,9 +29,9 @@ object MavenRepository {
   def getArtifactsOnPage(page: Int) : Seq[Artifact] = {
     val pageUrl = s"${projectListBaseUrl}?page=${page-1}"
     val pageText = Source.fromURL(pageUrl).mkString
-    MavenWebPageParser.extractProjectLinks(pageText).flatMap(projectLink=> {
+    MavenWebPageParser.parseProjectLinks(pageText).flatMap(projectLink=> {
       val projectText = Source.fromURL(s"${baseUrl}/${projectLink}").mkString
-      val artifacts = MavenWebPageParser.extractArtifacts(projectText)
+      val artifacts = MavenWebPageParser.parseArtifacts(projectText)
       artifacts
     })
   }
@@ -43,21 +39,21 @@ object MavenRepository {
   def testingExtractVersions() = {
     val url = "http://mvnrepository.com/artifact/com.typesafe.slick/slick_2.11"
     val content = Source.fromURL(url).mkString
-    val versions = MavenWebPageParser.extractVersions(content)
+    val versions = MavenWebPageParser.parseVersions(content)
     println(versions.toList)
   }
 
   def testingExtractProjectLinks() = {
     val url = "http://mvnrepository.com/popular"
     val content = Source.fromURL(url).mkString
-    val links = MavenWebPageParser.extractProjectLinks(content)
+    val links = MavenWebPageParser.parseProjectLinks(content)
     println(links.toList)
   }
 
   def testingExtractLibraryDetail() = {
     val url = "http://mvnrepository.com/artifact/joda-time/joda-time/2.7"
     val content = Source.fromURL(url).mkString
-    val detail = MavenWebPageParser.extractLibraryDetail(content)
+    val detail = MavenWebPageParser.parseLibraryDetail(content)
     println(detail)
   }
 }

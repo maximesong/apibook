@@ -1,6 +1,7 @@
 package com.cppdo.apibook.repository
 
-import com.cppdo.apibook.repository.MavenRepository.{Artifact, LibraryDetail}
+import com.cppdo.apibook.repository.MavenRepository.LibraryDetail
+import com.cppdo.apibook.repository.db.Artifact
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import org.jsoup.Jsoup
@@ -17,14 +18,27 @@ object MavenWebPageParser {
   val ArtifactLinkRegex = "/artifact/([^/]+)/([^/]+)/([^/]+)".r()
   case class VersionLink(name: String, link: String, releaseType: String, dateTime: DateTime)
 
-  def extractProjectLinks(html: String) : Seq[String] = {
+  def parseProjectLinks(html: String) : Seq[String] = {
     val document = Jsoup.parse(html)
     val links = document.select("div#maincontent div.im h2.im-title a[href]:not(.im-usage)")
     links.iterator.asScala.map(_.attr("href")).toSeq
   }
 
   // parse a project page, e.g. http://mvnrepository.com/artifact/com.typesafe.slick/slick_2.11
-  def extractVersions(html: String)  : Seq[VersionLink] = {
+  def parseArtifacts(html: String) : Seq[Artifact] = {
+    val document = Jsoup.parse(html)
+    document.select("div#maincontent table.versions tbody tr").asScala.map(row => {
+      val columnSize = row.children().size
+      // the link format is like "/mvnrepository.com/artifact/junit/junit/4.12-beta-3"
+      val link = row.select("td a.vbtn").attr("href")
+      link match {
+        case ArtifactLinkRegex(group, name, version) => Artifact(None, name, group, version)
+      }
+    }).toSeq
+  }
+
+  // parse a project page, e.g. http://mvnrepository.com/artifact/com.typesafe.slick/slick_2.11
+  def parseVersions(html: String)  : Seq[VersionLink] = {
     val document = Jsoup.parse(html)
     document.select("div#maincontent table.versions tbody tr").asScala.map(row => {
       val columnSize = row.children().size
@@ -35,22 +49,8 @@ object MavenWebPageParser {
     }).toSeq
   }
 
-  // parse a project page, e.g. http://mvnrepository.com/artifact/com.typesafe.slick/slick_2.11
-  def extractArtifacts(html: String) : Seq[Artifact] = {
-    val document = Jsoup.parse(html)
-    document.select("div#maincontent table.versions tbody tr").asScala.map(row => {
-      val columnSize = row.children().size
-      // the link format is like "/mvnrepository.com/artifact/junit/junit/4.12-beta-3"
-      val link = row.select("td a.vbtn").attr("href")
-      println(link)
-      link match {
-        case ArtifactLinkRegex(group, name, version) => Artifact(group, name, version)
-      }
-    }).toSeq
-  }
-
   // parse a project detail page, e.g. http://mvnrepository.com/artifact/joda-time/joda-time/2.7
-  def extractLibraryDetail(html: String) : LibraryDetail = {
+  def parseLibraryDetail(html: String) : LibraryDetail = {
     val document = Jsoup.parse(html)
     val tableBody = document.select("div#maincontent table tbody").first()
     val link = tableBody.child(0).select("td a.vbtn").attr("href")
@@ -58,7 +58,7 @@ object MavenWebPageParser {
 
     val ivyText = document.select("div#snippets div#ivy").text()
     val ivy = Jsoup.parse(ivyText, "", Parser.xmlParser()).select("dependency")
-    val artifact = Artifact(ivy.attr("name"), ivy.attr("org"), ivy.attr("rev"))
+    val artifact = Artifact(None, ivy.attr("name"), ivy.attr("org"), ivy.attr("rev"))
 
     LibraryDetail(artifact, link, releaseDateTime)
   }
