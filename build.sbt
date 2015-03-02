@@ -10,5 +10,6 @@ libraryDependencies ++= Seq(
   "org.jsoup" % "jsoup" % "1.8.1",
   "joda-time" % "joda-time" % "2.7",
   "com.h2database" % "h2" % "1.4.185",
-  "org.xerial" % "sqlite-jdbc" % "3.8.7"
+  "org.xerial" % "sqlite-jdbc" % "3.8.7",
+  "org.apache.lucene" % "lucene-core" % "5.0.0"
 )
