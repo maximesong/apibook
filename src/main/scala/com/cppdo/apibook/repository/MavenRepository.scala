@@ -13,16 +13,17 @@ object MavenRepository {
   val projectListBaseUrl = "http://mvnrepository.com/popular"
   val baseUrl = "http://mvnrepository.com"
 
-  val projectsPerPage = 10
+  val projectsPerPage = 20
 
   case class LibraryDetail(artifact: Artifact, downloadLink: String, releaseDateTime: DateTime)
 
 
-  def getTopProjects(n: Int = 10) : Seq[Project] = {
-    val pages = n / projectsPerPage
-    (1 to pages).flatMap(page => {
+  def getTopProjects(n: Int = projectsPerPage) : Seq[Project] = {
+    val pages = Math.ceil(n.toDouble / projectsPerPage).toInt
+    val projects = (1 to pages).flatMap(page => {
       getOnPage(page, MavenWebPageParser.parseProjects)
     })
+    projects.take(n)
   }
 
   def getOnPage[A](page: Int, f: String => A) = {
