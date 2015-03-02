@@ -1,7 +1,7 @@
 package com.cppdo.apibook.repository
 
 import com.cppdo.apibook.repository.MavenRepository.LibraryDetail
-import com.cppdo.apibook.repository.db.Artifact
+import com.cppdo.apibook.repository.db.{Project, Artifact}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import org.jsoup.Jsoup
@@ -15,13 +15,18 @@ import scala.collection.JavaConverters._
 object MavenWebPageParser {
   val monthYearFormat = DateTimeFormat.forPattern("(MMM, y)")
   val monthDayYearFormat = DateTimeFormat.forPattern("(MMM dd, y)")
-  val ArtifactLinkRegex = "/artifact/([^/]+)/([^/]+)/([^/]+)".r()
+  val ArtifactLinkRegex = "/artifact/([^/]+)/([^/]+)/([^/]+)".r
+  val ProjectLinkRegex = "/artifact/([^/]+)/([^/]+)".r
   case class VersionLink(name: String, link: String, releaseType: String, dateTime: DateTime)
 
-  def parseProjectLinks(html: String) : Seq[String] = {
+
+  // parse a project list page, e.g. http://mvnrepository.com/popular?p=1
+  def parseProjects(html: String) : Seq[Project] = {
     val document = Jsoup.parse(html)
     val links = document.select("div#maincontent div.im h2.im-title a[href]:not(.im-usage)")
-    links.iterator.asScala.map(_.attr("href")).toSeq
+    links.iterator.asScala.map(_.attr("href")).map({ case ProjectLinkRegex(group, name) =>
+        Project(None, name, group)
+    }).toSeq
   }
 
   // parse a project page, e.g. http://mvnrepository.com/artifact/com.typesafe.slick/slick_2.11
@@ -35,6 +40,13 @@ object MavenWebPageParser {
         case ArtifactLinkRegex(group, name, version) => Artifact(None, name, group, version)
       }
     }).toSeq
+  }
+
+  // parse a project list page, e.g. http://mvnrepository.com/popular?p=1
+  def parseProjectLinks(html: String) : Seq[String] = {
+    val document = Jsoup.parse(html)
+    val links = document.select("div#maincontent div.im h2.im-title a[href]:not(.im-usage)")
+    links.iterator.asScala.map(_.attr("href")).toSeq
   }
 
   // parse a project page, e.g. http://mvnrepository.com/artifact/com.typesafe.slick/slick_2.11

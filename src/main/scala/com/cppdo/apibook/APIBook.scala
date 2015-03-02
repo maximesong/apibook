@@ -14,8 +14,10 @@ import scala.concurrent.duration.Duration
  */
 object APIBook extends App {
   println("Hi")
-  //val artifacts = MavenRepository.getTopArtifacts()
-  //artifacts.foreach(println)
+  val projects = MavenRepository.getTopProjects()
+  projects.foreach(println)
+
+  /*
   import slick.driver.SQLiteDriver.api._
   val db = Database.forConfig("sqliteDb")
   val artifactsTable = TableQuery[Artifacts]
@@ -24,4 +26,5 @@ object APIBook extends App {
   )
   Await.result(db.run(setup), Duration.Inf)
   //val db = Database.forConfig("h2mem1")
+  */
 }
