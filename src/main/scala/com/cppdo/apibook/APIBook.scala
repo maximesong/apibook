@@ -2,6 +2,7 @@ package com.cppdo.apibook
 
 import com.cppdo.apibook.ast.JarManager
 import com.cppdo.apibook.db.{Project, Artifacts, Projects}
+import com.cppdo.apibook.index.IndexManager
 import com.cppdo.apibook.repository.MavenRepository
 import com.typesafe.scalalogging.LazyLogging
 import slick.driver.JdbcDriver
@@ -34,6 +35,7 @@ object APIBook extends LazyLogging {
   def testJar() = {
     val nodes = JarManager.getClassNodes("/home/song/Downloads/asm-5.0.3.jar")
     nodes.foreach(node => println(node.name))
+    IndexManager.buildIndex(nodes)
   }
 
   def fetchProjects() = {

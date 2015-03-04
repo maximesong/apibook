@@ -1,5 +1,6 @@
 *~
 .idea
+data
 target
 db.sqlite
 .history

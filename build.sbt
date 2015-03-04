@@ -16,5 +16,6 @@ libraryDependencies ++= Seq(
   "org.jsoup" % "jsoup" % "1.8.1",
   "joda-time" % "joda-time" % "2.7",
   "org.apache.lucene" % "lucene-core" % "5.0.0",
+  "org.apache.lucene" % "lucene-analyzers-common" % "5.0.0",
   "org.ow2.asm" % "asm-all" % "5.0.3"
 )
