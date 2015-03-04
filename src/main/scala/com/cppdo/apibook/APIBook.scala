@@ -1,5 +1,6 @@
 package com.cppdo.apibook
 
+import com.cppdo.apibook.ast.JarManager
 import com.cppdo.apibook.db.{Project, Artifacts, Projects}
 import com.cppdo.apibook.repository.MavenRepository
 import com.typesafe.scalalogging.LazyLogging
@@ -19,7 +20,8 @@ object APIBook extends LazyLogging {
   def main(args: Array[String]): Unit = {
     logger.info("Hi")
     //fetchProjects()
-    testVersions()
+    //testVersions()
+    testJar()
     logger.info("Bye")
   }
 
@@ -27,6 +29,11 @@ object APIBook extends LazyLogging {
     val t1 = "1.0.6-M1"
     val v1 = MavenRepository.Version.parse(t1)
     println(v1)
+  }
+
+  def testJar() = {
+    val nodes = JarManager.getClassNodes("/home/song/Downloads/asm-5.0.3.jar")
+    nodes.foreach(node => println(node.name))
   }
 
   def fetchProjects() = {
