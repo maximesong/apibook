@@ -1,7 +1,7 @@
 package com.cppdo.apibook
 
+import com.cppdo.apibook.db.{Artifacts, Projects}
 import com.cppdo.apibook.repository.MavenRepository
-import com.cppdo.apibook.repository.db.{Projects, Artifacts}
 import com.typesafe.scalalogging.LazyLogging
 import slick.driver.JdbcDriver
 import slick.jdbc.meta.MTable
@@ -17,17 +17,17 @@ import scala.concurrent.duration.Duration
 object APIBook extends LazyLogging {
   def main(args: Array[String]): Unit = {
     logger.info("Hi")
-    val projects = MavenRepository.getTopProjects(10)
-
-    println(projects.size)
-    projects.foreach(println)
-    logger.info("Bye")
     fetchProjects()
+    logger.info("Bye")
   }
 
   def fetchProjects() = {
     import slick.driver.SQLiteDriver.api._
     val db = Database.forConfig("sqliteDb")
+
+    val projects = MavenRepository.getTopProjects(10)
+
+    projects.foreach(println)
 
     try {
       val artifactsTable = TableQuery[Artifacts]
@@ -43,7 +43,10 @@ object APIBook extends LazyLogging {
       val setup = DBIO.seq(
         actions: _*
       )
+      val insertion = projectsTable ++= projects
       Await.result(db.run(setup), Duration.Inf)
+      Await.result(db.run(insertion), Duration.Inf)
+
     } finally {
       db.close()
     }

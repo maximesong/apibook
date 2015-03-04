@@ -1,7 +1,7 @@
 package com.cppdo.apibook.repository
 
 
-import com.cppdo.apibook.repository.db.{Project, Artifact}
+import com.cppdo.apibook.db.{Artifact, Project}
 import org.joda.time.DateTime
 
 import scala.io.Source
@@ -26,7 +26,7 @@ object MavenRepository {
     projects.take(n)
   }
 
-  def getOnPage[A](page: Int, f: String => A) = {
+  private def getOnPage[A](page: Int, f: String => A) = {
     val pageUrl = s"${projectListBaseUrl}?page=${page-1}"
     val pageText = Source.fromURL(pageUrl).mkString
     f(pageText)

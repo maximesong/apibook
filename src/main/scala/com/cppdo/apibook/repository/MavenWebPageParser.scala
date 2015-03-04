@@ -1,7 +1,7 @@
 package com.cppdo.apibook.repository
 
+import com.cppdo.apibook.db.{Artifact, Project}
 import com.cppdo.apibook.repository.MavenRepository.LibraryDetail
-import com.cppdo.apibook.repository.db.{Project, Artifact}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import org.jsoup.Jsoup
@@ -25,7 +25,7 @@ object MavenWebPageParser {
     val document = Jsoup.parse(html)
     val links = document.select("div#maincontent div.im h2.im-title a[href]:not(.im-usage)")
     links.iterator.asScala.map(_.attr("href")).map({ case ProjectLinkRegex(group, name) =>
-        Project(None, name, group)
+        Project(name, group)
     }).toSeq
   }
 
@@ -37,7 +37,7 @@ object MavenWebPageParser {
       // the link format is like "/mvnrepository.com/artifact/junit/junit/4.12-beta-3"
       val link = row.select("td a.vbtn").attr("href")
       link match {
-        case ArtifactLinkRegex(group, name, version) => Artifact(None, name, group, version)
+        case ArtifactLinkRegex(group, name, version) => Artifact(name, group, version)
       }
     }).toSeq
   }
@@ -70,7 +70,7 @@ object MavenWebPageParser {
 
     val ivyText = document.select("div#snippets div#ivy").text()
     val ivy = Jsoup.parse(ivyText, "", Parser.xmlParser()).select("dependency")
-    val artifact = Artifact(None, ivy.attr("name"), ivy.attr("org"), ivy.attr("rev"))
+    val artifact = Artifact(ivy.attr("name"), ivy.attr("org"), ivy.attr("rev"))
 
     LibraryDetail(artifact, link, releaseDateTime)
   }
