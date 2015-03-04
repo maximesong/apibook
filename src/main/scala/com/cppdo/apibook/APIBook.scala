@@ -1,10 +1,11 @@
 package com.cppdo.apibook
 
-import com.cppdo.apibook.db.{Artifacts, Projects}
+import com.cppdo.apibook.db.{Project, Artifacts, Projects}
 import com.cppdo.apibook.repository.MavenRepository
 import com.typesafe.scalalogging.LazyLogging
 import slick.driver.JdbcDriver
 import slick.jdbc.meta.MTable
+import slick.model.ForeignKeyAction.NoAction
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -17,8 +18,15 @@ import scala.concurrent.duration.Duration
 object APIBook extends LazyLogging {
   def main(args: Array[String]): Unit = {
     logger.info("Hi")
-    fetchProjects()
+    //fetchProjects()
+    testVersions()
     logger.info("Bye")
+  }
+
+  def testVersions(): Unit = {
+    val t1 = "1.0.6-M1"
+    val v1 = MavenRepository.Version.parse(t1)
+    println(v1)
   }
 
   def fetchProjects() = {
@@ -39,14 +47,12 @@ object APIBook extends LazyLogging {
       val result = Await.result(db.run(MTable.getTables("")), Duration.Inf)
       val tableMap = (result map (table => (table.name.name, table))).toMap
       val newTables = tableList filter { case (_, name) => !tableMap.contains(name) } map { case (table, _) => table }
-      val actions = newTables map (table => table.schema.create)
+      val createTableActions = newTables map (table => table.schema.create)
+      val insertActions = projects.map(project => projectsTable.insertOrUpdate(project))
       val setup = DBIO.seq(
-        actions: _*
+        (createTableActions ++ insertActions): _*
       )
-      val insertion = projectsTable ++= projects
       Await.result(db.run(setup), Duration.Inf)
-      Await.result(db.run(insertion), Duration.Inf)
-
     } finally {
       db.close()
     }

@@ -30,7 +30,7 @@ object MavenWebPageParser {
   }
 
   // parse a project page, e.g. http://mvnrepository.com/artifact/com.typesafe.slick/slick_2.11
-  def parseArtifacts(html: String) : Seq[Artifact] = {
+  def parseProjectDetailPage(html: String) : Seq[Artifact] = {
     val document = Jsoup.parse(html)
     document.select("div#maincontent table.versions tbody tr").asScala.map(row => {
       val columnSize = row.children().size
