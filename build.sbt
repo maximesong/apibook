@@ -25,8 +25,7 @@ lazy val core = (project in file("./apibook-core"))
     "joda-time" % "joda-time" % "2.7",
     "org.apache.lucene" % "lucene-core" % "5.0.0",
     "org.apache.lucene" % "lucene-analyzers-common" % "5.0.0",
-    "org.ow2.asm" % "asm-all" % "5.0.3"
-    )
+    "org.ow2.asm" % "asm-all" % "5.0.3")
   )
 
 lazy val web = (project in file("./apibook-web")).enablePlugins(PlayScala).dependsOn(core)
@@ -39,8 +38,9 @@ lazy val web = (project in file("./apibook-web")).enablePlugins(PlayScala).depen
     "org.webjars" %% "webjars-play" % "2.3.0-2",
     "org.webjars" % "angularjs" % "1.3.14",
     "org.webjars" % "bootstrap" % "3.3.2-1",
-    "org.webjars" % "modernizr" % "2.8.3"
-    )
+    "org.webjars" % "underscorejs" % "1.8.2",
+    "org.webjars" % "modernizr" % "2.8.3",
+    "org.webjars" % "momentjs" % "2.9.0")
   )
 
 lazy val root = (project in file(".")).aggregate(core, web)
