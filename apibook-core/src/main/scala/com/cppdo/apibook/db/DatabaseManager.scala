@@ -17,11 +17,13 @@ object DatabaseManager {
   val projectsTable = TableQuery[Projects]
   val classesTable = TableQuery[Classes]
   val methodsTable = TableQuery[Methods]
+  val packageFilesTable = TableQuery[PackageFiles]
   val tableList  = List(
     (projectsTable, "PROJECTS"),
     (artifactsTable, "ARTIFACTS"),
-    (classesTable, "Classes"),
-    (methodsTable, "Mehtods")
+    (classesTable, "CLASSES"),
+    (methodsTable, "METHODS"),
+    (packageFilesTable, "PACKAGE_FILES")
   )
 
   def createTables = {
@@ -34,4 +36,19 @@ object DatabaseManager {
     )
     Await.result(db.run(setup), Duration.Inf)
   }
+
+  def add(project: Project): Project = {
+    val insertAction = projectsTable insertOrUpdate project
+    Await.result(db.run(insertAction), Duration.Inf)
+    project
+  }
+
+  def add(artifact: Artifact): Artifact = {
+    val insertAction = (artifactsTable returning artifactsTable.map(_.id)
+      into ((a, id) => a.copy(id=Some(id)))) insertOrUpdate artifact
+    val result: Option[Artifact] = Await.result(db.run(insertAction), Duration.Inf)
+    result.getOrElse(artifact)
+  }
+
+  createTables
 }

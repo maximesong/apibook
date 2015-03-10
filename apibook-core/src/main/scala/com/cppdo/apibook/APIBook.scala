@@ -7,7 +7,7 @@ import java.nio.file.{Path, Paths, Files}
 import com.cppdo.apibook.ast.JarManager
 import com.cppdo.apibook.db._
 import com.cppdo.apibook.index.IndexManager
-import com.cppdo.apibook.repository.MavenRepository
+import com.cppdo.apibook.repository.{ArtifactsManager, MavenRepository}
 import com.cppdo.apibook.repository.MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
@@ -28,7 +28,8 @@ import sys.process._
 object APIBook extends LazyLogging {
   def main(args: Array[String]): Unit = {
     logger.info("Hi")
-    fetchProjects()
+    //fetchProjects()
+    fetchAll()
     //testVersions()
     //testJar()
     logger.info("Bye")
@@ -59,6 +60,10 @@ object APIBook extends LazyLogging {
     val nodes = JarManager.getClassNodes("/home/song/Downloads/asm-5.0.3.jar")
     nodes.foreach(node => println(node.name))
     IndexManager.buildIndex(nodes)
+  }
+
+  def fetchAll() = {
+    ArtifactsManager.fetchTopProjectsAndArtifactsToDb(10)
   }
 
   def fetchProjects() = {
