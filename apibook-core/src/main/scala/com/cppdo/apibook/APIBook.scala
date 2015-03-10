@@ -63,7 +63,8 @@ object APIBook extends LazyLogging {
   }
 
   def fetchAll() = {
-    ArtifactsManager.fetchTopProjectsAndArtifactsToDb(10)
+    //ArtifactsManager.fetchTopProjectsAndArtifactsToDb(10)
+    ArtifactsManager.downloadLatestPackages
   }
 
   def fetchProjects() = {

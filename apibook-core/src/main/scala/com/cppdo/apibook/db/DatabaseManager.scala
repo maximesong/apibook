@@ -50,5 +50,14 @@ object DatabaseManager {
     result.getOrElse(artifact)
   }
 
+  def getProjects() : Seq[Project] = {
+    Await.result(db.run(projectsTable.result), Duration.Inf)
+  }
+
+  def getArtifacts(project: Project) : Seq[Artifact] = {
+    val query = artifactsTable.filter(artifact => artifact.group === project.group && artifact.name === project.name)
+    Await.result(db.run(query.result),Duration.Inf)
+  }
+
   createTables
 }

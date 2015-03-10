@@ -1,7 +1,11 @@
 package com.cppdo.apibook.repository
 
 
+import java.io.File
+import java.net.URL
+
 import com.cppdo.apibook.db.{Artifact, Project}
+import org.apache.commons.io.FileUtils
 import org.joda.time.DateTime
 
 import scala.io.Source
@@ -121,27 +125,6 @@ object MavenRepository {
     val projectUrl = detailUrlOf(project)
     val artifacts = fetchFrom(projectUrl, MavenWebPageParser.parseProjectDetailPage)
     artifacts
-  }
-
-  def testingExtractVersions() = {
-    val url = "http://mvnrepository.com/artifact/com.typesafe.slick/slick_2.11"
-    val content = Source.fromURL(url).mkString
-    val versions = MavenWebPageParser.parseVersions(content)
-    println(versions.toList)
-  }
-
-  def testingExtractProjectLinks() = {
-    val url = "http://mvnrepository.com/popular"
-    val content = Source.fromURL(url).mkString
-    val links = MavenWebPageParser.parseProjectLinks(content)
-    println(links.toList)
-  }
-
-  def testingExtractLibraryDetail() = {
-    val url = "http://mvnrepository.com/artifact/joda-time/joda-time/2.7"
-    val content = Source.fromURL(url).mkString
-    val detail = MavenWebPageParser.parseLibraryDetail(content)
-    println(detail)
   }
 
   def takeLatestVersion(artifacts: Seq[Artifact]): Option[Artifact] = {
