@@ -1,17 +1,25 @@
 package com.cppdo.apibook
 
+import java.io.File
+import java.net.URL
+import java.nio.file.{Path, Paths, Files}
+
 import com.cppdo.apibook.ast.JarManager
 import com.cppdo.apibook.db._
 import com.cppdo.apibook.index.IndexManager
 import com.cppdo.apibook.repository.MavenRepository
+import com.cppdo.apibook.repository.MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.commons.io.FileUtils
 import slick.driver.JdbcDriver
 import slick.jdbc.meta.MTable
 import slick.model.ForeignKeyAction.NoAction
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+import scala.io.Source
 
+import sys.process._
 //import slick.driver.H2Driver.api._
 
 /**
@@ -27,9 +35,24 @@ object APIBook extends LazyLogging {
   }
 
   def testVersions(): Unit = {
+    val v = MavenRepository.Version(0)
+    //println(v.matchQualifierToVersion("M-1"))
+    //println(v.matchQualifierToVersion("abc"))
+    /*
     val t1 = "1.0.6-M1"
+    val t2 = "1.0.6"
     val v1 = MavenRepository.Version.parse(t1)
-    println(v1)
+    val v2 = MavenRepository.Version.parse(t2)
+    //println(v1 compare v2)
+    */
+    val projects = MavenRepository.getTopProjects(500)
+    projects.flatMap(project => {
+      val artifacts = project.fetchArtifacts
+      artifacts.flatMap(artifact => {
+        MavenRepository.Version.tryParse(artifact.version).flatMap(_.qualifier)
+      })
+    }).toSet.toList.sortBy(v.matchQualifierToVersion).foreach(println)
+
   }
 
   def testJar() = {
@@ -39,37 +62,17 @@ object APIBook extends LazyLogging {
   }
 
   def fetchProjects() = {
-    import slick.driver.SQLiteDriver.api._
-    val db = Database.forConfig("sqliteDb")
-
+    val baseDirectory = "repository"
     val projects = MavenRepository.getTopProjects(10)
-
-    projects.foreach(println)
-
-    try {
-      val artifactsTable = TableQuery[Artifacts]
-      val projectsTable = TableQuery[Projects]
-      val classesTable = TableQuery[Classes]
-      val methodsTable = TableQuery[Methods]
-      val tableList  = List(
-        (projectsTable, "PROJECTS"),
-        (artifactsTable, "ARTIFACTS"),
-        (classesTable, "Classes"),
-        (methodsTable, "Mehtods")
-      )
-      val result = Await.result(db.run(MTable.getTables("")), Duration.Inf)
-      val tableMap = (result map (table => (table.name.name, table))).toMap
-      val newTables = tableList filter { case (_, name) => !tableMap.contains(name) } map { case (table, _) => table }
-      val createTableActions = newTables map (table => table.schema.create)
-      val insertActions = projects.map(project => projectsTable.insertOrUpdate(project))
-      val setup = DBIO.seq(
-        (createTableActions ++ insertActions): _*
-      )
-      Await.result(db.run(setup), Duration.Inf)
-    } finally {
-      db.close()
-    }
-
+    val latestArtifacts = projects.flatMap(_.fetchArtifacts.takeLatestVersion)
+    latestArtifacts.foreach(artifact => {
+      println(s"Downloading artifacts of ${artifact.name}...")
+      FileUtils.copyURLToFile(new URL(artifact.libraryPackageUrl), new File(s"${baseDirectory}/${artifact.libraryPackagePath}"))
+      FileUtils.copyURLToFile(new URL(artifact.sourcePackageUrl), new File(s"${baseDirectory}/${artifact.sourcePackagePath}"))
+      //new URL(artifact.libraryPackageUrl) #> new File(artifact.libraryPackagePath) !!
+    })
+      //val insertActions = projects.map(project => projectsTable.insertOrUpdate(project))
+      //Await.result(db.run(setup), Duration.Inf)
   }
 
 

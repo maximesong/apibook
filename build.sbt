@@ -13,6 +13,7 @@ lazy val commonSettings = Seq(
 lazy val core = (project in file("./apibook-core"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= Seq(
+    "commons-io" % "commons-io" % "2.4",
     "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
     //"org.slf4j" % "slf4j-api" % "1.7.10",
     //"org.slf4j" % "slf4j-nop" % "1.7.10",

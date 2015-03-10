@@ -1,6 +1,7 @@
 *~
 .idea
-data
+/data
 target
+/repository
 db.sqlite
 .history
