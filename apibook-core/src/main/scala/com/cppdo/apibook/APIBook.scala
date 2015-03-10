@@ -1,7 +1,7 @@
 package com.cppdo.apibook
 
 import com.cppdo.apibook.ast.JarManager
-import com.cppdo.apibook.db.{Project, Artifacts, Projects}
+import com.cppdo.apibook.db._
 import com.cppdo.apibook.index.IndexManager
 import com.cppdo.apibook.repository.MavenRepository
 import com.typesafe.scalalogging.LazyLogging
@@ -20,9 +20,9 @@ import scala.concurrent.duration.Duration
 object APIBook extends LazyLogging {
   def main(args: Array[String]): Unit = {
     logger.info("Hi")
-    //fetchProjects()
+    fetchProjects()
     //testVersions()
-    testJar()
+    //testJar()
     logger.info("Bye")
   }
 
@@ -49,9 +49,13 @@ object APIBook extends LazyLogging {
     try {
       val artifactsTable = TableQuery[Artifacts]
       val projectsTable = TableQuery[Projects]
+      val classesTable = TableQuery[Classes]
+      val methodsTable = TableQuery[Methods]
       val tableList  = List(
         (projectsTable, "PROJECTS"),
-        (artifactsTable, "ARTIFACTS")
+        (artifactsTable, "ARTIFACTS"),
+        (classesTable, "Classes"),
+        (methodsTable, "Mehtods")
       )
       val result = Await.result(db.run(MTable.getTables("")), Duration.Inf)
       val tableMap = (result map (table => (table.name.name, table))).toMap

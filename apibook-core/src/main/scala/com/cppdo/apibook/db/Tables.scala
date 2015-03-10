@@ -1,7 +1,7 @@
 package com.cppdo.apibook.db
 
 import slick.driver.SQLiteDriver.api._
-import slick.lifted.Tag
+import slick.lifted.{ProvenShape, Tag}
 
 
 
@@ -33,5 +33,36 @@ class Artifacts(tag: Tag) extends Table[Artifact](tag, "ARTIFACTS") {
   def * = (name, group, version) <> (Artifact.tupled, Artifact.unapply)
 }
 
+case class Class(id: Option[Int], artifact: Artifact, fullName: String)
+
+class Classes(tag: Tag) extends Table[Class](tag, "CLASSES") {
+  def id = column[Int]("ID", O.PrimaryKey, O.AutoInc)
+
+  def artifactName = column[String]("ARTIFACT_NAME")
+  def artifactGroup = column[String]("ARTIFACT_GROUP")
+  def artifactVersion = column[String]("ARTIFACT_VERSION")
+
+  def fullName = column[String]("FULL_NAME")
+
+  def artifact = foreignKey("ARTIFACT_FK", (artifactName, artifactGroup, artifactVersion),
+    TableQuery[Artifacts])(t => (t.name, t.group, t.version))
+
+  def * = (id.?, artifactName, artifactGroup, artifactVersion, fullName).shaped <>
+    (c => Class(c._1, Artifact(c._2, c._3, c._4), c._5),
+      (klass: Class) =>  Some((klass.id, klass.fullName, klass.artifact.name, klass.artifact.group, klass.artifact.version)))
+}
+
+case class Method(name: String, signature: String, enclosingClassId: Int)
 
 
+class Methods(tag: Tag) extends Table[Method](tag, "METHODS") {
+  def name = column[String]("NAME")
+
+  def signature = column[String]("SIGNATURE")
+
+  def classId = column[Int]("CLASS_ID")
+
+  def klass = foreignKey("CLASS_FK", classId, TableQuery[Classes])(t => t.id)
+
+  def * = (name, signature, classId) <> (Method.tupled, Method.unapply)
+}
