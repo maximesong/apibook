@@ -6,7 +6,7 @@ import org.apache.lucene.search.{TermQuery, BooleanQuery, MatchAllDocsQuery, Ind
 
 import scala.collection.JavaConverters._
 import org.apache.lucene.analysis.standard.StandardAnalyzer
-import org.apache.lucene.document.{Field, StringField, Document}
+import org.apache.lucene.document.{TextField, Field, StringField, Document}
 import org.apache.lucene.index.IndexWriterConfig.OpenMode
 import org.apache.lucene.index._
 import org.apache.lucene.store.FSDirectory
@@ -47,14 +47,9 @@ object IndexManager {
     val analyzer = new StandardAnalyzer()
     val parser = new QueryParser(fieldName, analyzer)
     val booleanQuery = new BooleanQuery()
-    val q = new MatchAllDocsQuery()
-    println(queryText)
-    val term = new Term(fieldName, "Function")
-    val termQuery = new TermQuery(term)
-    //val query = parser.parse(queryText)
-    val query = parser.parse("scala Function")
-    //println(query.)
-    val topDocs = searcher.search(termQuery, null, 100)
+    //val q = new MatchAllDocsQuery()
+    val query = parser.parse(queryText)
+    val topDocs = searcher.search(query, null, 100)
 
     //val topDocs = searcher.search(q, null, 100)
     println("Total hits: " + topDocs.totalHits)
@@ -65,7 +60,7 @@ object IndexManager {
 
   private def buildDocument(classNode: ClassNode) : Document = {
     val document = new Document
-    val nameField = new StringField(fieldName, classNode.name.replaceAll("[/$]", " "), Field.Store.YES)
+    val nameField = new TextField(fieldName, classNode.name, Field.Store.YES)
     document.add(nameField)
     document
   }
