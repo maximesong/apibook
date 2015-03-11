@@ -2,8 +2,9 @@ package com.cppdo.apibook.ast
 
 import java.util.jar.JarFile
 
+import com.cppdo.apibook.db.Method
 import org.objectweb.asm.ClassReader
-import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.{MethodNode, ClassNode}
 
 import scala.collection.JavaConverters._
 
