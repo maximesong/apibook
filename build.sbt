@@ -26,6 +26,8 @@ lazy val core = (project in file("./apibook-core"))
     "joda-time" % "joda-time" % "2.7",
     "org.apache.lucene" % "lucene-core" % "5.0.0",
     "org.apache.lucene" % "lucene-analyzers-common" % "5.0.0",
+    "org.apache.lucene" % "lucene-queryparser" % "5.0.0",
+    "org.apache.lucene" % "lucene-queries" % "5.0.0",
     "org.ow2.asm" % "asm-all" % "5.0.3")
   )
 

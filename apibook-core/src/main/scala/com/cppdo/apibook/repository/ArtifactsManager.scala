@@ -3,8 +3,10 @@ package com.cppdo.apibook.repository
 import java.io.File
 import java.net.URL
 
-import com.cppdo.apibook.db.DatabaseManager
+import com.cppdo.apibook.ast.JarManager
+import com.cppdo.apibook.db.{Artifact, PackageFile, DatabaseManager}
 import MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
+import com.cppdo.apibook.index.IndexManager
 import org.apache.commons.io.FileUtils
 
 /**
@@ -34,9 +36,25 @@ object ArtifactsManager {
       val artifacts = DatabaseManager.getArtifacts(project)
       artifacts.takeLatestVersion.foreach(artifact => {
         downloadFile(artifact.libraryPackageUrl, artifact.libraryPackagePath)
+        DatabaseManager.add(PackageFile(artifact.id.get, "library", artifact.libraryPackagePath))
         downloadFile(artifact.sourcePackageUrl, artifact.sourcePackagePath)
+        DatabaseManager.add(PackageFile(artifact.id.get, "source", artifact.sourcePackagePath))
       })
     })
     println(projects.size)
+  }
+
+  def buildIndex(artifact: Artifact) =  {
+    val packageFiles = DatabaseManager.getPackageFiles(artifact)
+    packageFiles.filter(_.packageType == "library").foreach(packageFile => {
+      val fullPath = s"${baseDirectory}/${packageFile.path}"
+      val classNodes = JarManager.getClassNodes(fullPath)
+      IndexManager.buildIndex(classNodes)
+    })
+  }
+
+  def buildIndexForArtifacts = {
+    val artifacts = DatabaseManager.getArtifacts()
+    artifacts.foreach(buildIndex(_))
   }
 }

@@ -1,5 +1,6 @@
 package controllers
 
+import com.cppdo.apibook.index.IndexManager
 import play.api._
 import play.api.mvc._
 

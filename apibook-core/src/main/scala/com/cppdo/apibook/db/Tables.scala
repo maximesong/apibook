@@ -59,7 +59,7 @@ class Methods(tag: Tag) extends Table[Method](tag, "METHODS") {
   def * = (name, signature, classId, id.?) <> (Method.tupled, Method.unapply)
 }
 
-case class PackageFile(artifactId: Int, packageType: String, path: String, id: Option[Int])
+case class PackageFile(artifactId: Int, packageType: String, path: String, id: Option[Int] = None)
 
 class PackageFiles(tag: Tag) extends Table[PackageFile](tag, "PACKAGE_FILES") {
   def id = column[Int]("ID", O.PrimaryKey, O.AutoInc)

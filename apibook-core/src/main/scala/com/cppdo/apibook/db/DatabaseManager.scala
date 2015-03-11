@@ -44,10 +44,29 @@ object DatabaseManager {
   }
 
   def add(artifact: Artifact): Artifact = {
-    val insertAction = (artifactsTable returning artifactsTable.map(_.id)
-      into ((a, id) => a.copy(id=Some(id)))) insertOrUpdate artifact
-    val result: Option[Artifact] = Await.result(db.run(insertAction), Duration.Inf)
-    result.getOrElse(artifact)
+    if (exists(artifact)) {
+      artifact
+    }
+    else {
+      val insertAction = (artifactsTable returning artifactsTable.map(_.id)
+        into ((a, id) => a.copy(id=Some(id)))) insertOrUpdate artifact
+      val result: Option[Artifact] = Await.result(db.run(insertAction), Duration.Inf)
+      result.getOrElse(artifact)
+    }
+  }
+
+  def add(packageFile: PackageFile): PackageFile = {
+    val insertAction = (packageFilesTable returning packageFilesTable.map(_.id)
+      into ((packageFile, id) => packageFile.copy(id=Some(id)))) insertOrUpdate packageFile
+    val result: Option[PackageFile] = Await.result(db.run(insertAction), Duration.Inf)
+    result.getOrElse(packageFile)
+  }
+
+  def exists(artifact: Artifact): Boolean = {
+    val countQuery = artifactsTable.filter(a => a.group === artifact.group &&
+      a.name === artifact.name && a.version === artifact.version)
+    val result  = Await.result(db.run(countQuery.result), Duration.Inf)
+    result.size > 0
   }
 
   def getProjects() : Seq[Project] = {
@@ -57,6 +76,16 @@ object DatabaseManager {
   def getArtifacts(project: Project) : Seq[Artifact] = {
     val query = artifactsTable.filter(artifact => artifact.group === project.group && artifact.name === project.name)
     Await.result(db.run(query.result),Duration.Inf)
+  }
+
+  def getArtifacts() : Seq[Artifact] = {
+    val query = artifactsTable
+    Await.result(db.run(query.result),Duration.Inf)
+  }
+
+  def getPackageFiles(artifact: Artifact): Seq[PackageFile] = {
+    val query = packageFilesTable.filter(packageFile => packageFile.artifactId === artifact.id)
+    Await.result(db.run(query.result), Duration.Inf)
   }
 
   createTables
