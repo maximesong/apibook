@@ -88,5 +88,11 @@ object DatabaseManager {
     Await.result(db.run(query.result), Duration.Inf)
   }
 
+  def getLibraryPackageFile(artifact: Artifact): Option[PackageFile] = {
+    val query = packageFilesTable.filter(packageFile => packageFile.artifactId === artifact.id)
+    val packageFiles = Await.result(db.run(query.result), Duration.Inf)
+    ???
+  }
+
   createTables
 }

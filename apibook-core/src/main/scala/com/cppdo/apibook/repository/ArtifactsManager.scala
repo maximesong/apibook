@@ -57,4 +57,8 @@ object ArtifactsManager {
     val artifacts = DatabaseManager.getArtifacts()
     artifacts.foreach(buildIndex(_))
   }
+
+  def analysisArtifact(artifact: Artifact) = {
+    val packageFiles = DatabaseManager.getPackageFiles(artifact)
+  }
 }
