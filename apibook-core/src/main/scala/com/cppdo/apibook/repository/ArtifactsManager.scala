@@ -7,16 +7,18 @@ import com.cppdo.apibook.ast.JarManager
 import com.cppdo.apibook.db.{Artifact, PackageFile, DatabaseManager}
 import MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
 import com.cppdo.apibook.index.IndexManager
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 
 /**
  * Created by song on 3/1/15.
  */
-object ArtifactsManager {
+object ArtifactsManager extends LazyLogging {
   val baseDirectory = "repository"
 
   def fetchTopProjectsAndArtifactsToDb(projectsNum: Int) = {
     val projects = MavenRepository.getTopProjects(projectsNum)
+    logger.info("Projects count: " + projects.size)
     projects.foreach(project => {
       val projectWithId = DatabaseManager.add(project)
       val artifacts = projectWithId.fetchArtifacts()

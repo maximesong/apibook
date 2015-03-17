@@ -5,6 +5,7 @@ import java.io.File
 import java.net.URL
 
 import com.cppdo.apibook.db.{Artifact, Project}
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.joda.time.DateTime
 
@@ -13,7 +14,7 @@ import scala.io.Source
 /**
  * Created by song on 1/19/15.
  */
-object MavenRepository {
+object MavenRepository extends LazyLogging {
   val projectListBaseUrl = "http://mvnrepository.com/popular"
   val baseUrl = "http://mvnrepository.com"
   val baseDownloadUrl = "http://central.maven.org/maven2"
@@ -89,18 +90,20 @@ object MavenRepository {
   def getTopProjects(n: Int = projectsPerPage) : Seq[Project] = {
     val pages = Math.ceil(n.toDouble / projectsPerPage).toInt
     val projects = (1 to pages).flatMap(page => {
+      logger.info("Fetching page:" + page)
       fetchFromProjectListPage(page, MavenWebPageParser.parseProjects)
     })
     projects.take(n)
   }
 
-  private def fetchFrom[A](url: String, f: String => A) = {
+  private def fetchFrom[A](url: String, f: String => A): A = {
     val content = Source.fromURL(url).mkString
     f(content)
   }
 
-  private def fetchFromProjectListPage[A](page: Int, f: String => A) = {
-    val pageUrl = s"${projectListBaseUrl}?page=${page-1}"
+  private def fetchFromProjectListPage[A](page: Int, f: String => A): A = {
+    val pageUrl = s"${projectListBaseUrl}?p=${page-1}"
+    logger.info("Page Url:" + pageUrl)
     fetchFrom(pageUrl, f)
   }
 

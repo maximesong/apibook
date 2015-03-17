@@ -9,7 +9,7 @@ import scala.collection.JavaConverters._
  */
 object AstTreeManager {
   def methodNodesOf(classNode: ClassNode): Seq[MethodNode] = {
-    classNode.methods.asScala.map { methodNode: MethodNode =>
+    classNode.methods.asScala.map { case methodNode: MethodNode =>
       methodNode
     }.toSeq
   }

@@ -29,9 +29,9 @@ object APIBook extends LazyLogging {
   def main(args: Array[String]): Unit = {
     logger.info("Hi")
     //fetchProjects()
-    //fetchAll()
+    fetchAll()
     //buildIndex
-    search("scala")
+    //search("scala")
     //testVersions()
     //testJar()
     logger.info("Bye")
@@ -75,7 +75,7 @@ object APIBook extends LazyLogging {
   }
 
   def fetchAll() = {
-    ArtifactsManager.fetchTopProjectsAndArtifactsToDb(100)
+    ArtifactsManager.fetchTopProjectsAndArtifactsToDb(1000)
     ArtifactsManager.downloadLatestPackages
   }
 
