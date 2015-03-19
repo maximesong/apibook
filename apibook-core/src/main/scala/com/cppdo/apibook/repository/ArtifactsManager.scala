@@ -1,6 +1,6 @@
 package com.cppdo.apibook.repository
 
-import java.io.File
+import java.io.{FileNotFoundException, File}
 import java.net.URL
 
 import com.cppdo.apibook.ast.JarManager
@@ -29,7 +29,7 @@ object ArtifactsManager extends LazyLogging {
   }
 
   private def downloadFile(url: String, savePath: String) = {
-    FileUtils.copyURLToFile(new URL(url), new File(s"${baseDirectory}/${savePath}"))
+    FileUtils.copyURLToFile(new URL(url), new File(getPackageFileFullPath(savePath)))
   }
 
   def downloadLatestPackages = {
@@ -39,8 +39,13 @@ object ArtifactsManager extends LazyLogging {
       artifacts.takeLatestVersion.foreach(artifact => {
         downloadFile(artifact.libraryPackageUrl, artifact.libraryPackagePath)
         DatabaseManager.add(PackageFile(artifact.id.get, "library", artifact.libraryPackagePath))
-        downloadFile(artifact.sourcePackageUrl, artifact.sourcePackagePath)
-        DatabaseManager.add(PackageFile(artifact.id.get, "source", artifact.sourcePackagePath))
+        try {
+          downloadFile(artifact.sourcePackageUrl, artifact.sourcePackagePath)
+          DatabaseManager.add(PackageFile(artifact.id.get, "source", artifact.sourcePackagePath))
+        } catch {
+          case e: FileNotFoundException => logger.warn("Fail to download: " + artifact.toString)
+        }
+
       })
     })
     println(projects.size)
@@ -49,10 +54,14 @@ object ArtifactsManager extends LazyLogging {
   def buildIndex(artifact: Artifact) =  {
     val packageFiles = DatabaseManager.getPackageFiles(artifact)
     packageFiles.filter(_.packageType == "library").foreach(packageFile => {
-      val fullPath = s"${baseDirectory}/${packageFile.path}"
+      val fullPath = getPackageFileFullPath(packageFile.path)
       val classNodes = JarManager.getClassNodes(fullPath)
       IndexManager.buildIndex(classNodes)
     })
+  }
+
+  private def getPackageFileFullPath(relativePath: String) = {
+    s"${baseDirectory}/${relativePath}"
   }
 
   def buildIndexForArtifacts = {
@@ -61,6 +70,13 @@ object ArtifactsManager extends LazyLogging {
   }
 
   def analysisArtifact(artifact: Artifact) = {
-    val packageFiles = DatabaseManager.getPackageFiles(artifact)
+    val libraryPackageFile = DatabaseManager.getLibraryPackageFile(artifact)
+    libraryPackageFile.foreach(library => {
+      val fullPath = getPackageFileFullPath(library.path)
+      val classNodes = JarManager.getClassNodes(fullPath)
+      classNodes.foreach(classNode => {
+        classNode.fields
+      })
+    })
   }
 }

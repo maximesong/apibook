@@ -102,7 +102,7 @@ object MavenRepository extends LazyLogging {
   }
 
   private def fetchFromProjectListPage[A](page: Int, f: String => A): A = {
-    val pageUrl = s"${projectListBaseUrl}?p=${page-1}"
+    val pageUrl = s"${projectListBaseUrl}?p=${page}"
     logger.info("Page Url:" + pageUrl)
     fetchFrom(pageUrl, f)
   }

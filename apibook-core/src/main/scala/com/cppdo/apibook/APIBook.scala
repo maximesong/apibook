@@ -29,14 +29,20 @@ object APIBook extends LazyLogging {
   def main(args: Array[String]): Unit = {
     logger.info("Hi")
     //fetchProjects()
-    fetchAll()
+    //fetchAll()
     //buildIndex
     //search("scala")
     //testVersions()
     //testJar()
+    testSource()
     logger.info("Bye")
   }
 
+  def testSource() = {
+    val jarFile = "/home/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12-sources.jar"
+    val compilationUnits = JarManager.getCompilationUnits(jarFile)
+    compilationUnits.foreach(cu => println(cu.getPackage.toString))
+  }
   def search(query: String) = {
     val results = IndexManager.search(query)
     logger.info("HERE?" + results.size)
