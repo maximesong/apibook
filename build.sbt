@@ -16,6 +16,7 @@ lazy val core = (project in file("./apibook-core"))
     "commons-io" % "commons-io" % "2.4",
     "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
     "com.typesafe.akka" %% "akka-actor" % "2.3.9",
+    "com.typesafe.akka" %% "akka-testkit" % "2.3.9",
     //"org.slf4j" % "slf4j-api" % "1.7.10",
     //"org.slf4j" % "slf4j-nop" % "1.7.10",
     "ch.qos.logback" % "logback-classic" % "1.1.2",
@@ -30,7 +31,8 @@ lazy val core = (project in file("./apibook-core"))
     "org.apache.lucene" % "lucene-queryparser" % "5.0.0",
     "org.apache.lucene" % "lucene-queries" % "5.0.0",
     "org.eclipse.jdt" % "org.eclipse.jdt.core" % "3.10.0",
-    "org.ow2.asm" % "asm-all" % "5.0.3")
+    "org.ow2.asm" % "asm-all" % "5.0.3",
+    "org.scalatest" %% "scalatest" % "2.2.4" % "test")
   )
 
 lazy val web = (project in file("./apibook-web")).enablePlugins(PlayScala).dependsOn(core)

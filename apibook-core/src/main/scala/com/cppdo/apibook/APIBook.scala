@@ -34,8 +34,13 @@ object APIBook extends LazyLogging {
     //search("scala")
     //testVersions()
     //testJar()
-    testSource()
+    //testSource()
+    testActor()
     logger.info("Bye")
+  }
+
+  def testActor() = {
+
   }
 
   def testSource() = {
