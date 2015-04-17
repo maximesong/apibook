@@ -11,6 +11,7 @@ import org.apache.lucene.index.IndexWriterConfig.OpenMode
 import org.apache.lucene.index._
 import org.apache.lucene.store.FSDirectory
 import org.objectweb.asm.tree.ClassNode
+import com.typesafe.config.ConfigFactory
 
 /**
  * Created by song on 3/4/15.

@@ -62,6 +62,20 @@ object DatabaseManager {
     result.getOrElse(packageFile)
   }
 
+  def add(klass: Class): Class = {
+    val insertAction = (classesTable returning classesTable.map(_.id)
+      into ((klass, id) => klass.copy(id=Some(id)))) insertOrUpdate klass
+    val result: Option[Class] = Await.result(db.run(insertAction), Duration.Inf)
+    result.getOrElse(klass)
+  }
+
+  def add(method: Method): Method = {
+    val insertAction = (methodsTable returning methodsTable.map(_.id)
+      into ((method, id) => method.copy(id=Some(id)))) insertOrUpdate method
+    val result: Option[Method] = Await.result(db.run(insertAction), Duration.Inf)
+    result.getOrElse(method)
+  }
+
   def exists(artifact: Artifact): Boolean = {
     val countQuery = artifactsTable.filter(a => a.group === artifact.group &&
       a.name === artifact.name && a.version === artifact.version)
@@ -75,12 +89,22 @@ object DatabaseManager {
 
   def getArtifacts(project: Project) : Seq[Artifact] = {
     val query = artifactsTable.filter(artifact => artifact.group === project.group && artifact.name === project.name)
-    Await.result(db.run(query.result),Duration.Inf)
+    Await.result(db.run(query.result), Duration.Inf)
   }
 
   def getArtifacts() : Seq[Artifact] = {
     val query = artifactsTable
-    Await.result(db.run(query.result),Duration.Inf)
+    Await.result(db.run(query.result), Duration.Inf)
+  }
+
+  def getClasses(artifact: Artifact): Seq[Class] = {
+    val query = classesTable.filter(klass => klass.artifactId === artifact.id)
+    Await.result(db.run(query.result), Duration.Inf)
+  }
+
+  def getMethods(klass: Class): Seq[Method] = {
+    val query = methodsTable.filter(method => method.classId === klass.id)
+    Await.result(db.run(query.result), Duration.Inf)
   }
 
   def getPackageFiles(artifact: Artifact): Seq[PackageFile] = {

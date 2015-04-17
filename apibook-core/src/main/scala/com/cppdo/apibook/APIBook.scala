@@ -48,6 +48,7 @@ object APIBook extends LazyLogging {
     val compilationUnits = JarManager.getCompilationUnits(jarFile)
     compilationUnits.foreach(cu => println(cu.getPackage.toString))
   }
+
   def search(query: String) = {
     val results = IndexManager.search(query)
     logger.info("HERE?" + results.size)
