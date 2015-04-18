@@ -4,6 +4,10 @@ import java.io.File
 import java.net.URL
 import java.nio.file.{Path, Paths, Files}
 
+import akka.actor.{Props, ActorSystem}
+import akka.routing.RoundRobinPool
+import com.cppdo.apibook.actor.ActorProtocols.{FetchPage}
+import com.cppdo.apibook.actor.FetchMavenProjectsActor
 import com.cppdo.apibook.ast.JarManager
 import com.cppdo.apibook.db._
 import com.cppdo.apibook.index.IndexManager
@@ -40,6 +44,11 @@ object APIBook extends LazyLogging {
   }
 
   def testActor() = {
+    val system = ActorSystem()
+    val rootActor = system.actorOf(RoundRobinPool(2).props(Props(new FetchMavenProjectsActor())))
+    (1 to 10).foreach(page => {
+      rootActor ! FetchPage(page)
+    })
 
   }
 

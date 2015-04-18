@@ -91,9 +91,13 @@ object MavenRepository extends LazyLogging {
     val pages = Math.ceil(n.toDouble / projectsPerPage).toInt
     val projects = (1 to pages).flatMap(page => {
       logger.info("Fetching page:" + page)
-      fetchFromProjectListPage(page, MavenWebPageParser.parseProjects)
+      fetchProjectsFromListPage(page)
     })
     projects.take(n)
+  }
+
+  def fetchProjectsFromListPage(page: Int): Seq[Project] = {
+    fetchFromProjectListPage(page, MavenWebPageParser.parseProjects)
   }
 
   private def fetchFrom[A](url: String, f: String => A): A = {

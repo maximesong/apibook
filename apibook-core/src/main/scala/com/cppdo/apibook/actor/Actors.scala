@@ -6,9 +6,10 @@ import java.nio.file.Paths
 
 import akka.actor.Actor
 import akka.actor.Actor.Receive
-import com.cppdo.apibook.actor.ActorProtocols.{FinishDownloadFile, DownloadFile}
+import com.cppdo.apibook.actor.ActorProtocols.{FetchPage, FinishDownloadFile, DownloadFile}
 import com.cppdo.apibook.ast.JarManager
-import com.cppdo.apibook.db.{DatabaseManager, Artifact}
+import com.cppdo.apibook.db.{Project, DatabaseManager, Artifact}
+import com.cppdo.apibook.repository.MavenRepository
 import org.apache.commons.io.FileUtils
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.index.{IndexWriter, IndexWriterConfig}
@@ -28,6 +29,7 @@ class TryActor extends Actor {
 object ActorProtocols {
   case class DownloadFile(fromUrl: String, toPath: String)
   case class FinishDownloadFile(fromUrl: String, toPath: String)
+  case class FetchPage(page: Int)
 }
 
 class BuildIndexActor(indexDirectoryPath: String) extends Actor {
@@ -64,6 +66,23 @@ class DownloadFileActor extends Actor {
 class ArtifactCollectActor extends Actor {
   override def receive: Actor.Receive = {
     ???
+  }
+}
+
+class FetchMavenProjectsActor extends Actor {
+  override def receive: Actor.Receive = {
+    case FetchPage(page) => {
+      val projects = MavenRepository.fetchProjectsFromListPage(page)
+      println(projects.size)
+    }
+  }
+}
+
+class FetchMavenArtifactsActor extends Actor {
+  override def receive: Actor.Receive = {
+    case project: Project => {
+      MavenRepository.fetchArtifactsOf(project)
+    }
   }
 }
 
