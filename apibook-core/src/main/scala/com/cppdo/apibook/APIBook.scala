@@ -6,8 +6,8 @@ import java.nio.file.{Path, Paths, Files}
 
 import akka.actor.{Props, ActorSystem}
 import akka.routing.RoundRobinPool
-import com.cppdo.apibook.actor.ActorProtocols.{FetchPage}
-import com.cppdo.apibook.actor.FetchMavenProjectsActor
+import com.cppdo.apibook.actor.ActorProtocols.FetchProjects
+import com.cppdo.apibook.actor.{ArtifactsCollectActor, DbWriteActor, MavenFetchActor}
 import com.cppdo.apibook.ast.JarManager
 import com.cppdo.apibook.db._
 import com.cppdo.apibook.index.IndexManager
@@ -45,10 +45,14 @@ object APIBook extends LazyLogging {
 
   def testActor() = {
     val system = ActorSystem()
-    val rootActor = system.actorOf(RoundRobinPool(2).props(Props(new FetchMavenProjectsActor())))
-    (1 to 10).foreach(page => {
-      rootActor ! FetchPage(page)
-    })
+    val mavenFetchActor = system.actorOf(
+      RoundRobinPool(3).props(Props(new MavenFetchActor())), "maven")
+
+    val storageActor = system.actorOf(Props(new DbWriteActor()), "db")
+
+    val artifactsCollector = system.actorOf(Props(new ArtifactsCollectActor(mavenFetchActor, storageActor)), "artifact")
+
+    mavenFetchActor ! FetchProjects(20, Some(artifactsCollector))
 
   }
 

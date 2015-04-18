@@ -87,6 +87,10 @@ object MavenRepository extends LazyLogging {
     }
   }
 
+  def pagesForTopProjects(n: Int): Range = {
+    1 to Math.ceil(n.toDouble / projectsPerPage).toInt
+  }
+
   def getTopProjects(n: Int = projectsPerPage) : Seq[Project] = {
     val pages = Math.ceil(n.toDouble / projectsPerPage).toInt
     val projects = (1 to pages).flatMap(page => {

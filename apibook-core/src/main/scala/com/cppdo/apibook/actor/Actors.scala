@@ -4,12 +4,13 @@ import java.io.File
 import java.net.URL
 import java.nio.file.Paths
 
-import akka.actor.Actor
+import akka.actor.{Actor, ActorRef}
 import akka.actor.Actor.Receive
-import com.cppdo.apibook.actor.ActorProtocols.{FetchPage, FinishDownloadFile, DownloadFile}
+import com.cppdo.apibook.actor.ActorProtocols._
 import com.cppdo.apibook.ast.JarManager
 import com.cppdo.apibook.db.{Project, DatabaseManager, Artifact}
 import com.cppdo.apibook.repository.MavenRepository
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.index.{IndexWriter, IndexWriterConfig}
@@ -29,7 +30,11 @@ class TryActor extends Actor {
 object ActorProtocols {
   case class DownloadFile(fromUrl: String, toPath: String)
   case class FinishDownloadFile(fromUrl: String, toPath: String)
-  case class FetchPage(page: Int)
+  case class FetchProjectListPage(page: Int, receiver: Option[ActorRef] = None)
+  case class FetchProjects(n: Int, receiver: Option[ActorRef] = None)
+  case class FetchArtifacts(project: Project, receiver: Option[ActorRef] = None)
+  case class SaveProject(project: Project)
+  case class SaveArtifact(artifact: Artifact)
 }
 
 class BuildIndexActor(indexDirectoryPath: String) extends Actor {
@@ -63,25 +68,50 @@ class DownloadFileActor extends Actor {
   }
 }
 
-class ArtifactCollectActor extends Actor {
+class ArtifactsCollectActor(fetchActor: ActorRef, storageActor: ActorRef) extends Actor with LazyLogging {
   override def receive: Actor.Receive = {
-    ???
-  }
-}
-
-class FetchMavenProjectsActor extends Actor {
-  override def receive: Actor.Receive = {
-    case FetchPage(page) => {
-      val projects = MavenRepository.fetchProjectsFromListPage(page)
-      println(projects.size)
+    case project: Project => {
+      logger.info(s"collect project $project")
+      storageActor ! SaveProject(project)
+      fetchActor ! FetchArtifacts(project)
+    }
+    case artifact: Artifact => {
+      logger.info(artifact.toString)
+      storageActor ! SaveArtifact(artifact)
     }
   }
 }
 
-class FetchMavenArtifactsActor extends Actor {
+class MavenFetchActor extends Actor with LazyLogging {
   override def receive: Actor.Receive = {
-    case project: Project => {
-      MavenRepository.fetchArtifactsOf(project)
+    case FetchProjectListPage(page, receiver) => {
+      val projects = MavenRepository.fetchProjectsFromListPage(page)
+      projects.foreach(project => {
+        receiver.getOrElse(sender()) ! project
+      })
+    }
+    case FetchProjects(n, receiver) => {
+      MavenRepository.pagesForTopProjects(n).foreach(page => {
+        self ! FetchProjectListPage(page, receiver)
+      })
+    }
+    case FetchArtifacts(project, receiver) => {
+      val artifacts = MavenRepository.fetchArtifactsOf(project)
+      artifacts.foreach(artifact => {
+        logger.info(artifact.name)
+        receiver.getOrElse(sender()) ! artifact
+      })
+    }
+  }
+}
+
+class DbWriteActor extends Actor {
+  override def receive: Actor.Receive = {
+    case SaveProject(project) => {
+      DatabaseManager.add(project)
+    }
+    case SaveArtifact(artifact) => {
+      DatabaseManager.add(artifact)
     }
   }
 }
