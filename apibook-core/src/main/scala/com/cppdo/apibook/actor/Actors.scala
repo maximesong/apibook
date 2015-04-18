@@ -4,12 +4,13 @@ import java.io.File
 import java.net.URL
 import java.nio.file.Paths
 
-import akka.actor.{Actor, ActorRef}
+import akka.actor.{Props, Actor, ActorRef}
 import akka.actor.Actor.Receive
+import akka.routing.RoundRobinPool
 import com.cppdo.apibook.actor.ActorProtocols._
 import com.cppdo.apibook.ast.JarManager
 import com.cppdo.apibook.db.{Project, DatabaseManager, Artifact}
-import com.cppdo.apibook.repository.MavenRepository
+import com.cppdo.apibook.repository.{ArtifactsManager, MavenRepository}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.apache.lucene.analysis.standard.StandardAnalyzer
@@ -17,6 +18,7 @@ import org.apache.lucene.index.{IndexWriter, IndexWriterConfig}
 import org.apache.lucene.index.IndexWriterConfig.OpenMode
 import org.apache.lucene.store.FSDirectory
 import scala.concurrent._
+import com.cppdo.apibook.repository.MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
 import ExecutionContext.Implicits.global
 
 /**
@@ -33,8 +35,9 @@ object ActorProtocols {
   case class FetchProjectListPage(page: Int, receiver: Option[ActorRef] = None)
   case class FetchProjects(n: Int, receiver: Option[ActorRef] = None)
   case class FetchArtifacts(project: Project, receiver: Option[ActorRef] = None)
-  case class SaveProject(project: Project)
-  case class SaveArtifact(artifact: Artifact)
+  case class SaveProject(project: Project, receiver: Option[ActorRef] = None)
+  case class SaveArtifact(artifact: Artifact, receiver: Option[ActorRef] = None)
+  case class FetchLatestPackages()
 }
 
 class BuildIndexActor(indexDirectoryPath: String) extends Actor {
@@ -105,15 +108,34 @@ class MavenFetchActor extends Actor with LazyLogging {
   }
 }
 
+class PackageFetchActor extends Actor with LazyLogging {
+
+  var downloadWorker: ActorRef = null
+
+  override def preStart() = {
+    downloadWorker = context.actorOf(RoundRobinPool(5).props(Props[DownloadFileActor]))
+  }
+
+  override def receive: Actor.Receive = {
+    case FetchLatestPackages => {
+      val artifacts = ArtifactsManager.getLatestArtifacts
+    }
+    case artifact: Artifact => {
+      downloadWorker ! DownloadFile(artifact.libraryPackageUrl, artifact.libraryPackagePath)
+      downloadWorker ! DownloadFile(artifact.sourcePackageUrl, artifact.sourcePackagePath)
+    }
+  }
+}
+
 class DbWriteActor extends Actor with LazyLogging {
   override def receive: Actor.Receive = {
     case SaveProject(project) => {
       logger.info(s"saving $project")
-      DatabaseManager.add(project)
+      val projectSaved = DatabaseManager.add(project)
     }
     case SaveArtifact(artifact) => {
       //logger.info(s"saving $artifact")
-      DatabaseManager.add(artifact)
+      val artifactSaved = DatabaseManager.add(artifact)
     }
   }
 }

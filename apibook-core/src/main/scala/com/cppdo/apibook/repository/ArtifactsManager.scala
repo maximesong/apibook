@@ -51,6 +51,13 @@ object ArtifactsManager extends LazyLogging {
     println(projects.size)
   }
 
+  def getLatestArtifacts: Seq[Artifact] = {
+    val projects = DatabaseManager.getProjects()
+    projects.flatMap(project => {
+      DatabaseManager.getArtifacts(project).takeLatestVersion
+    })
+  }
+
   def buildIndex(artifact: Artifact) =  {
     val packageFiles = DatabaseManager.getPackageFiles(artifact)
     packageFiles.filter(_.packageType == "library").foreach(packageFile => {
