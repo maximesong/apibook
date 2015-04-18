@@ -3,8 +3,9 @@ package com.cppdo.apibook.db
 import slick.driver.SQLiteDriver.api._
 import slick.jdbc.meta.MTable
 
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.Duration
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * Created by song on 3/10/15.
@@ -35,6 +36,17 @@ object DatabaseManager {
       createTableActions: _*
     )
     Await.result(db.run(setup), Duration.Inf)
+  }
+
+  def addAsync(project: Project): Future[Project] = {
+    val insertAction = (projectsTable += project)
+    db.run(insertAction).map(_ => project)
+  }
+
+  def addAsync(artifact: Artifact): Future[Artifact] = {
+    val insertAction = (artifactsTable returning artifactsTable.map(_.id)
+      into ((a, id) => a.copy(id=Some(id)))) += artifact
+    db.run(insertAction)
   }
 
   def add(project: Project): Project = {

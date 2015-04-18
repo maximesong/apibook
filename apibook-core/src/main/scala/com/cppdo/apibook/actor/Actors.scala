@@ -71,12 +71,12 @@ class DownloadFileActor extends Actor {
 class ArtifactsCollectActor(fetchActor: ActorRef, storageActor: ActorRef) extends Actor with LazyLogging {
   override def receive: Actor.Receive = {
     case project: Project => {
-      logger.info(s"collect project $project")
+      logger.info(s"collecting project $project")
       storageActor ! SaveProject(project)
-      fetchActor ! FetchArtifacts(project)
+      //fetchActor ! FetchArtifacts(project)
     }
     case artifact: Artifact => {
-      logger.info(artifact.toString)
+      //logger.info(artifact.toString)
       storageActor ! SaveArtifact(artifact)
     }
   }
@@ -98,19 +98,21 @@ class MavenFetchActor extends Actor with LazyLogging {
     case FetchArtifacts(project, receiver) => {
       val artifacts = MavenRepository.fetchArtifactsOf(project)
       artifacts.foreach(artifact => {
-        logger.info(artifact.name)
+        //logger.info(artifact.name)
         receiver.getOrElse(sender()) ! artifact
       })
     }
   }
 }
 
-class DbWriteActor extends Actor {
+class DbWriteActor extends Actor with LazyLogging {
   override def receive: Actor.Receive = {
     case SaveProject(project) => {
+      logger.info(s"saving $project")
       DatabaseManager.add(project)
     }
     case SaveArtifact(artifact) => {
+      //logger.info(s"saving $artifact")
       DatabaseManager.add(artifact)
     }
   }
