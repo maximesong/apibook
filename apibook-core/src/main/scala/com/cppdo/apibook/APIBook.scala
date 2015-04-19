@@ -6,8 +6,8 @@ import java.nio.file.{Path, Paths, Files}
 
 import akka.actor.{Props, ActorSystem}
 import akka.routing.RoundRobinPool
-import com.cppdo.apibook.actor.ActorProtocols.{FetchLatestPackages, FetchProjects}
-import com.cppdo.apibook.actor.{PackageFetchActor, ArtifactsCollectActor, DbWriteActor, MavenFetchActor}
+import com.cppdo.apibook.actor.ActorProtocols.{AnalyzeAndSave, FetchLatestPackages, FetchProjects}
+import com.cppdo.apibook.actor._
 import com.cppdo.apibook.ast.JarManager
 import com.cppdo.apibook.db._
 import com.cppdo.apibook.index.IndexManager
@@ -41,7 +41,9 @@ object APIBook extends LazyLogging {
     //testJar()
     //testSource()
     //testActor()
-    downloadPackages()
+    //downloadPackages()
+    analyze()
+    //tryAnalyze()
     logger.info("Bye")
   }
 
@@ -50,6 +52,22 @@ object APIBook extends LazyLogging {
     val storageActor = system.actorOf(Props(new DbWriteActor()), "db")
     val fetchActor = system.actorOf(Props(new PackageFetchActor(storageActor)))
     fetchActor ! FetchLatestPackages()
+  }
+
+  def tryAnalyze() = {
+    val system = ActorSystem()
+    val storageActor = system.actorOf(Props(new DbWriteActor()), "db")
+    val analyzer = system.actorOf(Props(new ArtifactAnalyzer(storageActor)))
+    val project = DatabaseManager.getProjects().head
+    DatabaseManager.getArtifacts(project).takeLatestVersion.foreach(artifact => {
+      analyzer ! artifact
+    })
+  }
+  def analyze() = {
+    val system = ActorSystem()
+    val storageActor = system.actorOf(Props(new DbWriteActor()), "db")
+    val analyzer = system.actorOf(Props(new ArtifactAnalyzer(storageActor)))
+    analyzer ! AnalyzeAndSave()
   }
 
   def testActor() = {
@@ -61,7 +79,7 @@ object APIBook extends LazyLogging {
 
     val artifactsCollector = system.actorOf(Props(new ArtifactsCollectActor(mavenFetchActor, storageActor)), "artifact")
 
-    mavenFetchActor ! FetchProjects(100, Some(artifactsCollector))
+    mavenFetchActor ! FetchProjects(5, Some(artifactsCollector))
 
   }
 

@@ -28,12 +28,6 @@ object JarManager {
     classNodes
   }
 
-  def getMethodNodes(classNode: ClassNode): Seq[MethodNode] = {
-    classNode.methods.asScala.map({ case methodNode: MethodNode =>
-        methodNode
-    }).toSeq
-  }
-
   def getCompilationUnits(jarPath: String): Seq[CompilationUnit] = {
     val jarFile = new JarFile(jarPath)
     val sourceEntries = jarFile.entries().asScala.filter(_.getName endsWith ".java")

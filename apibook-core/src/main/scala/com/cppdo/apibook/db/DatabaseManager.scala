@@ -1,5 +1,6 @@
 package com.cppdo.apibook.db
 
+import com.cppdo.apibook.repository.ArtifactsManager.PackageType
 import slick.driver.SQLiteDriver.api._
 import slick.jdbc.meta.MTable
 
@@ -127,7 +128,7 @@ object DatabaseManager {
   def getLibraryPackageFile(artifact: Artifact): Option[PackageFile] = {
     val query = packageFilesTable.filter(packageFile => packageFile.artifactId === artifact.id)
     val packageFiles : Seq[PackageFile] = Await.result(db.run(query.result), Duration.Inf)
-    val libraryPackageFiles = packageFiles.filter(file => file.packageType == "library")
+    val libraryPackageFiles = packageFiles.filter(file => file.packageType == PackageType.Library.toString)
     libraryPackageFiles.headOption
   }
 

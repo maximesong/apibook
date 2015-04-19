@@ -33,33 +33,35 @@ class Artifacts(tag: Tag) extends Table[Artifact](tag, "ARTIFACTS") {
   def * = (name, group, version, id.?) <> (Artifact.tupled, Artifact.unapply)
 }
 
-case class Class(fullName: String, artifactId: Int, id: Option[Int] = None)
+case class Class(fullName: String, fieldNames: String, artifactId: Int, id: Option[Int] = None)
 
 class Classes(tag: Tag) extends Table[Class](tag, "CLASSES") {
   def id = column[Int]("ID", O.PrimaryKey, O.AutoInc)
   def fullName = column[String]("FULL_NAME")
+  def fieldNames = column[String]("FIELDS")
   def artifactId = column[Int]("ARTIFACT_ID")
 
   def artifact = foreignKey("ARTIFACT_FK", artifactId, TableQuery[Artifacts])(t => t.id)
 
-  def * = (fullName, artifactId, id.?) <> (Class.tupled, Class.unapply)
+  def * = (fullName, fieldNames, artifactId, id.?) <> (Class.tupled, Class.unapply)
 }
 
-case class Method(name: String, signature: String, enclosingClassId: Int, id: Option[Int] = None)
+case class Method(name: String, signature: String, parameters: String, enclosingClassId: Int, id: Option[Int] = None)
 
 
 class Methods(tag: Tag) extends Table[Method](tag, "METHODS") {
   def id = column[Int]("ID", O.PrimaryKey, O.AutoInc)
   def name = column[String]("NAME")
   def signature = column[String]("SIGNATURE")
+  def parameters = column[String]("PARAMETERS")
   def classId = column[Int]("CLASS_ID")
 
   def klass = foreignKey("CLASS_FK", classId, TableQuery[Classes])(t => t.id)
 
-  def * = (name, signature, classId, id.?) <> (Method.tupled, Method.unapply)
+  def * = (name, signature, parameters, classId, id.?) <> (Method.tupled, Method.unapply)
 }
 
-case class PackageFile(artifactId: Int, packageType: String, path: String, id: Option[Int] = None)
+case class PackageFile(artifactId: Int, packageType: String, relativePath: String, id: Option[Int] = None)
 
 class PackageFiles(tag: Tag) extends Table[PackageFile](tag, "PACKAGE_FILES") {
   def id = column[Int]("ID", O.PrimaryKey, O.AutoInc)

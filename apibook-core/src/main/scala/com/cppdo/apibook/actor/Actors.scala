@@ -4,13 +4,14 @@ import java.io.{FileNotFoundException, File}
 import java.net.URL
 import java.nio.file.Paths
 
-import akka.actor.{Props, Actor, ActorRef}
+import akka.actor.{Actor, Props, ActorRef}
 import akka.actor.Actor.Receive
 import akka.routing.RoundRobinPool
 import com.cppdo.apibook.actor.ActorProtocols._
-import com.cppdo.apibook.ast.JarManager
-import com.cppdo.apibook.db.{PackageFile, Project, DatabaseManager, Artifact}
-import com.cppdo.apibook.repository.ArtifactsManager.{PackageType, RichArtifact}
+import com.cppdo.apibook.ast.{AstTreeManager, JarManager}
+import com.cppdo.apibook.db._
+import com.cppdo.apibook.repository.ArtifactsManager.{PackageType, RichArtifact, RichPackageFile}
+import com.cppdo.apibook.ast.AstTreeManager.{RichMethodNode, RichClassNode}
 import com.cppdo.apibook.repository.{ArtifactsManager, MavenRepository}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
@@ -18,6 +19,7 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.index.{IndexWriter, IndexWriterConfig}
 import org.apache.lucene.index.IndexWriterConfig.OpenMode
 import org.apache.lucene.store.FSDirectory
+import org.objectweb.asm.tree.ClassNode
 import scala.concurrent._
 import com.cppdo.apibook.repository.MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
 import ExecutionContext.Implicits.global
@@ -40,7 +42,14 @@ object ActorProtocols {
   case class SaveProject(project: Project, receiver: Option[ActorRef] = None)
   case class SaveArtifact(artifact: Artifact, receiver: Option[ActorRef] = None)
   case class SavePackageFile(packageFile: PackageFile, receiver: Option[ActorRef] = None)
+  case class SaveClass(klass: Class, receiver: Option[ActorRef] = None)
+  case class ClassSaved(klass: Class)
+  case class ReadLibraryPackage(artifact: Artifact, receiver: Option[ActorRef] = None)
+  case class LibraryPackageResult(artifact: Artifact, libraryPackageFile: Option[PackageFile])
+  case class SaveMethod(method: Method, receiver: Option[ActorRef] = None)
+  case class MethodSaved(method: Method)
   case class FetchLatestPackages()
+  case class AnalyzeAndSave()
 }
 
 class BuildIndexActor(indexDirectoryPath: String) extends Actor {
@@ -160,22 +169,73 @@ class DbWriteActor extends Actor with LazyLogging {
     case SavePackageFile(packageFile, receiver) => {
       val packageFileSaved = DatabaseManager.add(packageFile)
     }
+    case SaveClass(klass, receiver) => {
+      //logger.info("SaveClass?")
+      val klassSaved = DatabaseManager.add(klass)
+      receiver.getOrElse(sender()) ! ClassSaved(klassSaved)
+    }
+    case SaveMethod(method, receiver) => {
+      val methodSaved = DatabaseManager.add(method)
+      receiver.getOrElse(sender()) ! MethodSaved(methodSaved)
+    }
+    case ReadLibraryPackage(artifact, receiver) => {
+      val libraryPackage = DatabaseManager.getLibraryPackageFile(artifact)
+      receiver.getOrElse(sender()) ! libraryPackage
+    }
   }
 }
 
-class ArtifactAnalyzer extends Actor {
+class ArtifactAnalyzer(storageActor: ActorRef)  extends Actor with LazyLogging {
   override def receive: Actor.Receive = {
+    case _: AnalyzeAndSave => {
+      val artifacts = DatabaseManager.getArtifacts()
+      artifacts.foreach(artifact => {
+        logger.info(s"analyzing $artifact")
+        self ! artifact
+      })
+    }
     case artifact: Artifact => {
       val optionLibraryPackage = DatabaseManager.getLibraryPackageFile(artifact)
       optionLibraryPackage.foreach(libraryPackage => {
-        val classNodes = JarManager.getClassNodes(libraryPackage.path)
-        classNodes.foreach(classNode => {
-          val methodNodes = JarManager.getMethodNodes(classNode)
-          methodNodes.foreach(methodNode => {
-            println(methodNode)
+
+
+      })
+    }
+    case LibraryPackageResult(artifact, libraryPackage) => {
+      try {
+        libraryPackage.foreach(packageFile => {
+          val classNodes = JarManager.getClassNodes(packageFile.fullPath)
+          classNodes.foreach(classNode => {
+            if (classNode.isPublic) {
+              val actor = context.actorOf(Props(new ClassNodeAnalyzer(artifact, classNode, storageActor)))
+              actor ! AnalyzeAndSave()
+            }
           })
         })
+      } catch {
+        case e: FileNotFoundException => {
+          logger.warn(e.toString)
+        }
+      }
+    }
+  }
+}
+
+class ClassNodeAnalyzer(artifact: Artifact, classNode: ClassNode, storageActor: ActorRef) extends Actor with LazyLogging {
+  override def receive: Actor.Receive = {
+    case _: AnalyzeAndSave => {
+      //logger.info("HAHA")
+      classNode.fields
+      storageActor ! SaveClass(AstTreeManager.buildFrom(classNode, artifact))
+    }
+    case ClassSaved(klass) => {
+      logger.info(s"Analyzing $klass")
+      AstTreeManager.methodNodesOf(classNode).foreach(methodNode => {
+        storageActor ! SaveMethod(AstTreeManager.buildFrom(methodNode, klass))
       })
+    }
+    case message => {
+      logger.info(message.toString)
     }
   }
 }

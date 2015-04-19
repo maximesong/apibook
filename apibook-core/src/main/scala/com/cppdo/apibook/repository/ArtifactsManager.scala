@@ -65,7 +65,7 @@ object ArtifactsManager extends LazyLogging {
   def buildIndex(artifact: Artifact) =  {
     val packageFiles = DatabaseManager.getPackageFiles(artifact)
     packageFiles.filter(_.packageType == PackageType.Library.toString).foreach(packageFile => {
-      val fullPath = getPackageFileFullPath(packageFile.path)
+      val fullPath = getPackageFileFullPath(packageFile.relativePath)
       val classNodes = JarManager.getClassNodes(fullPath)
       IndexManager.buildIndex(classNodes)
     })
@@ -83,7 +83,7 @@ object ArtifactsManager extends LazyLogging {
   def analysisArtifact(artifact: Artifact) = {
     val libraryPackageFile = DatabaseManager.getLibraryPackageFile(artifact)
     libraryPackageFile.foreach(library => {
-      val fullPath = getPackageFileFullPath(library.path)
+      val fullPath = getPackageFileFullPath(library.relativePath)
       val classNodes = JarManager.getClassNodes(fullPath)
       classNodes.foreach(classNode => {
         classNode.fields
@@ -96,5 +96,9 @@ object ArtifactsManager extends LazyLogging {
     def fullLibraryPackagePath = s"${baseDirectory}/${artifact.relativeLibraryPackagePath}"
 
     def fullSourcePackagePath = s"${baseDirectory}/${artifact.relativeSourcePackagePath}"
+  }
+
+  implicit class RichPackageFile(packageFile: PackageFile) {
+    def fullPath = s"${baseDirectory}/${packageFile.relativePath}"
   }
 }
