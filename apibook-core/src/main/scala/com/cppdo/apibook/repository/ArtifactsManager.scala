@@ -14,6 +14,10 @@ import org.apache.commons.io.FileUtils
  * Created by song on 3/1/15.
  */
 object ArtifactsManager extends LazyLogging {
+  object PackageType extends Enumeration {
+    type PackageType = Value
+    val Library, Source = Value
+  }
   val baseDirectory = "repository"
 
   def fetchTopProjectsAndArtifactsToDb(projectsNum: Int) = {
@@ -29,7 +33,7 @@ object ArtifactsManager extends LazyLogging {
   }
 
   private def downloadFile(url: String, savePath: String) = {
-    FileUtils.copyURLToFile(new URL(url), new File(getPackageFileFullPath(savePath)))
+    FileUtils.copyURLToFile(new URL(url), new File(savePath))
   }
 
   def downloadLatestPackages = {
@@ -37,11 +41,11 @@ object ArtifactsManager extends LazyLogging {
     projects.foreach(project => {
       val artifacts = DatabaseManager.getArtifacts(project)
       artifacts.takeLatestVersion.foreach(artifact => {
-        downloadFile(artifact.libraryPackageUrl, artifact.libraryPackagePath)
-        DatabaseManager.add(PackageFile(artifact.id.get, "library", artifact.libraryPackagePath))
+        downloadFile(artifact.libraryPackageUrl, artifact.fullLibraryPackagePath)
+        DatabaseManager.add(PackageFile(artifact.id.get, PackageType.Library.toString, artifact.relativeLibraryPackagePath))
         try {
-          downloadFile(artifact.sourcePackageUrl, artifact.sourcePackagePath)
-          DatabaseManager.add(PackageFile(artifact.id.get, "source", artifact.sourcePackagePath))
+          downloadFile(artifact.sourcePackageUrl, artifact.fullSourcePackagePath)
+          DatabaseManager.add(PackageFile(artifact.id.get, PackageType.Source.toString, artifact.relativeSourcePackagePath))
         } catch {
           case e: FileNotFoundException => logger.warn("Fail to download: " + artifact.toString)
         }
@@ -60,14 +64,14 @@ object ArtifactsManager extends LazyLogging {
 
   def buildIndex(artifact: Artifact) =  {
     val packageFiles = DatabaseManager.getPackageFiles(artifact)
-    packageFiles.filter(_.packageType == "library").foreach(packageFile => {
+    packageFiles.filter(_.packageType == PackageType.Library.toString).foreach(packageFile => {
       val fullPath = getPackageFileFullPath(packageFile.path)
       val classNodes = JarManager.getClassNodes(fullPath)
       IndexManager.buildIndex(classNodes)
     })
   }
 
-  private def getPackageFileFullPath(relativePath: String) = {
+  def getPackageFileFullPath(relativePath: String) = {
     s"${baseDirectory}/${relativePath}"
   }
 
@@ -85,5 +89,12 @@ object ArtifactsManager extends LazyLogging {
         classNode.fields
       })
     })
+  }
+
+  implicit class RichArtifact(artifact: Artifact) {
+
+    def fullLibraryPackagePath = s"${baseDirectory}/${artifact.relativeLibraryPackagePath}"
+
+    def fullSourcePackagePath = s"${baseDirectory}/${artifact.relativeSourcePackagePath}"
   }
 }

@@ -1,6 +1,6 @@
 package com.cppdo.apibook.actor
 
-import java.io.File
+import java.io.{FileNotFoundException, File}
 import java.net.URL
 import java.nio.file.Paths
 
@@ -9,7 +9,8 @@ import akka.actor.Actor.Receive
 import akka.routing.RoundRobinPool
 import com.cppdo.apibook.actor.ActorProtocols._
 import com.cppdo.apibook.ast.JarManager
-import com.cppdo.apibook.db.{Project, DatabaseManager, Artifact}
+import com.cppdo.apibook.db.{PackageFile, Project, DatabaseManager, Artifact}
+import com.cppdo.apibook.repository.ArtifactsManager.{PackageType, RichArtifact}
 import com.cppdo.apibook.repository.{ArtifactsManager, MavenRepository}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
@@ -32,11 +33,13 @@ class TryActor extends Actor {
 object ActorProtocols {
   case class DownloadFile(fromUrl: String, toPath: String)
   case class FinishDownloadFile(fromUrl: String, toPath: String)
+  case class FailDownloadFile(fromUrl: String, toPath: String, e: Exception)
   case class FetchProjectListPage(page: Int, receiver: Option[ActorRef] = None)
   case class FetchProjects(n: Int, receiver: Option[ActorRef] = None)
   case class FetchArtifacts(project: Project, receiver: Option[ActorRef] = None)
   case class SaveProject(project: Project, receiver: Option[ActorRef] = None)
   case class SaveArtifact(artifact: Artifact, receiver: Option[ActorRef] = None)
+  case class SavePackageFile(packageFile: PackageFile, receiver: Option[ActorRef] = None)
   case class FetchLatestPackages()
 }
 
@@ -65,7 +68,14 @@ class BuildIndexActor(indexDirectoryPath: String) extends Actor {
 class DownloadFileActor extends Actor {
   override def receive: Actor.Receive = {
     case DownloadFile(fromUrl, toPath) => {
+      try {
         FileUtils.copyURLToFile(new URL(fromUrl), new File(toPath))
+      } catch {
+        case e: FileNotFoundException => {
+          sender() ! FailDownloadFile(fromUrl, toPath, e)
+        }
+      }
+
       sender() ! FinishDownloadFile(fromUrl, toPath)
     }
   }
@@ -76,7 +86,7 @@ class ArtifactsCollectActor(fetchActor: ActorRef, storageActor: ActorRef) extend
     case project: Project => {
       logger.info(s"collecting project $project")
       storageActor ! SaveProject(project)
-      //fetchActor ! FetchArtifacts(project)
+      fetchActor ! FetchArtifacts(project)
     }
     case artifact: Artifact => {
       //logger.info(artifact.toString)
@@ -108,34 +118,47 @@ class MavenFetchActor extends Actor with LazyLogging {
   }
 }
 
-class PackageFetchActor extends Actor with LazyLogging {
+class PackageFetchActor(storageActor: ActorRef) extends Actor with LazyLogging {
 
   var downloadWorker: ActorRef = null
 
   override def preStart() = {
+    logger.info("??")
     downloadWorker = context.actorOf(RoundRobinPool(5).props(Props[DownloadFileActor]))
   }
 
   override def receive: Actor.Receive = {
-    case FetchLatestPackages => {
+    case _: FetchLatestPackages => {
       val artifacts = ArtifactsManager.getLatestArtifacts
+      artifacts.foreach(artifact => {
+        self ! artifact
+      })
     }
     case artifact: Artifact => {
-      downloadWorker ! DownloadFile(artifact.libraryPackageUrl, artifact.libraryPackagePath)
-      downloadWorker ! DownloadFile(artifact.sourcePackageUrl, artifact.sourcePackagePath)
+      logger.info(s"downloading package for $artifact")
+      downloadWorker ! DownloadFile(artifact.libraryPackageUrl, artifact.fullLibraryPackagePath)
+      storageActor ! SavePackageFile(PackageFile(artifact.id.get, PackageType.Library.toString, artifact.relativeLibraryPackagePath))
+      downloadWorker ! DownloadFile(artifact.sourcePackageUrl, artifact.fullSourcePackagePath)
+      storageActor ! SavePackageFile(PackageFile(artifact.id.get, PackageType.Source.toString, artifact.relativeSourcePackagePath))
+    }
+    case message => {
+      //logger.info(s"What $message")
     }
   }
 }
 
 class DbWriteActor extends Actor with LazyLogging {
   override def receive: Actor.Receive = {
-    case SaveProject(project) => {
+    case SaveProject(project, receiver) => {
       logger.info(s"saving $project")
       val projectSaved = DatabaseManager.add(project)
     }
-    case SaveArtifact(artifact) => {
+    case SaveArtifact(artifact, receiver) => {
       //logger.info(s"saving $artifact")
       val artifactSaved = DatabaseManager.add(artifact)
+    }
+    case SavePackageFile(packageFile, receiver) => {
+      val packageFileSaved = DatabaseManager.add(packageFile)
     }
   }
 }

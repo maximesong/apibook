@@ -6,12 +6,13 @@ import java.nio.file.{Path, Paths, Files}
 
 import akka.actor.{Props, ActorSystem}
 import akka.routing.RoundRobinPool
-import com.cppdo.apibook.actor.ActorProtocols.FetchProjects
-import com.cppdo.apibook.actor.{ArtifactsCollectActor, DbWriteActor, MavenFetchActor}
+import com.cppdo.apibook.actor.ActorProtocols.{FetchLatestPackages, FetchProjects}
+import com.cppdo.apibook.actor.{PackageFetchActor, ArtifactsCollectActor, DbWriteActor, MavenFetchActor}
 import com.cppdo.apibook.ast.JarManager
 import com.cppdo.apibook.db._
 import com.cppdo.apibook.index.IndexManager
 import com.cppdo.apibook.repository.{ArtifactsManager, MavenRepository}
+import com.cppdo.apibook.repository.ArtifactsManager.RichArtifact
 import com.cppdo.apibook.repository.MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
@@ -39,8 +40,16 @@ object APIBook extends LazyLogging {
     //testVersions()
     //testJar()
     //testSource()
-    testActor()
+    //testActor()
+    downloadPackages()
     logger.info("Bye")
+  }
+
+  def downloadPackages() = {
+    val system = ActorSystem()
+    val storageActor = system.actorOf(Props(new DbWriteActor()), "db")
+    val fetchActor = system.actorOf(Props(new PackageFetchActor(storageActor)))
+    fetchActor ! FetchLatestPackages()
   }
 
   def testActor() = {
@@ -52,7 +61,7 @@ object APIBook extends LazyLogging {
 
     val artifactsCollector = system.actorOf(Props(new ArtifactsCollectActor(mavenFetchActor, storageActor)), "artifact")
 
-    mavenFetchActor ! FetchProjects(20, Some(artifactsCollector))
+    mavenFetchActor ! FetchProjects(100, Some(artifactsCollector))
 
   }
 
@@ -110,8 +119,8 @@ object APIBook extends LazyLogging {
     val latestArtifacts = projects.flatMap(_.fetchArtifacts.takeLatestVersion)
     latestArtifacts.foreach(artifact => {
       println(s"Downloading artifacts of ${artifact.name}...")
-      FileUtils.copyURLToFile(new URL(artifact.libraryPackageUrl), new File(s"${baseDirectory}/${artifact.libraryPackagePath}"))
-      FileUtils.copyURLToFile(new URL(artifact.sourcePackageUrl), new File(s"${baseDirectory}/${artifact.sourcePackagePath}"))
+      FileUtils.copyURLToFile(new URL(artifact.libraryPackageUrl), new File(artifact.fullLibraryPackagePath))
+      FileUtils.copyURLToFile(new URL(artifact.sourcePackageUrl), new File(artifact.fullSourcePackagePath))
       //new URL(artifact.libraryPackageUrl) #> new File(artifact.libraryPackagePath) !!
     })
       //val insertActions = projects.map(project => projectsTable.insertOrUpdate(project))

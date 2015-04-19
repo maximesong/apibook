@@ -160,9 +160,9 @@ object MavenRepository extends LazyLogging {
 
     def artifactPath: String = s"${artifact.group}/${artifact.name}/${artifact.version}"
 
-    def libraryPackagePath = s"${artifact.artifactPath}/${artifact.name}-${artifact.version}.jar"
+    def relativeLibraryPackagePath = s"${artifact.artifactPath}/${artifact.name}-${artifact.version}.jar"
 
-    def sourcePackagePath = s"${artifact.artifactPath}/${artifact.name}-${artifact.version}-sources.jar"
+    def relativeSourcePackagePath = s"${artifact.artifactPath}/${artifact.name}-${artifact.version}-sources.jar"
   }
 
   implicit class MavenArtifactSeq(artifacts: Seq[Artifact]) {

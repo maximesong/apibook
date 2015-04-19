@@ -65,10 +65,10 @@ class PackageFiles(tag: Tag) extends Table[PackageFile](tag, "PACKAGE_FILES") {
   def id = column[Int]("ID", O.PrimaryKey, O.AutoInc)
   def artifactId = column[Int]("ARTIFACT_ID")
   def packageType = column[String]("PACKAGE_TYPE")
-  def path = column[String]("PATH")
+  def relativePath = column[String]("RELATIVE_PATH")
 
   def artifact = foreignKey("ARTIFACT_FK", artifactId, TableQuery[Artifacts])(t => t.id)
   def idx = index("IDX_PACKAGE_FILE", (artifactId, packageType), unique=true)
 
-  def * = (artifactId, packageType, path, id.?) <> (PackageFile.tupled, PackageFile.unapply)
+  def * = (artifactId, packageType, relativePath, id.?) <> (PackageFile.tupled, PackageFile.unapply)
 }

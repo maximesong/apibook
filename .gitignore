@@ -3,5 +3,5 @@
 /data
 target
 /repository
-db.sqlite
+*.sqlite
 .history
