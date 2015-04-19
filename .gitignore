@@ -5,3 +5,4 @@ target
 /repository
 *.sqlite
 .history
+db.sqlite-journal

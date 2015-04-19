@@ -180,7 +180,7 @@ class DbWriteActor extends Actor with LazyLogging {
     }
     case ReadLibraryPackage(artifact, receiver) => {
       val libraryPackage = DatabaseManager.getLibraryPackageFile(artifact)
-      receiver.getOrElse(sender()) ! libraryPackage
+      receiver.getOrElse(sender()) ! LibraryPackageResult(artifact, libraryPackage)
     }
   }
 }
@@ -195,18 +195,14 @@ class ArtifactAnalyzer(storageActor: ActorRef)  extends Actor with LazyLogging {
       })
     }
     case artifact: Artifact => {
-      val optionLibraryPackage = DatabaseManager.getLibraryPackageFile(artifact)
-      optionLibraryPackage.foreach(libraryPackage => {
-
-
-      })
+      storageActor ! ReadLibraryPackage(artifact)
     }
     case LibraryPackageResult(artifact, libraryPackage) => {
       try {
         libraryPackage.foreach(packageFile => {
           val classNodes = JarManager.getClassNodes(packageFile.fullPath)
           classNodes.foreach(classNode => {
-            if (classNode.isPublic) {
+            if (classNode.isPublic && classNode.isRegular) {
               val actor = context.actorOf(Props(new ClassNodeAnalyzer(artifact, classNode, storageActor)))
               actor ! AnalyzeAndSave()
             }
@@ -229,7 +225,7 @@ class ClassNodeAnalyzer(artifact: Artifact, classNode: ClassNode, storageActor: 
       storageActor ! SaveClass(AstTreeManager.buildFrom(classNode, artifact))
     }
     case ClassSaved(klass) => {
-      logger.info(s"Analyzing $klass")
+      logger.info(s"Analyzing ${klass.fullName}")
       AstTreeManager.methodNodesOf(classNode).foreach(methodNode => {
         storageActor ! SaveMethod(AstTreeManager.buildFrom(methodNode, klass))
       })

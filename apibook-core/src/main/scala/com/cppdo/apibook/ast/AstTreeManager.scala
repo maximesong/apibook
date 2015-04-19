@@ -49,6 +49,10 @@ object AstTreeManager {
     def isPublic: Boolean = {
       (classNode.access & Opcodes.ACC_PUBLIC) != 0
     }
+
+    def isRegular: Boolean = {
+      !classNode.name.contains("$")
+    }
   }
 
   implicit class RichMethodNode(methodNode: MethodNode) {
