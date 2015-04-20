@@ -10,6 +10,7 @@ import akka.routing.RoundRobinPool
 import com.cppdo.apibook.actor.ActorProtocols._
 import com.cppdo.apibook.ast.{AstTreeManager, JarManager}
 import com.cppdo.apibook.db._
+import com.cppdo.apibook.index.IndexManager
 import com.cppdo.apibook.repository.ArtifactsManager.{PackageType, RichArtifact, RichPackageFile}
 import com.cppdo.apibook.ast.AstTreeManager.{RichMethodNode, RichClassNode}
 import com.cppdo.apibook.repository.{ArtifactsManager, MavenRepository}
@@ -50,12 +51,15 @@ object ActorProtocols {
   case class MethodSaved(method: Method)
   case class FetchLatestPackages()
   case class AnalyzeAndSave()
+  case class BuildIndexForClass(klass: Class, receiver: Option[ActorRef] = None)
+  case class BuildIndexForMethod(method: Method, receiver: Option[ActorRef] = None)
 }
 
-class BuildIndexActor(indexDirectoryPath: String) extends Actor {
+class BuildIndexActor() extends Actor with LazyLogging {
 
   var indexWriter: IndexWriter = null
-
+  val indexDirectoryPath: String = IndexManager.indexDirectory
+  var count = 0
   override def preStart() = {
     super.preStart()
     val directory = FSDirectory.open(Paths.get(indexDirectoryPath))
@@ -68,9 +72,20 @@ class BuildIndexActor(indexDirectoryPath: String) extends Actor {
   override def postStop() = {
     super.postStop()
     indexWriter.close()
+    logger.info("Close")
   }
   override def receive: Actor.Receive = {
-    ???
+    case BuildIndexForClass(klass, receiver) => {
+      val document = IndexManager.buildDocument(klass)
+      indexWriter.addDocument(document)
+    }
+    case BuildIndexForMethod(method, receiver) => {
+      //logger.info(method.name)
+      val document = IndexManager.buildDocument(method)
+      indexWriter.addDocument(document)
+      count += 1
+      logger.info(count.toString)
+    }
   }
 }
 
@@ -227,11 +242,13 @@ class ClassNodeAnalyzer(artifact: Artifact, classNode: ClassNode, storageActor: 
     case ClassSaved(klass) => {
       logger.info(s"Analyzing ${klass.fullName}")
       AstTreeManager.methodNodesOf(classNode).foreach(methodNode => {
-        storageActor ! SaveMethod(AstTreeManager.buildFrom(methodNode, klass))
+        if (methodNode.isRegular) {
+          storageActor ! SaveMethod(AstTreeManager.buildFrom(methodNode, klass))
+        }
       })
     }
     case message => {
-      logger.info(message.toString)
+      //logger.info(message.toString)
     }
   }
 }

@@ -115,9 +115,17 @@ object DatabaseManager {
     Await.result(db.run(query.result), Duration.Inf)
   }
 
+  def getClasses(): Seq[Class] = {
+    Await.result(db.run(classesTable.result), Duration.Inf)
+  }
+
   def getMethods(klass: Class): Seq[Method] = {
     val query = methodsTable.filter(method => method.classId === klass.id)
     Await.result(db.run(query.result), Duration.Inf)
+  }
+
+  def getMethods(): Seq[Method] = {
+    Await.result(db.run(methodsTable.result), Duration.Inf)
   }
 
   def getPackageFiles(artifact: Artifact): Seq[PackageFile] = {

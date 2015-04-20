@@ -6,11 +6,12 @@ import org.apache.lucene.search.{TermQuery, BooleanQuery, MatchAllDocsQuery, Ind
 
 import scala.collection.JavaConverters._
 import org.apache.lucene.analysis.standard.StandardAnalyzer
-import org.apache.lucene.document.{TextField, Field, StringField, Document}
+import org.apache.lucene.document._
 import org.apache.lucene.index.IndexWriterConfig.OpenMode
 import org.apache.lucene.index._
 import org.apache.lucene.store.FSDirectory
 import org.objectweb.asm.tree.ClassNode
+import com.cppdo.apibook.db.{Class, Method}
 import com.typesafe.config.ConfigFactory
 
 /**
@@ -19,6 +20,18 @@ import com.typesafe.config.ConfigFactory
 object IndexManager {
   val indexDirectory = "data"
   val fieldName = "name"
+
+  object FieldName extends Enumeration {
+    type FieldName = Value
+
+    val Name, Type, DbId, EnclosingClassDbId, FieldNames = Value
+  }
+
+  object DocumentType extends Enumeration {
+    type DocumentType = Value
+
+    val Class, Method = Value
+  }
   def buildIndex(classNodes: Seq[ClassNode]) = {
     val directory = FSDirectory.open(Paths.get(indexDirectory))
     val analyzer = new StandardAnalyzer()
@@ -41,6 +54,7 @@ object IndexManager {
     indexWriter.close()
   }
 
+
   def search(queryText: String): Seq[Document] = {
     val directory = FSDirectory.open(Paths.get(indexDirectory))
     val reader = DirectoryReader.open(directory)
@@ -59,12 +73,36 @@ object IndexManager {
     })
   }
 
-  private def buildDocument(classNode: ClassNode) : Document = {
+  private def buildDocument(classNode: ClassNode): Document = {
     val document = new Document
     val nameField = new TextField(fieldName, classNode.name, Field.Store.YES)
     document.add(nameField)
     document
   }
 
+  def buildDocument(klass: Class): Document = {
+    val document = new Document
+    val nameField = new TextField(FieldName.Name.toString, klass.fullName, Field.Store.YES)
+    val typeField = new StringField(FieldName.Type.toString, DocumentType.Class.toString, Field.Store.YES)
+    val dbIdField = new StoredField(FieldName.DbId.toString, klass.id.get)
+    val fieldNamesField = new TextField(FieldName.FieldNames.toString, klass.fieldNames, Field.Store.NO)
+    document.add(nameField)
+    document.add(typeField)
+    document.add(dbIdField)
+    document.add(fieldNamesField)
+    document
+  }
 
+  def buildDocument(method: Method): Document = {
+    val document = new Document
+    val nameField = new TextField(FieldName.Name.toString, method.name, Field.Store.YES)
+    val typeField = new StringField(FieldName.Type.toString, DocumentType.Method.toString, Field.Store.YES)
+    val dbIdField = new StoredField(FieldName.DbId.toString, method.id.get)
+    val enclosingClassDbIdField = new StoredField(FieldName.EnclosingClassDbId.toString, method.enclosingClassId)
+    document.add(nameField)
+    document.add(typeField)
+    document.add(dbIdField)
+    document.add(enclosingClassDbIdField)
+    document
+  }
 }

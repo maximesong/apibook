@@ -67,6 +67,10 @@ object AstTreeManager {
     def isPublic: Boolean = {
       (methodNode.access & Opcodes.ACC_PUBLIC) != 0
     }
+
+    def isRegular: Boolean = {
+      !(methodNode.name.contains("$") || methodNode.name.contains("<"))
+    }
   }
 
 }

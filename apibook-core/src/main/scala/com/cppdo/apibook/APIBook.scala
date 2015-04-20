@@ -4,9 +4,9 @@ import java.io.File
 import java.net.URL
 import java.nio.file.{Path, Paths, Files}
 
-import akka.actor.{Props, ActorSystem}
+import akka.actor.{PoisonPill, Props, ActorSystem}
 import akka.routing.RoundRobinPool
-import com.cppdo.apibook.actor.ActorProtocols.{AnalyzeAndSave, FetchLatestPackages, FetchProjects}
+import com.cppdo.apibook.actor.ActorProtocols._
 import com.cppdo.apibook.actor._
 import com.cppdo.apibook.ast.JarManager
 import com.cppdo.apibook.db._
@@ -42,9 +42,22 @@ object APIBook extends LazyLogging {
     //testSource()
     //testActor()
     //downloadPackages()
-    analyze()
+    //analyze()
     //tryAnalyze()
+    buildIndexActor()
     logger.info("Bye")
+  }
+
+  def buildIndexActor() = {
+    val system = ActorSystem()
+    val indexer = system.actorOf(Props(new BuildIndexActor()))
+    DatabaseManager.getClasses().foreach(klass => {
+      indexer ! BuildIndexForClass(klass)
+    })
+    DatabaseManager.getMethods().foreach(method => {
+      indexer ! BuildIndexForMethod(method)
+    })
+    indexer ! PoisonPill
   }
 
   def downloadPackages() = {
