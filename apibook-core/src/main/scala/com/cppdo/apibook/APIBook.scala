@@ -41,10 +41,10 @@ object APIBook extends LazyLogging {
     //testJar()
     //testSource()
     //testActor()
-    downloadPackages()
+    //downloadPackages()
     //analyze()
     //tryAnalyze()
-    //buildIndexActor()
+    buildIndexActor()
     logger.info("Bye")
   }
 

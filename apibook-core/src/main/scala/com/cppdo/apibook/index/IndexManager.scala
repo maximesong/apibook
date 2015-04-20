@@ -1,8 +1,11 @@
 package com.cppdo.apibook.index
 
+import java.io.File
 import java.nio.file.Paths
+import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.queryparser.classic.QueryParser
 import org.apache.lucene.search._
+import org.apache.lucene.util.Version
 
 import scala.collection.JavaConverters._
 import org.apache.lucene.analysis.standard.StandardAnalyzer
@@ -32,11 +35,36 @@ object IndexManager {
 
     val Class, Method = Value
   }
-  def buildIndex(classNodes: Seq[ClassNode]) = {
-    val directory = FSDirectory.open(Paths.get(indexDirectory))
-    val analyzer = new StandardAnalyzer()
-    val indexWriterConfig = new IndexWriterConfig(analyzer)
+
+  private def openIndexDirectory(path: String) = {
+    // for lucene 5.x
+    //FSDirectory.open(Paths.get(indexDirectory))
+    // for lucene 4.x
+    FSDirectory.open(new File(path))
+  }
+
+  private def createIndexWriterConfig(analyzer: Analyzer) = {
+    // for lucene 5.x
+    //val indexWriterConfig = new IndexWriterConfig(analyzer)
+    // for lucene 4.x
+    val indexWriterConfig = new IndexWriterConfig(Version.LUCENE_CURRENT, analyzer)
+
     indexWriterConfig.setOpenMode(OpenMode.CREATE_OR_APPEND)
+    indexWriterConfig
+  }
+
+  def createIndexWriter() = {
+    val directory = openIndexDirectory(indexDirectory)
+    val analyzer = new StandardAnalyzer()
+    val indexWriterConfig = createIndexWriterConfig(analyzer)
+    val indexWriter = new IndexWriter(directory, indexWriterConfig)
+    indexWriter
+  }
+
+  def buildIndex(classNodes: Seq[ClassNode]) = {
+    val directory = openIndexDirectory(indexDirectory)
+    val analyzer = new StandardAnalyzer()
+    val indexWriterConfig = createIndexWriterConfig(analyzer)
     val indexWriter = new IndexWriter(directory, indexWriterConfig)
     val documents = classNodes.map(buildDocument(_))
     indexWriter.addDocuments(documents.asJava)
@@ -44,19 +72,17 @@ object IndexManager {
   }
 
   def buildIndex(classNode: ClassNode) = {
-    val directory = FSDirectory.open(Paths.get(indexDirectory))
+    val directory = openIndexDirectory(indexDirectory)
     val analyzer = new StandardAnalyzer()
-    val indexWriterConfig = new IndexWriterConfig(analyzer)
-    indexWriterConfig.setOpenMode(OpenMode.CREATE)
+    val indexWriterConfig = createIndexWriterConfig(analyzer)
     val indexWriter = new IndexWriter(directory, indexWriterConfig)
     val document = buildDocument(classNode)
     indexWriter.addDocument(document)
     indexWriter.close()
   }
 
-
   def search(queryText: String): Seq[Document] = {
-    val directory = FSDirectory.open(Paths.get(indexDirectory))
+    val directory = openIndexDirectory(indexDirectory)
     val reader = DirectoryReader.open(directory)
     val searcher = new IndexSearcher(reader)
     val analyzer = new StandardAnalyzer()
@@ -74,7 +100,7 @@ object IndexManager {
   }
 
   def trivial_search(queryText: String): Seq[Document] = {
-    val directory = FSDirectory.open(Paths.get(indexDirectory))
+    val directory = openIndexDirectory(indexDirectory)
     val reader = DirectoryReader.open(directory)
     val searcher = new IndexSearcher(reader)
 

@@ -2,12 +2,12 @@ name := "apibook"
 
 version := "1.0"
 
-scalaVersion := "2.11.5"
+scalaVersion := "2.11.6"
 
 lazy val commonSettings = Seq(
   organization := "com.cppdo",
   version := "1.0",
-  scalaVersion := "2.11.5"
+  scalaVersion := "2.11.6"
 )
 
 lazy val core = (project in file("./apibook-core"))
@@ -27,10 +27,10 @@ lazy val core = (project in file("./apibook-core"))
     "org.xerial" % "sqlite-jdbc" % "3.8.7",
     "org.jsoup" % "jsoup" % "1.8.1",
     "joda-time" % "joda-time" % "2.7",
-    "org.apache.lucene" % "lucene-core" % "5.0.0",
-    "org.apache.lucene" % "lucene-analyzers-common" % "5.0.0",
-    "org.apache.lucene" % "lucene-queryparser" % "5.0.0",
-    "org.apache.lucene" % "lucene-queries" % "5.0.0",
+    "org.apache.lucene" % "lucene-core" % "4.10.4",
+    "org.apache.lucene" % "lucene-analyzers-common" % "4.10.4",
+    "org.apache.lucene" % "lucene-queryparser" % "4.10.4",
+    "org.apache.lucene" % "lucene-queries" % "4.10.4",
     "org.eclipse.jdt" % "org.eclipse.jdt.core" % "3.10.0",
     "org.ow2.asm" % "asm-all" % "5.0.3",
     "org.scalatest" %% "scalatest" % "2.2.4" % "test")

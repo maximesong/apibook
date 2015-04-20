@@ -62,11 +62,7 @@ class BuildIndexActor() extends Actor with LazyLogging {
   var count = 0
   override def preStart() = {
     super.preStart()
-    val directory = FSDirectory.open(Paths.get(indexDirectoryPath))
-    val analyzer = new StandardAnalyzer()
-    val indexWriterConfig = new IndexWriterConfig(analyzer)
-    indexWriterConfig.setOpenMode(OpenMode.CREATE_OR_APPEND)
-    indexWriter = new IndexWriter(directory, indexWriterConfig)
+    indexWriter = IndexManager.createIndexWriter()
   }
 
   override def postStop() = {
