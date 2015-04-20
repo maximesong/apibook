@@ -2,7 +2,7 @@ package com.cppdo.apibook.index
 
 import java.nio.file.Paths
 import org.apache.lucene.queryparser.classic.QueryParser
-import org.apache.lucene.search.{TermQuery, BooleanQuery, MatchAllDocsQuery, IndexSearcher}
+import org.apache.lucene.search._
 
 import scala.collection.JavaConverters._
 import org.apache.lucene.analysis.standard.StandardAnalyzer
@@ -65,6 +65,31 @@ object IndexManager {
     //val q = new MatchAllDocsQuery()
     val query = parser.parse(queryText)
     val topDocs = searcher.search(query, null, 100)
+
+    //val topDocs = searcher.search(q, null, 100)
+    println("Total hits: " + topDocs.totalHits)
+    topDocs.scoreDocs.map(scoreDoc => {
+      searcher.doc(scoreDoc.doc)
+    })
+  }
+
+  def trivial_search(queryText: String): Seq[Document] = {
+    val directory = FSDirectory.open(Paths.get(indexDirectory))
+    val reader = DirectoryReader.open(directory)
+    val searcher = new IndexSearcher(reader)
+
+    val terms = queryText.split(" ")
+
+    val booleanQuery = new BooleanQuery()
+
+    terms.foreach(term => {
+      Array(FieldName.Name, FieldName.Type, FieldName.FieldNames).foreach(name => {
+        val query = new TermQuery(new Term(name.toString, term))
+        booleanQuery.add(query, BooleanClause.Occur.SHOULD)
+      })
+    })
+    //val q = new MatchAllDocsQuery()
+    val topDocs = searcher.search(booleanQuery, null, 100)
 
     //val topDocs = searcher.search(q, null, 100)
     println("Total hits: " + topDocs.totalHits)

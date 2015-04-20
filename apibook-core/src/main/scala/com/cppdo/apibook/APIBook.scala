@@ -36,7 +36,7 @@ object APIBook extends LazyLogging {
     //fetchProjects()
     //fetchAll()
     //buildIndex
-    //search("scala")
+    search("test")
     //testVersions()
     //testJar()
     //testSource()
@@ -44,7 +44,7 @@ object APIBook extends LazyLogging {
     //downloadPackages()
     //analyze()
     //tryAnalyze()
-    buildIndexActor()
+    //buildIndexActor()
     logger.info("Bye")
   }
 
@@ -103,9 +103,9 @@ object APIBook extends LazyLogging {
   }
 
   def search(query: String) = {
-    val results = IndexManager.search(query)
+    val results = IndexManager.trivial_search(query)
     logger.info("HERE?" + results.size)
-    results.foreach(document => println(document.get("name")))
+    results.foreach(document => println(document.get("Name")))
   }
 
   def buildIndex = {
