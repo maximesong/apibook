@@ -131,6 +131,11 @@ object MavenRepository extends LazyLogging {
     s"${baseDownloadUrl}/${groupPath}/${artifact.name}/${artifact.version}/${artifact.name}-${artifact.version}-sources.jar"
   }
 
+  private def docPackageUrlOf(artifact: Artifact): String = {
+    val groupPath = artifact.group.replaceAllLiterally(".", "/")
+    s"${baseDownloadUrl}/${groupPath}/${artifact.name}/${artifact.version}/${artifact.name}-${artifact.version}-javadoc.jar"
+  }
+
 
   def fetchArtifactsOf(project: Project) : Seq[Artifact] = {
     val projectUrl = detailUrlOf(project)
@@ -158,11 +163,15 @@ object MavenRepository extends LazyLogging {
 
     def sourcePackageUrl: String = MavenRepository.sourcePackageUrlOf(artifact)
 
+    def docPackageUrl: String = MavenRepository.docPackageUrlOf(artifact)
+
     def artifactPath: String = s"${artifact.group}/${artifact.name}/${artifact.version}"
 
     def relativeLibraryPackagePath = s"${artifact.artifactPath}/${artifact.name}-${artifact.version}.jar"
 
     def relativeSourcePackagePath = s"${artifact.artifactPath}/${artifact.name}-${artifact.version}-sources.jar"
+
+    def relativeDocPackagePath = s"${artifact.artifactPath}/${artifact.name}-${artifact.version}-javadoc.jar"
   }
 
   implicit class MavenArtifactSeq(artifacts: Seq[Artifact]) {

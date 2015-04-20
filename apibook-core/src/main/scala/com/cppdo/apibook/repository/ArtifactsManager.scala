@@ -16,7 +16,7 @@ import org.apache.commons.io.FileUtils
 object ArtifactsManager extends LazyLogging {
   object PackageType extends Enumeration {
     type PackageType = Value
-    val Library, Source = Value
+    val Library, Source, Doc = Value
   }
   val baseDirectory = "repository"
 
@@ -96,6 +96,8 @@ object ArtifactsManager extends LazyLogging {
     def fullLibraryPackagePath = s"${baseDirectory}/${artifact.relativeLibraryPackagePath}"
 
     def fullSourcePackagePath = s"${baseDirectory}/${artifact.relativeSourcePackagePath}"
+
+    def fullDocPackagePath = s"${baseDirectory}/${artifact.relativeDocPackagePath}"
   }
 
   implicit class RichPackageFile(packageFile: PackageFile) {

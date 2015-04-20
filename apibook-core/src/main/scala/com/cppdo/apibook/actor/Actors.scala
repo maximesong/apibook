@@ -164,6 +164,8 @@ class PackageFetchActor(storageActor: ActorRef) extends Actor with LazyLogging {
       storageActor ! SavePackageFile(PackageFile(artifact.id.get, PackageType.Library.toString, artifact.relativeLibraryPackagePath))
       downloadWorker ! DownloadFile(artifact.sourcePackageUrl, artifact.fullSourcePackagePath)
       storageActor ! SavePackageFile(PackageFile(artifact.id.get, PackageType.Source.toString, artifact.relativeSourcePackagePath))
+      downloadWorker ! DownloadFile(artifact.docPackageUrl, artifact.fullDocPackagePath)
+      storageActor ! SavePackageFile(PackageFile(artifact.id.get, PackageType.Doc.toString, artifact.relativeDocPackagePath))
     }
     case message => {
       //logger.info(s"What $message")
