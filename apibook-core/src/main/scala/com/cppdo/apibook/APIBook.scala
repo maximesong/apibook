@@ -39,12 +39,13 @@ object APIBook extends LazyLogging {
     //search("test")
     //testVersions()
     //testJar()
-    //testSource()
+    testSource()
+
     //testActor()
     //downloadPackages()
     //analyze()
     //tryAnalyze()
-    buildIndexActor()
+    //buildIndexActor()
     logger.info("Bye")
   }
 
@@ -99,7 +100,12 @@ object APIBook extends LazyLogging {
   def testSource() = {
     val jarFile = "/home/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12-sources.jar"
     val compilationUnits = JarManager.getCompilationUnits(jarFile)
-    compilationUnits.foreach(cu => println(cu.getPackage.toString))
+    compilationUnits.foreach {
+      cu => {
+        println(cu.getPackage.toString)
+        cu.
+      }
+    }
   }
 
   def search(query: String) = {

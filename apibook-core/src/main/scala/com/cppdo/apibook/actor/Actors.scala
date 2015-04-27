@@ -183,11 +183,12 @@ class DbWriteActor extends Actor with LazyLogging {
       val packageFileSaved = DatabaseManager.add(packageFile)
     }
     case SaveClass(klass, receiver) => {
-      //logger.info("SaveClass?")
+      logger.info(s"Save class: ${klass.fullName}")
       val klassSaved = DatabaseManager.add(klass)
       receiver.getOrElse(sender()) ! ClassSaved(klassSaved)
     }
     case SaveMethod(method, receiver) => {
+      logger.info(s"Save method: ${method.name}")
       val methodSaved = DatabaseManager.add(method)
       receiver.getOrElse(sender()) ! MethodSaved(methodSaved)
     }
