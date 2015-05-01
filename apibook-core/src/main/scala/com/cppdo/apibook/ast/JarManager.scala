@@ -3,6 +3,7 @@ package com.cppdo.apibook.ast
 import java.util.jar.JarFile
 
 import com.cppdo.apibook.db.Method
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.{IOUtils, FileUtils}
 import org.eclipse.jdt.core.dom.{AST, ASTParser, CompilationUnit}
 import org.objectweb.asm.ClassReader
@@ -14,7 +15,7 @@ import scala.collection.JavaConverters._
 /**
  * Created by song on 3/4/15.
  */
-object JarManager {
+object JarManager extends LazyLogging {
   def getClassNodes(jarPath: String): Seq[ClassNode] = {
     val jarFile = new JarFile(jarPath)
     val classEntries = jarFile.entries().asScala.filter(_.getName endsWith ".class")
@@ -36,7 +37,11 @@ object JarManager {
       val inputStream = jarFile.getInputStream(entry)
       val source = IOUtils.toCharArray(inputStream)
       parser.setSource(source)
-      parser.createAST(null).asInstanceOf[CompilationUnit]
+      val cu = parser.createAST(null).asInstanceOf[CompilationUnit]
+      if (cu == null) {
+        logger.info(entry.getName)
+      }
+      cu
     })
     compilationUnits.toSeq
   }

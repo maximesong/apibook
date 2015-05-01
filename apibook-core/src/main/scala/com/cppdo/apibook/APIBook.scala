@@ -8,7 +8,7 @@ import akka.actor.{PoisonPill, Props, ActorSystem}
 import akka.routing.RoundRobinPool
 import com.cppdo.apibook.actor.ActorProtocols._
 import com.cppdo.apibook.actor._
-import com.cppdo.apibook.ast.JarManager
+import com.cppdo.apibook.ast.{AstTreeManager, ClassVisitor, JarManager}
 import com.cppdo.apibook.db._
 import com.cppdo.apibook.index.IndexManager
 import com.cppdo.apibook.repository.{ArtifactsManager, MavenRepository}
@@ -100,12 +100,20 @@ object APIBook extends LazyLogging {
   def testSource() = {
     val jarFile = "/home/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12-sources.jar"
     val compilationUnits = JarManager.getCompilationUnits(jarFile)
-    compilationUnits.foreach {
-      cu => {
-        println(cu.getPackage.toString)
-        cu.
-      }
-    }
+    logger.info("size:" + compilationUnits.size)
+    compilationUnits.foreach(cu => {
+      val classVisitor = new ClassVisitor
+      cu.accept(classVisitor)
+      classVisitor.types.foreach(t => {
+        val klass = AstTreeManager.buildFrom(t, Artifact("", "", "", Some(1)))
+        t.getMethods.foreach(methodDeclaration => {
+          val method = AstTreeManager.buildFrom(methodDeclaration, klass.copy(id=Some(1)))
+          logger.info(method.toString)
+        })
+        //logger.info(klass.toString)
+      })
+
+    })
   }
 
   def search(query: String) = {
