@@ -74,3 +74,15 @@ class PackageFiles(tag: Tag) extends Table[PackageFile](tag, "PACKAGE_FILES") {
 
   def * = (artifactId, packageType, relativePath, id.?) <> (PackageFile.tupled, PackageFile.unapply)
 }
+
+case class GitHubRepository(fullName: String, name: String, stars: Int)
+
+class GitHubRepositories(tag: Tag) extends Table[GitHubRepository](tag, "GITHUB_REPOSITORIES") {
+  def fullName = column[String]("FULL_NAME", O.PrimaryKey)
+
+  def name = column[String]("NAME")
+
+  def stars = column[Int]("STARS")
+
+  def * = (fullName, name, stars) <> (GitHubRepository.tupled, GitHubRepository.unapply)
+}

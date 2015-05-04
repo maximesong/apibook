@@ -11,7 +11,7 @@ import com.cppdo.apibook.actor._
 import com.cppdo.apibook.ast.{AstTreeManager, ClassVisitor, JarManager}
 import com.cppdo.apibook.db._
 import com.cppdo.apibook.index.IndexManager
-import com.cppdo.apibook.repository.{GitHubRepository, ArtifactsManager, MavenRepository}
+import com.cppdo.apibook.repository.{GitHubRepositoryManager, ArtifactsManager, MavenRepository}
 import com.cppdo.apibook.repository.ArtifactsManager.RichArtifact
 import com.cppdo.apibook.repository.MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
 import com.typesafe.scalalogging.LazyLogging
@@ -51,7 +51,7 @@ object APIBook extends LazyLogging {
   }
 
   def testGithub() = {
-    GitHubRepository.getTopProjects()
+    GitHubRepositoryManager.getTopProjects()
   }
 
   def buildIndexActor() = {
