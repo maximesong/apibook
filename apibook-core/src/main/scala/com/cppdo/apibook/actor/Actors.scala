@@ -13,7 +13,7 @@ import com.cppdo.apibook.db._
 import com.cppdo.apibook.index.IndexManager
 import com.cppdo.apibook.repository.ArtifactsManager.{PackageType, RichArtifact, RichPackageFile}
 import com.cppdo.apibook.ast.AstTreeManager.{RichMethodNode, RichClassNode}
-import com.cppdo.apibook.repository.{ArtifactsManager, MavenRepository}
+import com.cppdo.apibook.repository.{GitHubRepositoryManager, ArtifactsManager, MavenRepository}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.apache.lucene.analysis.standard.StandardAnalyzer
@@ -23,7 +23,9 @@ import org.apache.lucene.store.FSDirectory
 import org.objectweb.asm.tree.ClassNode
 import scala.concurrent._
 import com.cppdo.apibook.repository.MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
+import GitHubRepositoryManager.RichGitHubRepository
 import ExecutionContext.Implicits.global
+import scala.io.Source
 
 /**
  * Created by song on 3/20/15.
@@ -53,6 +55,7 @@ object ActorProtocols {
   case class AnalyzeAndSave()
   case class BuildIndexForClass(klass: Class, receiver: Option[ActorRef] = None)
   case class BuildIndexForMethod(method: Method, receiver: Option[ActorRef] = None)
+  case class CollectProjects(count: Int)
 }
 
 class BuildIndexActor() extends Actor with LazyLogging {
@@ -248,6 +251,19 @@ class ClassNodeAnalyzer(artifact: Artifact, classNode: ClassNode, storageActor: 
     }
     case message => {
       //logger.info(message.toString)
+    }
+  }
+}
+
+class GitHubRepositoryActor() extends Actor with LazyLogging {
+  override def receive: Actor.Receive = {
+    case CollectProjects(count) => {
+      val repositories = GitHubRepositoryManager.getTopRepositories(count)
+      logger.info(repositories.size.toString)
+      repositories.foreach(repository => {
+        logger.info(s"Downloading ${repository.fullName}")
+        FileUtils.copyURLToFile(new URL(repository.archiveUrl), new File(repository.fullSourcePath))
+      })
     }
   }
 }

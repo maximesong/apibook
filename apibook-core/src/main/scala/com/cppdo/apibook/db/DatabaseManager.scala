@@ -20,12 +20,18 @@ object DatabaseManager {
   val classesTable = TableQuery[Classes]
   val methodsTable = TableQuery[Methods]
   val packageFilesTable = TableQuery[PackageFiles]
+  val gitHubRepositoriesTable = TableQuery[GitHubRepositories]
+  val packageDeclarationsTable = TableQuery[PackageFiles]
+  val packageReferencesTable = TableQuery[PackageReferences]
+
   val tableList  = List(
     (projectsTable, "PROJECTS"),
     (artifactsTable, "ARTIFACTS"),
     (classesTable, "CLASSES"),
     (methodsTable, "METHODS"),
-    (packageFilesTable, "PACKAGE_FILES")
+    (packageFilesTable, "PACKAGE_FILES"),
+    (packageDeclarationsTable, "PACKAGE_DECLARATIONS"),
+    (packageReferencesTable, "PACKAGE_REFERENCES")
   )
 
   def createTables = {
@@ -87,6 +93,18 @@ object DatabaseManager {
       into ((method, id) => method.copy(id=Some(id)))) insertOrUpdate method
     val result: Option[Method] = Await.result(db.run(insertAction), Duration.Inf)
     result.getOrElse(method)
+  }
+
+  def add(gitHubRepository: GitHubRepository): GitHubRepository = {
+    val insertAction = gitHubRepositoriesTable.insertOrUpdate(gitHubRepository)
+    Await.result(db.run(insertAction), Duration.Inf)
+    return gitHubRepository
+  }
+
+  def add(packageReference: PackageReference): PackageReference = {
+    val insertAction = packageReferencesTable.insertOrUpdate(packageReference)
+    Await.result(db.run(insertAction), Duration.Inf)
+    return packageReference
   }
 
   def exists(artifact: Artifact): Boolean = {

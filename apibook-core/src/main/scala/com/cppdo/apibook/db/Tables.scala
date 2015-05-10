@@ -86,3 +86,29 @@ class GitHubRepositories(tag: Tag) extends Table[GitHubRepository](tag, "GITHUB_
 
   def * = (fullName, name, stars) <> (GitHubRepository.tupled, GitHubRepository.unapply)
 }
+
+
+case class PackageReference(repository: String, packageName: String)
+
+class PackageReferences(tag: Tag) extends Table[PackageReference](tag, "PACKAGE_REFERENCES") {
+  // this should be the full name of repository
+  def repository = column[String]("REPOSITORY")
+
+  def packageName = column[String]("PACKAGE_NAME")
+
+  def pk = primaryKey("PROJECT_PK", (repository, packageName))
+
+  def * = (repository, packageName) <> (PackageReference.tupled, PackageReference.unapply)
+}
+
+case class PackageDeclaration(artifactId: Int, packageName: String)
+
+class PackageDeclarations(tag: Tag) extends Table[PackageDeclaration](tag, "PACKAGE_DECLARATIONS") {
+  def artifactId = column[Int]("ARTIFACT_ID")
+
+  def packageName = column[String]("PACKAGE_NAME")
+
+  def pk = primaryKey("PROJECT_PK", (artifactId, packageName))
+
+  def * = (artifactId, packageName) <> (PackageDeclaration.tupled, PackageDeclaration.unapply)
+}

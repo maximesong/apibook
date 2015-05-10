@@ -51,7 +51,9 @@ object APIBook extends LazyLogging {
   }
 
   def testGithub() = {
-    GitHubRepositoryManager.getTopProjects()
+    val system = ActorSystem()
+    val github = system.actorOf(Props(new GitHubRepositoryActor()))
+    github ! CollectProjects(10)
   }
 
   def buildIndexActor() = {

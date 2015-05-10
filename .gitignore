@@ -3,6 +3,7 @@
 /data
 target
 /repository
+/client-repository
 *.sqlite
 .history
 db.sqlite-journal
