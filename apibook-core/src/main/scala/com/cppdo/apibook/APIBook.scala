@@ -77,6 +77,7 @@ object APIBook extends LazyLogging {
       analyzer ! artifact
     })
   }
+
   def analyze() = {
     val system = ActorSystem()
     val storageActor = system.actorOf(Props(new DbWriteActor()), "db")
