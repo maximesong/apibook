@@ -20,6 +20,7 @@ object GitHubRepositoryManager extends LazyLogging {
   def getTopRepositories(count: Int): Seq[GitHubRepository] = {
     val pages = (count.toDouble / perPage.toDouble).ceil.toInt
     (1 to pages).flatMap(page => {
+      logger.info(page.toString)
       getRepositoriesOnPage(page)
     }).take(count)
   }
@@ -28,6 +29,7 @@ object GitHubRepositoryManager extends LazyLogging {
     val url = repositoryListUrlOfPage(page)
     logger.info(url)
     val content = Source.fromURL(url).mkString
+    logger.info("Downloaded")
     val json = Json.parse(content)
     val items = (json \ "items").as[Seq[JsValue]]
     val repositories = items.map(item => {

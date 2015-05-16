@@ -1,6 +1,7 @@
 package com.cppdo.apibook.db
 
 import com.cppdo.apibook.repository.ArtifactsManager.PackageType
+import com.typesafe.scalalogging.LazyLogging
 import slick.driver.SQLiteDriver.api._
 import slick.jdbc.meta.MTable
 
@@ -11,7 +12,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
  * Created by song on 3/10/15.
  */
-object DatabaseManager {
+object DatabaseManager extends LazyLogging {
 
   val db = Database.forConfig("sqliteDb")
 
@@ -21,7 +22,7 @@ object DatabaseManager {
   val methodsTable = TableQuery[Methods]
   val packageFilesTable = TableQuery[PackageFiles]
   val gitHubRepositoriesTable = TableQuery[GitHubRepositories]
-  val packageDeclarationsTable = TableQuery[PackageFiles]
+  val packageDeclarationsTable = TableQuery[PackageDeclarations]
   val packageReferencesTable = TableQuery[PackageReferences]
 
   val tableList  = List(
@@ -31,7 +32,8 @@ object DatabaseManager {
     (methodsTable, "METHODS"),
     (packageFilesTable, "PACKAGE_FILES"),
     (packageDeclarationsTable, "PACKAGE_DECLARATIONS"),
-    (packageReferencesTable, "PACKAGE_REFERENCES")
+    (packageReferencesTable, "PACKAGE_REFERENCES"),
+    (gitHubRepositoriesTable, "GITHUB_REPOSITORIES")
   )
 
   def createTables = {
@@ -42,6 +44,8 @@ object DatabaseManager {
     val setup = DBIO.seq(
       createTableActions: _*
     )
+    logger.info("CREATE TABLES !")
+    logger.info(setup.toString)
     Await.result(db.run(setup), Duration.Inf)
   }
 

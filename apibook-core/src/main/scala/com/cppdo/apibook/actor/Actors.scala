@@ -262,7 +262,11 @@ class GitHubRepositoryActor() extends Actor with LazyLogging {
       logger.info(repositories.size.toString)
       repositories.foreach(repository => {
         logger.info(s"Downloading ${repository.fullName}")
-        FileUtils.copyURLToFile(new URL(repository.archiveUrl), new File(repository.fullSourcePath))
+        val destinationFile =  new File(repository.fullSourcePath)
+        if (!destinationFile.exists()) {
+          FileUtils.copyURLToFile(new URL(repository.archiveUrl),destinationFile)
+        }
+        DatabaseManager.add(repository)
       })
     }
   }
