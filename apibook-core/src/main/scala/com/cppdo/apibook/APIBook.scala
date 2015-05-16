@@ -46,8 +46,14 @@ object APIBook extends LazyLogging {
     //analyze()
     //tryAnalyze()
     //buildIndexActor()
-    testGithub()
+    //testGithub()
+    test()
     logger.info("Bye")
+  }
+
+  def test() = {
+    ActorMaster.collectProjects(1)
+    ActorMaster.shutdown()
   }
 
   def testGithub() = {

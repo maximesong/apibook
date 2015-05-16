@@ -95,12 +95,12 @@ object MavenRepository extends LazyLogging {
     val pages = Math.ceil(n.toDouble / projectsPerPage).toInt
     val projects = (1 to pages).flatMap(page => {
       logger.info("Fetching page:" + page)
-      fetchProjectsFromListPage(page)
+      collectProjectsOnPage(page)
     })
     projects.take(n)
   }
 
-  def fetchProjectsFromListPage(page: Int): Seq[Project] = {
+  def collectProjectsOnPage(page: Int): Seq[Project] = {
     fetchFromProjectListPage(page, MavenWebPageParser.parseProjects)
   }
 
@@ -137,7 +137,7 @@ object MavenRepository extends LazyLogging {
   }
 
 
-  def fetchArtifactsOf(project: Project) : Seq[Artifact] = {
+  def collectArtifactsOf(project: Project) : Seq[Artifact] = {
     val projectUrl = detailUrlOf(project)
     val artifacts = fetchFrom(projectUrl, MavenWebPageParser.parseProjectDetailPage)
     artifacts
@@ -155,7 +155,7 @@ object MavenRepository extends LazyLogging {
   }
 
   implicit class MavenProject(project: Project) {
-    def fetchArtifacts(): Seq[Artifact] = MavenRepository.fetchArtifactsOf(project)
+    def fetchArtifacts(): Seq[Artifact] = MavenRepository.collectArtifactsOf(project)
   }
 
   implicit class MavenArtifact(artifact: Artifact) {

@@ -4,9 +4,12 @@ import java.io.{FileNotFoundException, File}
 import java.net.URL
 import java.nio.file.Paths
 
+import akka.actor.Status.Success
 import akka.actor.{Actor, Props, ActorRef}
+import akka.pattern.{ask, pipe}
 import akka.actor.Actor.Receive
 import akka.routing.RoundRobinPool
+import akka.util.Timeout
 import com.cppdo.apibook.actor.ActorProtocols._
 import com.cppdo.apibook.ast.{AstTreeManager, JarManager}
 import com.cppdo.apibook.db._
@@ -25,6 +28,7 @@ import scala.concurrent._
 import com.cppdo.apibook.repository.MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
 import GitHubRepositoryManager.RichGitHubRepository
 import ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 import scala.io.Source
 
 /**
@@ -56,7 +60,11 @@ object ActorProtocols {
   case class BuildIndexForClass(klass: Class, receiver: Option[ActorRef] = None)
   case class BuildIndexForMethod(method: Method, receiver: Option[ActorRef] = None)
   case class CollectProjects(count: Int)
+  case class CollectProjectsOnPage(page: Int)
+  case class CollectArtifacts(project: Project)
+  case class UpdateSavedProject(project: Project)
 }
+
 
 class BuildIndexActor() extends Actor with LazyLogging {
 
@@ -121,7 +129,7 @@ class ArtifactsCollectActor(fetchActor: ActorRef, storageActor: ActorRef) extend
 class MavenFetchActor extends Actor with LazyLogging {
   override def receive: Actor.Receive = {
     case FetchProjectListPage(page, receiver) => {
-      val projects = MavenRepository.fetchProjectsFromListPage(page)
+      val projects = MavenRepository.collectProjectsOnPage(page)
       projects.foreach(project => {
         receiver.getOrElse(sender()) ! project
       })
@@ -132,11 +140,55 @@ class MavenFetchActor extends Actor with LazyLogging {
       })
     }
     case FetchArtifacts(project, receiver) => {
-      val artifacts = MavenRepository.fetchArtifactsOf(project)
+      val artifacts = MavenRepository.collectArtifactsOf(project)
       artifacts.foreach(artifact => {
         //logger.info(artifact.name)
         receiver.getOrElse(sender()) ! artifact
       })
+    }
+  }
+}
+
+class MavenRepositoryMaster extends Actor with LazyLogging {
+
+  implicit val timeout = Timeout.apply(5 minute)
+  val NumberOfWorkers = 3
+  val workers = context.actorOf(
+    RoundRobinPool(NumberOfWorkers).props(Props(new MavenRepositoryWorker())), "worker")
+
+  override def receive: Actor.Receive = {
+    case CollectProjects(count) => {
+      val pages = MavenRepository.pagesForTopProjects(count).toList
+      logger.info("COLLECT")
+      val projectsSeqFuture = Future.traverse(pages)(page => {
+        logger.info("ASK?")
+        ask(workers, CollectProjectsOnPage(page)).mapTo[Seq[Project]]
+      })
+      val savedProjectsFuture = projectsSeqFuture.flatMap(projectsSeq => {
+        val desiredProjects = projectsSeq.flatMap(projects => projects).take(count)
+        Future.traverse(desiredProjects)(project => {
+          ask(ActorMaster.storageMaster, SaveProject(project)).mapTo[Project]
+        })
+      })
+      savedProjectsFuture.onSuccess {
+        case projects: Seq[Project] => sender() ! projects
+      }
+    }
+    case UpdateSavedProject(project) => {
+      val futureArtifacts = (workers ask CollectArtifacts(project)).mapTo[Seq[Artifact]]
+      //futureArtifacts.map(artifac)
+    }
+  }
+}
+
+class MavenRepositoryWorker extends Actor with LazyLogging {
+  override def receive: Actor.Receive = {
+    case CollectProjectsOnPage(page) => {
+      logger.info("PAGE?")
+      sender() ! MavenRepository.collectProjectsOnPage(page)
+    }
+    case CollectArtifacts(project) => {
+      sender() ! MavenRepository.collectArtifactsOf(project)
     }
   }
 }
@@ -177,6 +229,7 @@ class DbWriteActor extends Actor with LazyLogging {
     case SaveProject(project, receiver) => {
       logger.info(s"saving $project")
       val projectSaved = DatabaseManager.add(project)
+      sender() ! projectSaved
     }
     case SaveArtifact(artifact, receiver) => {
       //logger.info(s"saving $artifact")
