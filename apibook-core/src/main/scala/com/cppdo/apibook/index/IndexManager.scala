@@ -48,14 +48,13 @@ object IndexManager {
     //val indexWriterConfig = new IndexWriterConfig(analyzer)
     // for lucene 4.x
     val indexWriterConfig = new IndexWriterConfig(Version.LUCENE_CURRENT, analyzer)
-
     indexWriterConfig.setOpenMode(OpenMode.CREATE_OR_APPEND)
     indexWriterConfig
   }
 
   def createIndexWriter() = {
     val directory = openIndexDirectory(indexDirectory)
-    val analyzer = new StandardAnalyzer()
+    val analyzer = new SourceCodeAnalyzer()
     val indexWriterConfig = createIndexWriterConfig(analyzer)
     val indexWriter = new IndexWriter(directory, indexWriterConfig)
     indexWriter
@@ -63,7 +62,7 @@ object IndexManager {
 
   def buildIndex(classNodes: Seq[ClassNode]) = {
     val directory = openIndexDirectory(indexDirectory)
-    val analyzer = new StandardAnalyzer()
+    val analyzer = new SourceCodeAnalyzer()
     val indexWriterConfig = createIndexWriterConfig(analyzer)
     val indexWriter = new IndexWriter(directory, indexWriterConfig)
     val documents = classNodes.map(buildDocument(_))
@@ -73,7 +72,7 @@ object IndexManager {
 
   def buildIndex(classNode: ClassNode) = {
     val directory = openIndexDirectory(indexDirectory)
-    val analyzer = new StandardAnalyzer()
+    val analyzer = new SourceCodeAnalyzer()
     val indexWriterConfig = createIndexWriterConfig(analyzer)
     val indexWriter = new IndexWriter(directory, indexWriterConfig)
     val document = buildDocument(classNode)
@@ -85,7 +84,7 @@ object IndexManager {
     val directory = openIndexDirectory(indexDirectory)
     val reader = DirectoryReader.open(directory)
     val searcher = new IndexSearcher(reader)
-    val analyzer = new StandardAnalyzer()
+    val analyzer = new SourceCodeAnalyzer()
     val parser = new QueryParser(fieldName, analyzer)
     val booleanQuery = new BooleanQuery()
     //val q = new MatchAllDocsQuery()
