@@ -170,8 +170,9 @@ class MavenRepositoryMaster extends Actor with LazyLogging {
           ask(ActorMaster.storageMaster, SaveProject(project)).mapTo[Project]
         })
       })
+      val s = sender()
       savedProjectsFuture.onSuccess {
-        case projects: Seq[Project] => sender() ! projects
+        case projects: Seq[Project] => s ! projects
       }
     }
     case UpdateSavedProject(project) => {
