@@ -23,7 +23,9 @@ object ActorMaster extends LazyLogging {
   }
 
   def shutdown() = {
+    logger.info("Before Shutdown!")
     system.shutdown()
+    logger.info("After Shutdown!")
   }
 
   val system = ActorSystem()

@@ -63,6 +63,7 @@ object ActorProtocols {
   case class CollectProjectsOnPage(page: Int)
   case class CollectArtifacts(project: Project)
   case class UpdateSavedProject(project: Project)
+  case class SavedProjectUpdated(project: Project)
 }
 
 
@@ -159,9 +160,7 @@ class MavenRepositoryMaster extends Actor with LazyLogging {
   override def receive: Actor.Receive = {
     case CollectProjects(count) => {
       val pages = MavenRepository.pagesForTopProjects(count).toList
-      logger.info("COLLECT")
       val projectsSeqFuture = Future.traverse(pages)(page => {
-        logger.info("ASK?")
         ask(workers, CollectProjectsOnPage(page)).mapTo[Seq[Project]]
       })
       val savedProjectsFuture = projectsSeqFuture.flatMap(projectsSeq => {
@@ -170,18 +169,26 @@ class MavenRepositoryMaster extends Actor with LazyLogging {
           ask(ActorMaster.storageMaster, SaveProject(project)).mapTo[Project]
         })
       })
-      savedProjectsFuture.foreach(projects => {
-        projects.foreach(project => {
-          ask(self, UpdateSavedProject(project))
+      val updatedProjectsFuture = savedProjectsFuture.flatMap(projects => {
+        Future.traverse(projects)(project => {
+          ask(self, UpdateSavedProject(project)).mapTo[Project]
         })
       })
-      savedProjectsFuture pipeTo sender()
+      updatedProjectsFuture pipeTo sender()
     }
+
     case UpdateSavedProject(project) => {
       val futureArtifacts = (workers ask CollectArtifacts(project)).mapTo[Seq[Artifact]]
-      futureArtifacts.map(artifacts => {
-        
+      val futureSavedArtifacts = futureArtifacts.flatMap(artifacts => {
+        Future.traverse(artifacts)(artifact => {
+          ask(ActorMaster.storageMaster, SaveArtifact(artifact)).mapTo[Artifact]
+        })
       })
+      val futureProject = futureSavedArtifacts.map(artifacts => {
+        logger.info("Updated?")
+        project
+      })
+      futureProject pipeTo sender()
       //futureArtifacts.map(artifac)
     }
   }
@@ -240,6 +247,7 @@ class DbWriteActor extends Actor with LazyLogging {
     case SaveArtifact(artifact, receiver) => {
       //logger.info(s"saving $artifact")
       val artifactSaved = DatabaseManager.add(artifact)
+      sender() ! artifactSaved
     }
     case SavePackageFile(packageFile, receiver) => {
       val packageFileSaved = DatabaseManager.add(packageFile)

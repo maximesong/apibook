@@ -52,7 +52,8 @@ object APIBook extends LazyLogging {
   }
 
   def test() = {
-    ActorMaster.collectProjects(1)
+    val projects = ActorMaster.collectProjects(1)
+    logger.info(projects.toString())
     ActorMaster.shutdown()
   }
 
