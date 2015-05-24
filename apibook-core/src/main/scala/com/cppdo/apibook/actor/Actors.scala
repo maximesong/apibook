@@ -10,10 +10,13 @@ import akka.pattern.{ask, pipe}
 import akka.actor.Actor.Receive
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
+import com.cppdo.apibook.APIBook._
 import com.cppdo.apibook.actor.ActorProtocols._
-import com.cppdo.apibook.ast.{AstTreeManager, JarManager}
+import com.cppdo.apibook.ast.{ClassVisitor, AstTreeManager, JarManager}
 import com.cppdo.apibook.db._
 import com.cppdo.apibook.index.IndexManager
+import com.cppdo.apibook.repository.ArtifactsManager.PackageType
+import com.cppdo.apibook.repository.ArtifactsManager.PackageType.PackageType
 import com.cppdo.apibook.repository.ArtifactsManager.{PackageType, RichArtifact, RichPackageFile}
 import com.cppdo.apibook.ast.AstTreeManager.{RichMethodNode, RichClassNode}
 import com.cppdo.apibook.repository.{GitHubRepositoryManager, ArtifactsManager, MavenRepository}
@@ -41,8 +44,6 @@ class TryActor extends Actor {
 
 object ActorProtocols {
   case class DownloadFile(fromUrl: String, toPath: String)
-  case class FinishDownloadFile(fromUrl: String, toPath: String)
-  case class FailDownloadFile(fromUrl: String, toPath: String, e: Exception)
   case class FetchProjectListPage(page: Int, receiver: Option[ActorRef] = None)
   case class FetchProjects(n: Int, receiver: Option[ActorRef] = None)
   case class FetchArtifacts(project: Project, receiver: Option[ActorRef] = None)
@@ -50,11 +51,9 @@ object ActorProtocols {
   case class SaveArtifact(artifact: Artifact, receiver: Option[ActorRef] = None)
   case class SavePackageFile(packageFile: PackageFile, receiver: Option[ActorRef] = None)
   case class SaveClass(klass: Class, receiver: Option[ActorRef] = None)
-  case class ClassSaved(klass: Class)
   case class ReadLibraryPackage(artifact: Artifact, receiver: Option[ActorRef] = None)
   case class LibraryPackageResult(artifact: Artifact, libraryPackageFile: Option[PackageFile])
   case class SaveMethod(method: Method, receiver: Option[ActorRef] = None)
-  case class MethodSaved(method: Method)
   case class FetchLatestPackages()
   case class AnalyzeAndSave()
   case class BuildIndexForClass(klass: Class, receiver: Option[ActorRef] = None)
@@ -64,7 +63,8 @@ object ActorProtocols {
   case class CollectArtifacts(project: Project)
   case class UpdateSavedProject(project: Project)
   case class SavedProjectUpdated(project: Project)
-  case class DownloadArtifact(artifact: Artifact)
+  case class FetchArtifact(artifact: Artifact)
+  case class AnalyzeArtifact(artifact: Artifact)
 }
 
 
@@ -105,11 +105,11 @@ class DownloadFileActor extends Actor {
         FileUtils.copyURLToFile(new URL(fromUrl), new File(toPath))
       } catch {
         case e: FileNotFoundException => {
-          sender() ! FailDownloadFile(fromUrl, toPath, e)
+          sender() ! Some(e)
         }
       }
 
-      sender() ! FinishDownloadFile(fromUrl, toPath)
+      sender() ! None
     }
   }
 }
@@ -197,7 +197,7 @@ class MavenRepositoryMaster extends Actor with LazyLogging {
 
 class MavenRepositoryWorker extends Actor with LazyLogging {
   val downloadWorker = context.actorOf(RoundRobinPool(3).props(Props[DownloadFileActor]))
-
+  case class PackageFileInfo(downloadUrl: String, fullPath: String, relativePath: String, packageType: PackageType)
   override def receive: Actor.Receive = {
     case CollectProjectsOnPage(page) => {
       sender() ! MavenRepository.collectProjectsOnPage(page)
@@ -205,15 +205,57 @@ class MavenRepositoryWorker extends Actor with LazyLogging {
     case CollectArtifacts(project) => {
       sender() ! MavenRepository.collectArtifactsOf(project)
     }
-    case DownloadArtifact(artifact) => {
-      ask(downloadWorker, DownloadFile(artifact.libraryPackageUrl, artifact.fullLibraryPackagePath)).mapTo[
-        Either[FinishDownloadFile, FailDownloadFile]]
-      downloadWorker ! DownloadFile(artifact.libraryPackageUrl, artifact.fullLibraryPackagePath)
-      storageActor ! SavePackageFile(PackageFile(artifact.id.get, PackageType.Library.toString, artifact.relativeLibraryPackagePath))
-      downloadWorker ! DownloadFile(artifact.sourcePackageUrl, artifact.fullSourcePackagePath)
-      storageActor ! SavePackageFile(PackageFile(artifact.id.get, PackageType.Source.toString, artifact.relativeSourcePackagePath))
-      downloadWorker ! DownloadFile(artifact.docPackageUrl, artifact.fullDocPackagePath)
-      storageActor ! SavePackageFile(PackageFile(artifact.id.get, PackageType.Doc.toString, artifact.relativeDocPackagePath))
+    case FetchArtifact(artifact) => {
+      val requiredPackageFiles = Seq(
+        PackageFileInfo(artifact.libraryPackageUrl, artifact.fullLibraryPackagePath, artifact.fullLibraryPackagePath,
+          PackageType.Library),
+        PackageFileInfo(artifact.sourcePackageUrl, artifact.fullSourcePackagePath, artifact.fullSourcePackagePath,
+          PackageType.Source),
+        PackageFileInfo(artifact.docPackageUrl, artifact.fullDocPackagePath, artifact.fullDocPackagePath,
+          PackageType.Doc)
+      )
+      val futurePackageFiles = Future.traverse(requiredPackageFiles)(info => {
+        val downloadResult = ask(downloadWorker, DownloadFile(info.downloadUrl, info.fullPath)).mapTo[Option[Exception]]
+        val packageFile = downloadResult.flatMap({
+            case None => {
+              val packageFile = PackageFile(artifact.id.get, info.packageType.toString, info.relativePath)
+              ask(ActorMaster.storageMaster, packageFile).mapTo[PackageFile].map(Some(_))
+            }
+            case Some(e) => {
+              logger.error(e.toString)
+              Future { None }
+            }
+        })
+        packageFile
+      }).map(seqOfOptions => {
+        seqOfOptions.filter({
+            case Some(packageFile) => true
+            case _ => false
+        }).map(option => {
+          case Some(packageFile) => packageFile
+        }).asInstanceOf[Seq[PackageFile]]
+      })
+      sender() ! futurePackageFiles
+    }
+    case AnalyzeArtifact(artifact) => {
+      val futurePackageFiles = ask(self, FetchArtifact(artifact)).mapTo[Seq[PackageFile]]
+      futurePackageFiles.map(packageFiles => {
+        packageFiles.foreach(packageFile => {
+          if (packageFile.packageType == PackageType.Source.toString) {
+            val compilationUnits = JarManager.getCompilationUnits(packageFile.fullPath)
+            compilationUnits.flatMap(cu => AstTreeManager.typeDeclarationsOf(cu)).map(typeDeclaration => {
+              val klass = AstTreeManager.buildFrom(typeDeclaration, artifact)
+              val futureSavedClass = ask(ActorMaster.storageMaster, SaveClass(klass)).mapTo[Class]
+              val futureSavedMethods = futureSavedClass.flatMap(savedClass => {
+                Future.traverse(typeDeclaration.getMethods.toSeq)(methodDeclaration => {
+                  val method = AstTreeManager.buildFrom(methodDeclaration, klass)
+                  ask(ActorMaster.storageMaster, SaveMethod(method)).mapTo[Method]
+                })
+              })
+            })
+          }
+        })
+      })
     }
   }
 }
@@ -263,16 +305,17 @@ class DbWriteActor extends Actor with LazyLogging {
     }
     case SavePackageFile(packageFile, receiver) => {
       val packageFileSaved = DatabaseManager.add(packageFile)
+      sender() ! packageFileSaved
     }
     case SaveClass(klass, receiver) => {
       logger.info(s"Save class: ${klass.fullName}")
       val klassSaved = DatabaseManager.add(klass)
-      receiver.getOrElse(sender()) ! ClassSaved(klassSaved)
+      sender() ! klassSaved
     }
     case SaveMethod(method, receiver) => {
       logger.info(s"Save method: ${method.name}")
       val methodSaved = DatabaseManager.add(method)
-      receiver.getOrElse(sender()) ! MethodSaved(methodSaved)
+      sender() ! methodSaved
     }
     case ReadLibraryPackage(artifact, receiver) => {
       val libraryPackage = DatabaseManager.getLibraryPackageFile(artifact)
@@ -320,7 +363,7 @@ class ClassNodeAnalyzer(artifact: Artifact, classNode: ClassNode, storageActor: 
       classNode.fields
       storageActor ! SaveClass(AstTreeManager.buildFrom(classNode, artifact))
     }
-    case ClassSaved(klass) => {
+    case klass : Class => {
       logger.info(s"Analyzing ${klass.fullName}")
       AstTreeManager.methodNodesOf(classNode).foreach(methodNode => {
         if (methodNode.isRegular) {

@@ -1,9 +1,10 @@
 package com.cppdo.apibook.ast
 
 
+import com.cppdo.apibook.APIBook._
 import com.cppdo.apibook.db.{Artifact, Class, Method}
 import com.typesafe.scalalogging.LazyLogging
-import org.eclipse.jdt.core.dom.{SingleVariableDeclaration, MethodDeclaration, VariableDeclaration, TypeDeclaration}
+import org.eclipse.jdt.core.dom._
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.{FieldNode, ParameterNode, MethodNode, ClassNode}
 import org.objectweb.asm.util.Textifier
@@ -13,6 +14,12 @@ import scala.collection.JavaConverters._
  * Created by song on 3/11/15.
  */
 object AstTreeManager extends LazyLogging {
+  def typeDeclarationsOf(cu:  CompilationUnit): Seq[TypeDeclaration] = {
+    val classVisitor = new ClassVisitor
+    cu.accept(classVisitor)
+    classVisitor.types
+  }
+
   def methodNodesOf(classNode: ClassNode): Seq[MethodNode] = {
     classNode.methods.asScala.map { case methodNode: MethodNode =>
       methodNode
