@@ -64,6 +64,7 @@ object ActorProtocols {
   case class CollectArtifacts(project: Project)
   case class UpdateSavedProject(project: Project)
   case class SavedProjectUpdated(project: Project)
+  case class DownloadArtifact(artifact: Artifact)
 }
 
 
@@ -195,13 +196,24 @@ class MavenRepositoryMaster extends Actor with LazyLogging {
 }
 
 class MavenRepositoryWorker extends Actor with LazyLogging {
+  val downloadWorker = context.actorOf(RoundRobinPool(3).props(Props[DownloadFileActor]))
+
   override def receive: Actor.Receive = {
     case CollectProjectsOnPage(page) => {
-      logger.info("PAGE?")
       sender() ! MavenRepository.collectProjectsOnPage(page)
     }
     case CollectArtifacts(project) => {
       sender() ! MavenRepository.collectArtifactsOf(project)
+    }
+    case DownloadArtifact(artifact) => {
+      ask(downloadWorker, DownloadFile(artifact.libraryPackageUrl, artifact.fullLibraryPackagePath)).mapTo[
+        Either[FinishDownloadFile, FailDownloadFile]]
+      downloadWorker ! DownloadFile(artifact.libraryPackageUrl, artifact.fullLibraryPackagePath)
+      storageActor ! SavePackageFile(PackageFile(artifact.id.get, PackageType.Library.toString, artifact.relativeLibraryPackagePath))
+      downloadWorker ! DownloadFile(artifact.sourcePackageUrl, artifact.fullSourcePackagePath)
+      storageActor ! SavePackageFile(PackageFile(artifact.id.get, PackageType.Source.toString, artifact.relativeSourcePackagePath))
+      downloadWorker ! DownloadFile(artifact.docPackageUrl, artifact.fullDocPackagePath)
+      storageActor ! SavePackageFile(PackageFile(artifact.id.get, PackageType.Doc.toString, artifact.relativeDocPackagePath))
     }
   }
 }
