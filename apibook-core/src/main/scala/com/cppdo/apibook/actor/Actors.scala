@@ -65,6 +65,7 @@ object ActorProtocols {
   case class SavedProjectUpdated(project: Project)
   case class FetchArtifact(artifact: Artifact)
   case class AnalyzeArtifact(artifact: Artifact)
+  case class AnalyzeSource(artifact: Artifact, packageFile: PackageFile)
 }
 
 
@@ -237,25 +238,38 @@ class MavenRepositoryWorker extends Actor with LazyLogging {
       })
       sender() ! futurePackageFiles
     }
-    case AnalyzeArtifact(artifact) => {
-      val futurePackageFiles = ask(self, FetchArtifact(artifact)).mapTo[Seq[PackageFile]]
-      futurePackageFiles.map(packageFiles => {
-        packageFiles.foreach(packageFile => {
-          if (packageFile.packageType == PackageType.Source.toString) {
-            val compilationUnits = JarManager.getCompilationUnits(packageFile.fullPath)
-            compilationUnits.flatMap(cu => AstTreeManager.typeDeclarationsOf(cu)).map(typeDeclaration => {
-              val klass = AstTreeManager.buildFrom(typeDeclaration, artifact)
-              val futureSavedClass = ask(ActorMaster.storageMaster, SaveClass(klass)).mapTo[Class]
-              val futureSavedMethods = futureSavedClass.flatMap(savedClass => {
-                Future.traverse(typeDeclaration.getMethods.toSeq)(methodDeclaration => {
-                  val method = AstTreeManager.buildFrom(methodDeclaration, klass)
-                  ask(ActorMaster.storageMaster, SaveMethod(method)).mapTo[Method]
-                })
-              })
-            })
-          }
+    case AnalyzeSource(artifact, packageFile) => {
+      val compilationUnits = JarManager.getCompilationUnits(packageFile.fullPath)
+      val types = compilationUnits.flatMap(cu => AstTreeManager.typeDeclarationsOf(cu))
+      val futureClasses = Future.traverse(types)(typeDeclaration => {
+        val klass = AstTreeManager.buildFrom(typeDeclaration, artifact)
+        val futureSavedClass = ask(ActorMaster.storageMaster, SaveClass(klass)).mapTo[Class]
+        val futureSavedMethods = futureSavedClass.flatMap(savedClass => {
+          Future.traverse(typeDeclaration.getMethods.toSeq)(methodDeclaration => {
+            val method = AstTreeManager.buildFrom(methodDeclaration, klass)
+            ask(ActorMaster.storageMaster, SaveMethod(method)).mapTo[Method]
+          })
+        })
+        futureSavedMethods.map(_ => {
+          klass
         })
       })
+      sender() ! futureClasses
+    }
+    case AnalyzeArtifact(artifact) => {
+      val futurePackageFiles = ask(self, FetchArtifact(artifact)).mapTo[Seq[PackageFile]]
+      val f = futurePackageFiles.map(packageFiles => {
+        val f = Future.traverse(packageFiles)(packageFile => {
+          if (packageFile.packageType == PackageType.Source.toString) {
+            ask(self, AnalyzeSource(artifact, packageFile)).mapTo[Seq[Class]]
+          }
+          else {
+            Future {List[Class]()}
+          }
+        })
+        f
+      })
+      f pipeTo sender()
     }
   }
 }
