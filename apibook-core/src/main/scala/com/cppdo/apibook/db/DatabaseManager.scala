@@ -67,36 +67,39 @@ object DatabaseManager extends LazyLogging {
   }
 
   def add(artifact: Artifact): Artifact = {
-    if (exists(artifact)) {
-      artifact
-    }
-    else {
+    existing(artifact).getOrElse({
       val insertAction = (artifactsTable returning artifactsTable.map(_.id)
         into ((a, id) => a.copy(id=Some(id)))) insertOrUpdate artifact
       val result: Option[Artifact] = Await.result(db.run(insertAction), Duration.Inf)
       result.getOrElse(artifact)
-    }
+    })
   }
 
   def add(packageFile: PackageFile): PackageFile = {
-    val insertAction = (packageFilesTable returning packageFilesTable.map(_.id)
-      into ((packageFile, id) => packageFile.copy(id=Some(id)))) insertOrUpdate packageFile
-    val result: Option[PackageFile] = Await.result(db.run(insertAction), Duration.Inf)
-    result.getOrElse(packageFile)
+    existing(packageFile).getOrElse({
+      val insertAction = (packageFilesTable returning packageFilesTable.map(_.id)
+        into ((packageFile, id) => packageFile.copy(id=Some(id)))) insertOrUpdate packageFile
+      val result: Option[PackageFile] = Await.result(db.run(insertAction), Duration.Inf)
+      result.getOrElse(packageFile)
+    })
   }
 
   def add(klass: Class): Class = {
-    val insertAction = (classesTable returning classesTable.map(_.id)
-      into ((klass, id) => klass.copy(id=Some(id)))) insertOrUpdate klass
-    val result: Option[Class] = Await.result(db.run(insertAction), Duration.Inf)
-    result.getOrElse(klass)
+    existing(klass).getOrElse({
+      val insertAction = (classesTable returning classesTable.map(_.id)
+        into ((klass, id) => klass.copy(id=Some(id)))) insertOrUpdate klass
+      val result: Option[Class] = Await.result(db.run(insertAction), Duration.Inf)
+      result.getOrElse(klass)
+    })
   }
 
   def add(method: Method): Method = {
-    val insertAction = (methodsTable returning methodsTable.map(_.id)
-      into ((method, id) => method.copy(id=Some(id)))) insertOrUpdate method
-    val result: Option[Method] = Await.result(db.run(insertAction), Duration.Inf)
-    result.getOrElse(method)
+    existing(method).getOrElse({
+      val insertAction = (methodsTable returning methodsTable.map(_.id)
+        into ((method, id) => method.copy(id=Some(id)))) insertOrUpdate method
+      val result: Option[Method] = Await.result(db.run(insertAction), Duration.Inf)
+      result.getOrElse(method)
+    })
   }
 
   def add(gitHubRepository: GitHubRepository): GitHubRepository = {
@@ -111,11 +114,32 @@ object DatabaseManager extends LazyLogging {
     return packageReference
   }
 
-  def exists(artifact: Artifact): Boolean = {
+  def existing(artifact: Artifact): Option[Artifact] = {
     val countQuery = artifactsTable.filter(a => a.group === artifact.group &&
       a.name === artifact.name && a.version === artifact.version)
     val result  = Await.result(db.run(countQuery.result), Duration.Inf)
-    result.size > 0
+    result.headOption
+  }
+
+  def existing(packageFile: PackageFile): Option[PackageFile] = {
+    val countQuery = packageFilesTable.filter(pf => pf.artifactId === packageFile.artifactId &&
+      pf.packageType === packageFile.packageType)
+    val result  = Await.result(db.run(countQuery.result), Duration.Inf)
+    result.headOption
+  }
+
+  def existing(klass: Class): Option[Class] = {
+    val countQuery = classesTable.filter(cl => cl.artifactId === klass.artifactId &&
+      cl.fullName === klass.fullName)
+    val result  = Await.result(db.run(countQuery.result), Duration.Inf)
+    result.headOption
+  }
+
+  def existing(method: Method): Option[Method] = {
+    val countQuery = methodsTable.filter(m => m.classId === method.enclosingClassId &&
+      m.name === method.name && m.signature === method.signature)
+    val result  = Await.result(db.run(countQuery.result), Duration.Inf)
+    result.headOption
   }
 
   def getProjects() : Seq[Project] = {
@@ -160,6 +184,13 @@ object DatabaseManager extends LazyLogging {
     val packageFiles : Seq[PackageFile] = Await.result(db.run(query.result), Duration.Inf)
     val libraryPackageFiles = packageFiles.filter(file => file.packageType == PackageType.Library.toString)
     libraryPackageFiles.headOption
+  }
+
+  def getSourcePackageFile(artifact: Artifact): Option[PackageFile] = {
+    val query = packageFilesTable.filter(packageFile => packageFile.artifactId === artifact.id)
+    val packageFiles : Seq[PackageFile] = Await.result(db.run(query.result), Duration.Inf)
+    val sourcePackageFiles = packageFiles.filter(file => file.packageType == PackageType.Source.toString)
+    sourcePackageFiles.headOption
   }
 
   createTables

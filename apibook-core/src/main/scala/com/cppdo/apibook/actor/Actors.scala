@@ -43,7 +43,7 @@ class TryActor extends Actor {
 }
 
 object ActorProtocols {
-  case class DownloadFile(fromUrl: String, toPath: String)
+  case class DownloadFile(fromUrl: String, toPath: String, overwrite: Boolean = false)
   case class FetchProjectListPage(page: Int, receiver: Option[ActorRef] = None)
   case class FetchProjects(n: Int, receiver: Option[ActorRef] = None)
   case class FetchArtifacts(project: Project, receiver: Option[ActorRef] = None)
@@ -66,6 +66,9 @@ object ActorProtocols {
   case class FetchArtifact(artifact: Artifact)
   case class AnalyzeArtifact(artifact: Artifact)
   case class AnalyzeSource(artifact: Artifact, packageFile: PackageFile)
+  case class AnalyzeProject(project: Project)
+  case class GetArtifacts(project: Project)
+  case class GetProjects()
 }
 
 
@@ -101,15 +104,17 @@ class BuildIndexActor() extends Actor with LazyLogging {
 
 class DownloadFileActor extends Actor {
   override def receive: Actor.Receive = {
-    case DownloadFile(fromUrl, toPath) => {
-      try {
-        FileUtils.copyURLToFile(new URL(fromUrl), new File(toPath))
-      } catch {
-        case e: FileNotFoundException => {
-          sender() ! Some(e)
+    case DownloadFile(fromUrl, toPath, overwrite) => {
+      val file = new File(toPath)
+      if (!file.exists() || overwrite) {
+        try {
+          FileUtils.copyURLToFile(new URL(fromUrl), file)
+        } catch {
+          case e: FileNotFoundException => {
+            sender() ! Some(e)
+          }
         }
       }
-
       sender() ! None
     }
   }
@@ -186,17 +191,38 @@ class MavenRepositoryMaster extends Actor with LazyLogging {
           ask(ActorMaster.storageMaster, SaveArtifact(artifact)).mapTo[Artifact]
         })
       })
-      val futureProject = futureSavedArtifacts.map(artifacts => {
-        logger.info("Updated?")
-        project
+      val futureProject = futureSavedArtifacts.flatMap(artifacts => {
+        logger.info(artifacts.toString)
+        logger.info(artifacts.takeLatestVersion.toString)
+        artifacts.takeLatestVersion.map(artifact => {
+          ask(workers, FetchArtifact(artifact)).map(_ => project).mapTo[Project]
+        }).getOrElse(Future{project})
       })
       futureProject pipeTo sender()
       //futureArtifacts.map(artifac)
+    }
+
+    case AnalyzeProject(project) => {
+      logger.info("Analyze Project!")
+      val futureArtifact = ask(ActorMaster.storageMaster, GetArtifacts(project)).mapTo[Seq[Artifact]].map(artifacts => {
+        logger.info(artifacts.toString)
+        logger.info(artifacts.takeLatestVersion.toString)
+        artifacts.takeLatestVersion
+      })
+      val optionArtifact = Await.result(futureArtifact, Duration.Inf)
+      val f = optionArtifact.map(artifact => {
+        logger.info("Ask Analyze!")
+        ask(workers, AnalyzeArtifact(artifact))
+      }).getOrElse(Future{})
+      logger.info(f.toString)
+      f pipeTo sender()
     }
   }
 }
 
 class MavenRepositoryWorker extends Actor with LazyLogging {
+  implicit val timeout = Timeout.apply(5 minute)
+
   val downloadWorker = context.actorOf(RoundRobinPool(3).props(Props[DownloadFileActor]))
   case class PackageFileInfo(downloadUrl: String, fullPath: String, relativePath: String, packageType: PackageType)
   override def receive: Actor.Receive = {
@@ -207,12 +233,13 @@ class MavenRepositoryWorker extends Actor with LazyLogging {
       sender() ! MavenRepository.collectArtifactsOf(project)
     }
     case FetchArtifact(artifact) => {
+      logger.info(artifact.toString)
       val requiredPackageFiles = Seq(
-        PackageFileInfo(artifact.libraryPackageUrl, artifact.fullLibraryPackagePath, artifact.fullLibraryPackagePath,
+        PackageFileInfo(artifact.libraryPackageUrl, artifact.fullLibraryPackagePath, artifact.relativeLibraryPackagePath,
           PackageType.Library),
-        PackageFileInfo(artifact.sourcePackageUrl, artifact.fullSourcePackagePath, artifact.fullSourcePackagePath,
+        PackageFileInfo(artifact.sourcePackageUrl, artifact.fullSourcePackagePath, artifact.relativeSourcePackagePath,
           PackageType.Source),
-        PackageFileInfo(artifact.docPackageUrl, artifact.fullDocPackagePath, artifact.fullDocPackagePath,
+        PackageFileInfo(artifact.docPackageUrl, artifact.fullDocPackagePath, artifact.relativeDocPackagePath,
           PackageType.Doc)
       )
       val futurePackageFiles = Future.traverse(requiredPackageFiles)(info => {
@@ -220,7 +247,7 @@ class MavenRepositoryWorker extends Actor with LazyLogging {
         val packageFile = downloadResult.flatMap({
             case None => {
               val packageFile = PackageFile(artifact.id.get, info.packageType.toString, info.relativePath)
-              ask(ActorMaster.storageMaster, packageFile).mapTo[PackageFile].map(Some(_))
+              ask(ActorMaster.storageMaster, SavePackageFile(packageFile)).mapTo[PackageFile].map(Some(_))
             }
             case Some(e) => {
               logger.error(e.toString)
@@ -232,11 +259,12 @@ class MavenRepositoryWorker extends Actor with LazyLogging {
         seqOfOptions.filter({
             case Some(packageFile) => true
             case _ => false
-        }).map(option => {
+        }).map({
           case Some(packageFile) => packageFile
+          case _ => ???
         }).asInstanceOf[Seq[PackageFile]]
       })
-      sender() ! futurePackageFiles
+      futurePackageFiles pipeTo sender()
     }
     case AnalyzeSource(artifact, packageFile) => {
       val compilationUnits = JarManager.getCompilationUnits(packageFile.fullPath)
@@ -246,7 +274,7 @@ class MavenRepositoryWorker extends Actor with LazyLogging {
         val futureSavedClass = ask(ActorMaster.storageMaster, SaveClass(klass)).mapTo[Class]
         val futureSavedMethods = futureSavedClass.flatMap(savedClass => {
           Future.traverse(typeDeclaration.getMethods.toSeq)(methodDeclaration => {
-            val method = AstTreeManager.buildFrom(methodDeclaration, klass)
+            val method = AstTreeManager.buildFrom(methodDeclaration, savedClass)
             ask(ActorMaster.storageMaster, SaveMethod(method)).mapTo[Method]
           })
         })
@@ -254,11 +282,12 @@ class MavenRepositoryWorker extends Actor with LazyLogging {
           klass
         })
       })
-      sender() ! futureClasses
+      futureClasses pipeTo sender()
     }
     case AnalyzeArtifact(artifact) => {
+      logger.info("Do Analyze!")
       val futurePackageFiles = ask(self, FetchArtifact(artifact)).mapTo[Seq[PackageFile]]
-      val f = futurePackageFiles.map(packageFiles => {
+      val f = futurePackageFiles.flatMap(packageFiles => {
         val f = Future.traverse(packageFiles)(packageFile => {
           if (packageFile.packageType == PackageType.Source.toString) {
             ask(self, AnalyzeSource(artifact, packageFile)).mapTo[Seq[Class]]
@@ -334,6 +363,14 @@ class DbWriteActor extends Actor with LazyLogging {
     case ReadLibraryPackage(artifact, receiver) => {
       val libraryPackage = DatabaseManager.getLibraryPackageFile(artifact)
       receiver.getOrElse(sender()) ! LibraryPackageResult(artifact, libraryPackage)
+    }
+    case GetArtifacts(project) => {
+      val artifacts = DatabaseManager.getArtifacts(project)
+      sender() ! artifacts
+    }
+    case GetProjects() => {
+      val projects = DatabaseManager.getProjects()
+      sender() ! projects
     }
   }
 }

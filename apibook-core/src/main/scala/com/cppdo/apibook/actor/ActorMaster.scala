@@ -8,7 +8,7 @@ import com.cppdo.apibook.db.Project
 import com.typesafe.scalalogging.LazyLogging
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import com.cppdo.apibook.actor.ActorProtocols.CollectProjects
+import com.cppdo.apibook.actor.ActorProtocols.{AnalyzeProject, CollectProjects}
 
 /**
  * Created by song on 5/16/15.
@@ -20,6 +20,11 @@ object ActorMaster extends LazyLogging {
     val projectsFuture = mavenRepositoryMaster.ask(CollectProjects(count)).mapTo[Seq[Project]]
     val projects = Await.result(projectsFuture, Duration.Inf)
     projects
+  }
+
+  def analyzeProject(project: Project): Unit = {
+    val f = mavenRepositoryMaster.ask(AnalyzeProject(project))
+    Await.result(f, Duration.Inf)
   }
 
   def shutdown() = {
