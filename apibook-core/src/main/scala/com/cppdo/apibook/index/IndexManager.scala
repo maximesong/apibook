@@ -22,12 +22,12 @@ import com.typesafe.config.ConfigFactory
  */
 object IndexManager {
   val indexDirectory = "data"
-  val fieldName = "name"
+  val fieldName = "Name"
 
   object FieldName extends Enumeration {
     type FieldName = Value
 
-    val Name, Type, DbId, EnclosingClassDbId, FieldNames = Value
+    val Name, Type, DbId, EnclosingClassDbId, FieldNames, Signature, Parameters = Value
   }
 
   object DocumentType extends Enumeration {
@@ -148,11 +148,15 @@ object IndexManager {
     val nameField = new TextField(FieldName.Name.toString, method.name, Field.Store.YES)
     val typeField = new StringField(FieldName.Type.toString, DocumentType.Method.toString, Field.Store.YES)
     val dbIdField = new StoredField(FieldName.DbId.toString, method.id.get)
+    val signatureField = new TextField(FieldName.Signature.toString, method.signature, Field.Store.YES)
+    val parameterField = new TextField(FieldName.Parameters.toString, method.parameters, Field.Store.YES)
     val enclosingClassDbIdField = new StoredField(FieldName.EnclosingClassDbId.toString, method.enclosingClassId)
     document.add(nameField)
     document.add(typeField)
     document.add(dbIdField)
     document.add(enclosingClassDbIdField)
+    document.add(signatureField)
+    document.add(parameterField)
     document
   }
 }

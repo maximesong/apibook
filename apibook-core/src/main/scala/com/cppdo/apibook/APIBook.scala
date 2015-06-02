@@ -31,8 +31,33 @@ import sys.process._
  * Created by song on 1/17/15.
  */
 object APIBook extends LazyLogging {
+  case class Config(mode: String = "")
   def main(args: Array[String]): Unit = {
-    logger.info("Hi")
+    val parser = new scopt.OptionParser[Config]("apibook") {
+      head("APIBook", "1.0")
+      cmd("fetch")  action {
+        (_, c) => c.copy(mode="fetch")
+      }
+      cmd("build") action {
+        (_, c) => c.copy(mode="build")
+      }
+    }
+    parser.parse(args, Config()) match {
+      case Some(config) => {
+        logger.info("Hi")
+        config.mode match {
+          case "fetch" => test()
+          case "build" => buildIndex()
+          case _ => parser.reportError("No command") // do nothing
+        }
+        logger.info("Bye")
+      }
+
+
+      case None =>
+      // arguments are bad, error message will have been displayed
+    }
+
     //fetchProjects()
     //fetchAll()
     //buildIndex
@@ -48,8 +73,7 @@ object APIBook extends LazyLogging {
     //buildIndexActor()
     //testGithub()
     //test()
-    buildIndex()
-    logger.info("Bye")
+
   }
 
   def test() = {
