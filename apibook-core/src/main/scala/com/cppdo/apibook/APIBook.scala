@@ -47,7 +47,8 @@ object APIBook extends LazyLogging {
     //tryAnalyze()
     //buildIndexActor()
     //testGithub()
-    test()
+    //test()
+    buildIndex()
     logger.info("Bye")
   }
 
@@ -58,6 +59,20 @@ object APIBook extends LazyLogging {
     })
     logger.info(projects.toString())
     ActorMaster.shutdown()
+  }
+
+  def buildIndex() = {
+    val indexWriter = IndexManager.createIndexWriter()
+    DatabaseManager.getClasses().foreach(klass => {
+      val document = IndexManager.buildDocument(klass)
+      indexWriter.addDocument(document)
+    })
+
+    DatabaseManager.getMethods().foreach(method => {
+      val document = IndexManager.buildDocument(method)
+      indexWriter.addDocument(document)
+    })
+    indexWriter.close()
   }
 
   def testGithub() = {
@@ -140,9 +155,6 @@ object APIBook extends LazyLogging {
     results.foreach(document => println(document.get("Name")))
   }
 
-  def buildIndex = {
-    ArtifactsManager.buildIndexForArtifacts
-  }
 
   def testVersions(): Unit = {
     val v = MavenRepository.Version(0)
