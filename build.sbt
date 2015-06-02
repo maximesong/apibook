@@ -41,15 +41,15 @@ lazy val web = (project in file("./apibook-web")).enablePlugins(PlayScala).depen
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= Seq(
     jdbc,
-    anorm,
     cache,
     ws,
-    "org.webjars" %% "webjars-play" % "2.3.0-2",
-    "org.webjars" % "angularjs" % "1.3.14",
-    "org.webjars" % "bootstrap" % "3.3.2-1",
-    "org.webjars" % "underscorejs" % "1.8.2",
+    specs2 % Test,
+    "org.webjars" %% "webjars-play" % "2.4.0-1",
+    "org.webjars" % "angularjs" % "1.4.0",
+    "org.webjars" % "bootstrap" % "3.3.4",
+    "org.webjars" % "underscorejs" % "1.8.3",
     "org.webjars" % "modernizr" % "2.8.3",
-    "org.webjars" % "momentjs" % "2.9.0")
+    "org.webjars" % "momentjs" % "2.10.2")
   )
 
 lazy val root = (project in file(".")).aggregate(core, web)
