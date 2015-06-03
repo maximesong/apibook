@@ -93,7 +93,7 @@ object APIBook extends LazyLogging {
   }
 
   def fetch() = {
-    val projects = ActorMaster.collectProjects(100)
+    val projects = ActorMaster.collectProjects(10)
     projects.foreach(project => {
       ActorMaster.analyzeProject(project)
     })
