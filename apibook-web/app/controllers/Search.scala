@@ -6,7 +6,8 @@ import com.cppdo.apibook.index.IndexManager.FieldName
 import play.api.libs.json.{JsString, JsArray}
 import play.api.mvc._
 import play.api.libs.json.Json
-
+import com.cppdo.apibook.repository.ArtifactsManager.RichArtifact
+import com.cppdo.apibook.repository.MavenRepository.MavenArtifact
 /**
  * Created by song on 3/11/15.
  */
@@ -25,7 +26,8 @@ object Search extends Controller {
           Json.obj(
             FieldName.Name.toString -> document.get(FieldName.Name.toString),
             FieldName.Type.toString -> typeClass,
-            "Artifact" -> artifact.name
+            "Artifact" -> artifact.name,
+            "DownloadUrl" -> artifact.libraryPackageUrl
           )
         }
         case `typeMethod` => {
@@ -38,7 +40,8 @@ object Search extends Controller {
             FieldName.Type.toString -> typeMethod,
             "Class" -> klass.fullName,
             "Artifact" -> artifact.name,
-            "Id" -> document.get(FieldName.DbId.toString)
+            "Id" -> document.get(FieldName.DbId.toString),
+            "DownloadUrl" -> artifact.libraryPackageUrl
           )
         }
       }

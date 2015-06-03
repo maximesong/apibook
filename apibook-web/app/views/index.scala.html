@@ -11,8 +11,27 @@
                 <div class="btn btn-primary" ng-click="search()">Search</div>
             </div>
         </div>
-        <div ng-repeat="item in items" class="row">
-            <div class="text-center">{{item}}</div>
-        </div>
+        <ul class="list-unstyled list-group">
+            <div ng-repeat="item in items" class="row">
+                <li class="classItem" ng-if="item.Type == 'Class'">
+                    <div class="col-md-3">
+                        <span class="label label-primary">Class</span>
+                    </div>
+                    <div class="col-md-9">
+                        <a href="{{item.DownloadUrl}}">{{item.Artifact}}</a> => <strong>{{item.Name}}</strong>
+                    </div>
+
+                </li>
+                <li class="methodItem" ng-if="item.Type == 'Method'">
+                    <div class="col-md-3">
+                        <span class="label label-info">Method</span>
+                    </div>
+                    <div class="col-md-9">
+                        <a href="{{item.DownloadUrl}}">{{item.Artifact}}</a> => <em>{{item.Class}}</em> => <strong>{{item.Name}}</strong>
+                    </div>
+                </li>
+            </div>
+        </ul>
+
     </div>
 }
