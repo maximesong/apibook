@@ -19,7 +19,7 @@ object MavenRepository extends LazyLogging {
   val baseUrl = "http://mvnrepository.com"
   val baseDownloadUrl = "http://central.maven.org/maven2"
   val VersionRegex = """(\d+)(?:\.(\d+)(?:\.(\d+))?)?(?:-([\w-.]+))?""".r
-  val projectsPerPage = 20
+  val projectsPerPage = 10
   val reasonableMaxMajorVersion = 100
 
   case class LibraryDetail(artifact: Artifact, downloadLink: String, releaseDateTime: DateTime)

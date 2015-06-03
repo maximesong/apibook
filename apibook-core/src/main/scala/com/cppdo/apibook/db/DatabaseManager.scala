@@ -1,6 +1,7 @@
 package com.cppdo.apibook.db
 
 import com.cppdo.apibook.repository.ArtifactsManager.PackageType
+import com.sun.xml.internal.bind.v2.schemagen.episode.Klass
 import com.typesafe.scalalogging.LazyLogging
 import slick.driver.SQLiteDriver.api._
 import slick.jdbc.meta.MTable
@@ -193,5 +194,24 @@ object DatabaseManager extends LazyLogging {
     sourcePackageFiles.headOption
   }
 
+  def getMethod(methodId: Int): Method = {
+    val query = methodsTable.filter(method => method.id === methodId)
+    val result: Seq[Method] = Await.result(db.run(query.result), Duration.Inf)
+    result.head
+  }
+
+  def getKlass(klassId: Int): Class = {
+    val query = classesTable.filter(klass => klass.id === klassId)
+    val result: Seq[Class] = Await.result(db.run(query.result), Duration.Inf)
+    result.head
+  }
+
+
+
+  def getArtifact(artifactId: Int): Artifact = {
+    val query = artifactsTable.filter(artifact => artifact.id === artifactId)
+    val result: Seq[Artifact] = Await.result(db.run(query.result), Duration.Inf)
+    result.head
+  }
   createTables
 }

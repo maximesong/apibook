@@ -105,6 +105,7 @@ class BuildIndexActor() extends Actor with LazyLogging {
 class DownloadFileActor extends Actor {
   override def receive: Actor.Receive = {
     case DownloadFile(fromUrl, toPath, overwrite) => {
+      var success = true
       val file = new File(toPath)
       if (!file.exists() || overwrite) {
         try {
@@ -112,10 +113,13 @@ class DownloadFileActor extends Actor {
         } catch {
           case e: FileNotFoundException => {
             sender() ! Some(e)
+            success = false
           }
         }
       }
-      sender() ! None
+      if (success) {
+        sender() ! None
+      }
     }
   }
 }
@@ -351,12 +355,12 @@ class DbWriteActor extends Actor with LazyLogging {
       sender() ! packageFileSaved
     }
     case SaveClass(klass, receiver) => {
-      logger.info(s"Save class: ${klass.fullName}")
+      //logger.info(s"Save class: ${klass.fullName}")
       val klassSaved = DatabaseManager.add(klass)
       sender() ! klassSaved
     }
     case SaveMethod(method, receiver) => {
-      logger.info(s"Save method: ${method.name}")
+      //logger.info(s"Save method: ${method.name}")
       val methodSaved = DatabaseManager.add(method)
       sender() ! methodSaved
     }

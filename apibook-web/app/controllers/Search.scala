@@ -1,5 +1,6 @@
 package controllers
 
+import com.cppdo.apibook.db.DatabaseManager
 import com.cppdo.apibook.index.IndexManager
 import com.cppdo.apibook.index.IndexManager.FieldName
 import play.api.libs.json.{JsString, JsArray}
@@ -17,16 +18,29 @@ object Search extends Controller {
       val typeClass = IndexManager.DocumentType.Class.toString
       val typeMethod = IndexManager.DocumentType.Method.toString
       documentType match {
-        case `typeClass` => Json.obj(
-          FieldName.Name.toString -> document.get(FieldName.Name.toString),
-          FieldName.Type.toString -> typeClass,
-          "Id" -> document.get(FieldName.DbId.toString)
-        )
-        case `typeMethod` => Json.obj(
-          FieldName.Name.toString -> document.get(FieldName.Name.toString),
-          FieldName.Type.toString -> typeMethod,
-          "Id" -> document.get(FieldName.DbId.toString)
-        )
+        case `typeClass` => {
+          val id = document.get(FieldName.DbId.toString).toInt
+          val klass = DatabaseManager.getKlass(id)
+          val artifact = DatabaseManager.getArtifact(klass.artifactId)
+          Json.obj(
+            FieldName.Name.toString -> document.get(FieldName.Name.toString),
+            FieldName.Type.toString -> typeClass,
+            "Artifact" -> artifact.name
+          )
+        }
+        case `typeMethod` => {
+          val id = document.get(FieldName.DbId.toString).toInt
+          val method = DatabaseManager.getMethod(id)
+          val klass = DatabaseManager.getKlass(method.enclosingClassId)
+          val artifact = DatabaseManager.getArtifact(klass.artifactId)
+          Json.obj(
+            FieldName.Name.toString -> document.get(FieldName.Name.toString),
+            FieldName.Type.toString -> typeMethod,
+            "Class" -> klass.fullName,
+            "Artifact" -> artifact.name,
+            "Id" -> document.get(FieldName.DbId.toString)
+          )
+        }
       }
     })
     val result = Json.toJson(resultEntries)

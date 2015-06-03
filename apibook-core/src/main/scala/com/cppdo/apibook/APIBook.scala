@@ -1,6 +1,6 @@
 package com.cppdo.apibook
 
-import java.io.File
+import java.io.{FileNotFoundException, File}
 import java.net.URL
 import java.nio.file.{Path, Paths, Files}
 
@@ -41,13 +41,17 @@ object APIBook extends LazyLogging {
       cmd("build") action {
         (_, c) => c.copy(mode="build")
       }
+      cmd("test") action {
+        (_, c) => c.copy(mode="test")
+      }
     }
     parser.parse(args, Config()) match {
       case Some(config) => {
         logger.info("Hi")
         config.mode match {
-          case "fetch" => test()
+          case "fetch" => fetch()
           case "build" => buildIndex()
+          case "test" => test()
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -77,7 +81,19 @@ object APIBook extends LazyLogging {
   }
 
   def test() = {
-    val projects = ActorMaster.collectProjects(1)
+    try {
+      val file = new File("doc.jar")
+      FileUtils.copyURLToFile(
+        new URL("http://central.maven.org/maven2/org/springframework/spring-context/2.5.6/spring-context-2.5.6-javadoc.jar"),
+        file)
+    } catch {
+      case e: FileNotFoundException =>
+        logger.info(e.toString)
+    }
+  }
+
+  def fetch() = {
+    val projects = ActorMaster.collectProjects(100)
     projects.foreach(project => {
       ActorMaster.analyzeProject(project)
     })

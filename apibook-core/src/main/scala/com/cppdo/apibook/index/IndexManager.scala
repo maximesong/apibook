@@ -80,7 +80,7 @@ object IndexManager {
     indexWriter.close()
   }
 
-  def search(queryText: String): Seq[Document] = {
+  def search(queryText: String, count: Int = 10): Seq[Document] = {
     val directory = openIndexDirectory(indexDirectory)
     val reader = DirectoryReader.open(directory)
     val searcher = new IndexSearcher(reader)
@@ -89,7 +89,7 @@ object IndexManager {
     val booleanQuery = new BooleanQuery()
     //val q = new MatchAllDocsQuery()
     val query = parser.parse(queryText)
-    val topDocs = searcher.search(query, null, 100)
+    val topDocs = searcher.search(query, null,count)
 
     //val topDocs = searcher.search(q, null, 100)
     println("Total hits: " + topDocs.totalHits)
