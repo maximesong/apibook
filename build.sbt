@@ -4,6 +4,8 @@ version := "1.0"
 
 scalaVersion := "2.11.6"
 
+
+
 lazy val commonSettings = Seq(
   organization := "com.cppdo",
   version := "1.0",
@@ -51,5 +53,6 @@ lazy val web = (project in file("./apibook-web")).enablePlugins(PlayScala).depen
     "org.webjars" % "modernizr" % "2.8.3",
     "org.webjars" % "momentjs" % "2.10.2")
   )
+  .settings(resolvers += "Scalaz Bintray Repo" at "https://dl.bintray.com/scalaz/releases")
 
 lazy val root = (project in file(".")).aggregate(core, web)
