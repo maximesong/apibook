@@ -5,7 +5,7 @@
         <h1>APIBook</h1>
         <div class="row">
             <div class="col-md-8">
-                <input class="form-control" ng-model="searchText">
+                <input ng-keypress="keypress($event)" class="form-control" ng-model="searchText">
             </div>
             <div class="col-md-4">
                 <div class="btn btn-primary" ng-click="search()">Search</div>
@@ -17,17 +17,22 @@
                     <div class="col-md-3">
                         <span class="label label-primary">Class</span>
                     </div>
-                    <div class="col-md-9">
+                    <div class="col-md-6">
                         <a href="{{item.DownloadUrl}}">{{item.Artifact}}</a> => <strong>{{item.Name}}</strong>
                     </div>
-
+                    <div class="col-md-3">
+                        <a href="{{item.DocPath}}" ng-if="item.DocPath != ''"><span class="label label-primary">doc</span></a>
+                    </div>
                 </li>
                 <li class="methodItem" ng-if="item.Type == 'Method'">
                     <div class="col-md-3">
                         <span class="label label-info">Method</span>
                     </div>
-                    <div class="col-md-9">
+                    <div class="col-md-6">
                         <a href="{{item.DownloadUrl}}">{{item.Artifact}}</a> => <em>{{item.Class}}</em> => <strong>{{item.Name}}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{item.DocPath}}" ng-if="item.DocPath != ''"><span class="label label-primary">doc</span></a>
                     </div>
                 </li>
             </div>

@@ -1,8 +1,9 @@
 package com.cppdo.apibook.ast
 
-import java.util.jar.JarFile
+import java.io.InputStream
+import java.util.jar.{JarEntry, JarFile}
 
-import com.cppdo.apibook.db.Method
+import com.cppdo.apibook.db.{Class, Method}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.{IOUtils, FileUtils}
 import org.eclipse.jdt.core.dom.{AST, ASTParser, CompilationUnit}
@@ -27,6 +28,42 @@ object JarManager extends LazyLogging {
       classNode
     }).toSeq
     classNodes
+  }
+
+  def getDocEntry(jarPath: String, klass: Class): Option[JarEntry] = {
+    val entries = getDocEntries(jarPath, klass)
+    selectDocEntry(entries, klass)
+  }
+
+  def getDocEntry(jarFile: JarFile, klass: Class): Option[JarEntry] = {
+    val entries = getDocEntries(jarFile, klass)
+    selectDocEntry(entries, klass)
+  }
+
+  def getDocInputStream(jarPath: String, klass: Class): Option[InputStream] = {
+    val jarFile = new JarFile(jarPath)
+    val optionDocEntry = getDocEntry(jarFile, klass)
+    optionDocEntry.map(e => {
+      jarFile.getInputStream(e)
+    })
+  }
+
+  def getDocEntries(jarFile: JarFile, klass: Class): Seq[JarEntry] = {
+    val docEntries = jarFile.entries().asScala.filter(entry => {
+      val name = entry.getName
+      name.endsWith(".html") && name.contains(klass.fullName)
+    })
+    docEntries.toSeq
+  }
+
+  def getDocEntries(jarPath: String, klass: Class): Seq[JarEntry] = {
+    val jarFile = new JarFile(jarPath)
+    getDocEntries(jarFile, klass)
+  }
+
+  def selectDocEntry(entries: Seq[JarEntry], klass: Class): Option[JarEntry] = {
+    val sorted = entries.sortBy(jarEntry => jarEntry.getName.length)
+    sorted.headOption
   }
 
   def getCompilationUnits(jarPath: String): Seq[CompilationUnit] = {

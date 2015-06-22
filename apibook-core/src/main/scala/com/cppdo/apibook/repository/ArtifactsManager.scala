@@ -2,6 +2,7 @@ package com.cppdo.apibook.repository
 
 import java.io.{FileNotFoundException, File}
 import java.net.URL
+import java.util.jar.JarEntry
 
 import com.cppdo.apibook.ast.JarManager
 import com.cppdo.apibook.db.{Artifact, PackageFile, DatabaseManager}
@@ -19,6 +20,8 @@ object ArtifactsManager extends LazyLogging {
     val Library, Source, Doc = Value
   }
   val baseDirectory = "repository"
+  val baseDocSaveDirectory = "apibook-web/public"
+  val baseDocDirectory = "doc"
 
   def fetchTopProjectsAndArtifactsToDb(projectsNum: Int) = {
     val projects = MavenRepository.getTopProjects(projectsNum)
@@ -102,5 +105,10 @@ object ArtifactsManager extends LazyLogging {
 
   implicit class RichPackageFile(packageFile: PackageFile) {
     def fullPath = s"${baseDirectory}/${packageFile.relativePath}"
+  }
+
+  implicit class RichDocEntry(jarEntry: JarEntry) {
+    def docSavePath = s"${baseDocSaveDirectory}/${baseDocDirectory}/${jarEntry.getName}"
+    def docPath = s"${baseDocDirectory}/${jarEntry.getName}"
   }
 }

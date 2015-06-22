@@ -31,5 +31,10 @@ angular.module('apibookApp', [])
             });
             */
         };
+        $scope.keypress = function(event) {
+            if (event.keyCode === 13) {
+                $scope.search();
+            }
+        }
     }]);
 

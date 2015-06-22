@@ -11,3 +11,5 @@ POST    /api/search     controllers.Search.post
 GET        /assets/*file         controllers.Assets.at(path="/public", file)
 
 GET        /webjars/*file        controllers.WebJarAssets.at(file)
+
+GET        /doc/*file           controllers.Assets.at(path="/public/doc", file)

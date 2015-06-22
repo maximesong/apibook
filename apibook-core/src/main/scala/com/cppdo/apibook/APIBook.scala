@@ -81,15 +81,7 @@ object APIBook extends LazyLogging {
   }
 
   def test() = {
-    try {
-      val file = new File("doc.jar")
-      FileUtils.copyURLToFile(
-        new URL("http://central.maven.org/maven2/org/springframework/spring-context/2.5.6/spring-context-2.5.6-javadoc.jar"),
-        file)
-    } catch {
-      case e: FileNotFoundException =>
-        logger.info(e.toString)
-    }
+    //JarManager.getDocEntries("/Users/song/Projects/apibook/repository/commons-io/commons-io/2.4/commons-io-2.4-javadoc.jar", Klass())
   }
 
   def fetch() = {

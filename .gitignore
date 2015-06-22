@@ -7,3 +7,4 @@ target
 *.sqlite
 .history
 db.sqlite-journal
+.DS_Store
