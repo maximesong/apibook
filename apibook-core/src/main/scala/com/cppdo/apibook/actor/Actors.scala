@@ -163,7 +163,7 @@ class MavenFetchActor extends Actor with LazyLogging {
 
 class MavenRepositoryMaster extends Actor with LazyLogging {
 
-  implicit val timeout = Timeout.apply(5 minute)
+  implicit val timeout = Timeout.apply(10 hour)
   val NumberOfWorkers = 3
   val workers = context.actorOf(
     RoundRobinPool(NumberOfWorkers).props(Props(new MavenRepositoryWorker())), "worker")
@@ -225,7 +225,7 @@ class MavenRepositoryMaster extends Actor with LazyLogging {
 }
 
 class MavenRepositoryWorker extends Actor with LazyLogging {
-  implicit val timeout = Timeout.apply(5 minute)
+  implicit val timeout = Timeout.apply(10 hour)
 
   val downloadWorker = context.actorOf(RoundRobinPool(3).props(Props[DownloadFileActor]))
   case class PackageFileInfo(downloadUrl: String, fullPath: String, relativePath: String, packageType: PackageType)

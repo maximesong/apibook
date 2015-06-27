@@ -2,6 +2,7 @@ package controllers
 
 import java.io.File
 import java.util.jar.JarFile
+import java.util.zip.ZipException
 
 import com.cppdo.apibook.ast.JarManager
 import com.cppdo.apibook.db.DatabaseManager
@@ -29,13 +30,18 @@ object Search extends Controller with LazyLogging {
           val id = document.get(FieldName.DbId.toString).toInt
           val klass = DatabaseManager.getKlass(id)
           val artifact = DatabaseManager.getArtifact(klass.artifactId)
-          val jarFile = new JarFile(artifact.fullDocPackagePath)
-          val optionEntry = JarManager.getDocEntry(jarFile, klass)
-          val optionDocPath = optionEntry.map(e => {
-            val inputStream = jarFile.getInputStream(e)
-            FileUtils.copyInputStreamToFile(inputStream, new File(e.docSavePath))
-            e.docPath
-          })
+          logger.info(artifact.fullDocPackagePath)
+          val optionDocPath = if (new File(artifact.fullDocPackagePath).exists()) {
+            val jarFile = new JarFile(artifact.fullDocPackagePath)
+            val optionEntry = JarManager.getDocEntry(jarFile, klass)
+            optionEntry.map(e => {
+              val inputStream = jarFile.getInputStream(e)
+              FileUtils.copyInputStreamToFile(inputStream, new File(e.docSavePath))
+              e.docPath
+            })
+          } else {
+            None
+          }
           Json.obj(
             FieldName.Name.toString -> document.get(FieldName.Name.toString),
             FieldName.Type.toString -> typeClass,
@@ -49,13 +55,19 @@ object Search extends Controller with LazyLogging {
           val method = DatabaseManager.getMethod(id)
           val klass = DatabaseManager.getKlass(method.enclosingClassId)
           val artifact = DatabaseManager.getArtifact(klass.artifactId)
-          val jarFile = new JarFile(artifact.fullDocPackagePath)
-          val optionEntry = JarManager.getDocEntry(jarFile, klass)
-          val optionDocPath = optionEntry.map(e => {
-            val inputStream = jarFile.getInputStream(e)
-            FileUtils.copyInputStreamToFile(inputStream, new File(e.docSavePath))
-            e.docPath
-          })
+          logger.info(artifact.fullDocPackagePath)
+          val optionDocPath = if (new File(artifact.fullDocPackagePath).exists()) {
+            val jarFile = new JarFile(artifact.fullDocPackagePath)
+            val optionEntry = JarManager.getDocEntry(jarFile, klass)
+            optionEntry.map(e => {
+              val inputStream = jarFile.getInputStream(e)
+              FileUtils.copyInputStreamToFile(inputStream, new File(e.docSavePath))
+              e.docPath
+            })
+          } else {
+            None
+          }
+
           Json.obj(
             FieldName.Name.toString -> document.get(FieldName.Name.toString),
             FieldName.Type.toString -> typeMethod,

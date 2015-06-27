@@ -5,7 +5,9 @@ import java.net.URL
 import java.nio.file.{Path, Paths, Files}
 
 import akka.actor.{PoisonPill, Props, ActorSystem}
+import akka.pattern._
 import akka.routing.RoundRobinPool
+import akka.util.Timeout
 import com.cppdo.apibook.actor.ActorProtocols._
 import com.cppdo.apibook.actor._
 import com.cppdo.apibook.ast.{AstTreeManager, ClassVisitor, JarManager}
@@ -22,6 +24,7 @@ import slick.model.ForeignKeyAction.NoAction
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import scala.io.Source
 
 import sys.process._
@@ -31,10 +34,15 @@ import sys.process._
  * Created by song on 1/17/15.
  */
 object APIBook extends LazyLogging {
-  case class Config(mode: String = "")
+
+  case class Config(mode: String = "", n: Int = 20)
   def main(args: Array[String]): Unit = {
     val parser = new scopt.OptionParser[Config]("apibook") {
       head("APIBook", "1.0")
+
+      opt[Int]('n', "number") action {
+        (n, c) => c.copy(n=n)
+      }
       cmd("fetch")  action {
         (_, c) => c.copy(mode="fetch")
       }
@@ -49,7 +57,7 @@ object APIBook extends LazyLogging {
       case Some(config) => {
         logger.info("Hi")
         config.mode match {
-          case "fetch" => fetch()
+          case "fetch" => fetch(config.n)
           case "build" => buildIndex()
           case "test" => test()
           case _ => parser.reportError("No command") // do nothing
@@ -81,11 +89,21 @@ object APIBook extends LazyLogging {
   }
 
   def test() = {
-    //JarManager.getDocEntries("/Users/song/Projects/apibook/repository/commons-io/commons-io/2.4/commons-io-2.4-javadoc.jar", Klass())
+    implicit val timeout = Timeout.apply(2 minute)
+    val system = ActorSystem()
+    val mavenFetchActor = system.actorOf(
+      RoundRobinPool(3).props(Props(new MavenFetchActor())), "maven")
+    val downloadWorker = system.actorOf(Props(new DownloadFileActor()))
+    val f = downloadWorker ask DownloadFile(
+      "http://central.maven.org/maven2/org/springframework/spring-context/2.5.6/spring-context-2.5.6-javadoc.jar",
+      "sprint-context.jar",
+      false)
+    val a = Await.result(f, Duration.Inf)
+    logger.info(a.toString)
   }
 
-  def fetch() = {
-    val projects = ActorMaster.collectProjects(10)
+  def fetch(n: Int) = {
+    val projects = ActorMaster.collectProjects(n)
     projects.foreach(project => {
       ActorMaster.analyzeProject(project)
     })
@@ -150,15 +168,6 @@ object APIBook extends LazyLogging {
   }
 
   def testActor() = {
-    val system = ActorSystem()
-    val mavenFetchActor = system.actorOf(
-      RoundRobinPool(3).props(Props(new MavenFetchActor())), "maven")
-
-    val storageActor = system.actorOf(Props(new DbWriteActor()), "db")
-
-    val artifactsCollector = system.actorOf(Props(new ArtifactsCollectActor(mavenFetchActor, storageActor)), "artifact")
-
-    mavenFetchActor ! FetchProjects(5, Some(artifactsCollector))
 
   }
 
