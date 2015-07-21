@@ -21,6 +21,8 @@ lazy val core = (project in file("./apibook-core"))
     "com.typesafe.akka" %% "akka-actor" % "2.3.9",
     "com.typesafe.akka" %% "akka-testkit" % "2.3.9",
     "com.typesafe.play" %% "play-json" % "2.4.0-RC1",
+    "org.mongodb" %% "casbah-core" % "2.8.1",
+
     //"org.slf4j" % "slf4j-api" % "1.7.10",
     //"org.slf4j" % "slf4j-nop" % "1.7.10",
     "ch.qos.logback" % "logback-classic" % "1.1.2",
@@ -29,6 +31,7 @@ lazy val core = (project in file("./apibook-core"))
     "com.h2database" % "h2" % "1.4.185",
     "org.xerial" % "sqlite-jdbc" % "3.8.7",
     "org.jsoup" % "jsoup" % "1.8.1",
+    "com.github.tototoshi" %% "scala-csv" % "1.2.1",
     "joda-time" % "joda-time" % "2.7",
     "org.apache.lucene" % "lucene-core" % "4.10.4",
     "org.apache.lucene" % "lucene-analyzers-common" % "4.10.4",

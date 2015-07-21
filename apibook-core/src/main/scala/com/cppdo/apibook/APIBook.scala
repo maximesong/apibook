@@ -12,10 +12,12 @@ import com.cppdo.apibook.actor.ActorProtocols._
 import com.cppdo.apibook.actor._
 import com.cppdo.apibook.ast.{AstTreeManager, ClassVisitor, JarManager}
 import com.cppdo.apibook.db._
+import com.cppdo.apibook.forum.StackOverflowCrawler
 import com.cppdo.apibook.index.IndexManager
 import com.cppdo.apibook.repository.{GitHubRepositoryManager, ArtifactsManager, MavenRepository}
 import com.cppdo.apibook.repository.ArtifactsManager.RichArtifact
 import com.cppdo.apibook.repository.MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
+import com.github.tototoshi.csv.CSVWriter
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import slick.driver.JdbcDriver
@@ -35,13 +37,16 @@ import sys.process._
  */
 object APIBook extends LazyLogging {
 
-  case class Config(mode: String = "", n: Int = 20)
+  case class Config(mode: String = "", n: Int = 20, outFile: String = "out.csv")
   def main(args: Array[String]): Unit = {
     val parser = new scopt.OptionParser[Config]("apibook") {
       head("APIBook", "1.0")
 
       opt[Int]('n', "number") action {
         (n, c) => c.copy(n=n)
+      }
+      opt[String]('o', "out") action {
+        (outFile, c) => c.copy(outFile=outFile)
       }
       cmd("fetch")  action {
         (_, c) => c.copy(mode="fetch")
@@ -52,6 +57,9 @@ object APIBook extends LazyLogging {
       cmd("test") action {
         (_, c) => c.copy(mode="test")
       }
+      cmd("so") action {
+        (_, c) => c.copy(mode="stackoverflow")
+      }
     }
     parser.parse(args, Config()) match {
       case Some(config) => {
@@ -60,6 +68,7 @@ object APIBook extends LazyLogging {
           case "fetch" => fetch(config.n)
           case "build" => buildIndex()
           case "test" => test()
+          case "stackoverflow" => stackoverflow(config)
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -100,6 +109,17 @@ object APIBook extends LazyLogging {
       false)
     val a = Await.result(f, Duration.Inf)
     logger.info(a.toString)
+  }
+
+  def stackoverflow(config: Config) = {
+    val summaries = StackOverflowCrawler.fetchQuestionSummaries(config.n)
+    val writer = CSVWriter.open(config.outFile)
+    writer.writeRow(List("Question ID", "Votes", "Title", "Ask API", "Answer With One API", "Link"))
+    summaries.foreach(summary => {
+      writer.writeRow(List(summary.id, summary.votes, summary.title, "", "", summary.link))
+    })
+    logger.info(s"Write to ${config.outFile}")
+    writer.close()
   }
 
   def fetch(n: Int) = {
