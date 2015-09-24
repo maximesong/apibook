@@ -17,8 +17,8 @@ class SourceCodeAnalyzer extends StopwordAnalyzerBase {
 
   val STOP_WORDS_SET = StopAnalyzer.ENGLISH_STOP_WORDS_SET
 
-  override def createComponents(fieldName: String, reader: Reader): TokenStreamComponents = {
-    val src = new StandardTokenizer(reader)
+  override def createComponents(fieldName: String): TokenStreamComponents = {
+    val src = new StandardTokenizer()
     src.setMaxTokenLength(maxTokenLength)
     var tok: TokenStream = new StandardFilter(src)
     tok = new WordDelimiterFilter(tok,

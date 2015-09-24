@@ -18,6 +18,7 @@ import com.cppdo.apibook.repository.{GitHubRepositoryManager, ArtifactsManager, 
 import com.cppdo.apibook.repository.ArtifactsManager.RichArtifact
 import com.cppdo.apibook.repository.MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
 import com.github.tototoshi.csv.CSVWriter
+import com.mongodb.casbah.MongoClient
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import slick.driver.JdbcDriver
@@ -31,6 +32,8 @@ import scala.io.Source
 
 import sys.process._
 //import slick.driver.H2Driver.api._
+import com.mongodb.casbah.Imports._
+
 
 /**
  * Created by song on 1/17/15.
@@ -98,28 +101,30 @@ object APIBook extends LazyLogging {
   }
 
   def test() = {
-    implicit val timeout = Timeout.apply(2 minute)
-    val system = ActorSystem()
-    val mavenFetchActor = system.actorOf(
-      RoundRobinPool(3).props(Props(new MavenFetchActor())), "maven")
-    val downloadWorker = system.actorOf(Props(new DownloadFileActor()))
-    val f = downloadWorker ask DownloadFile(
-      "http://central.maven.org/maven2/org/springframework/spring-context/2.5.6/spring-context-2.5.6-javadoc.jar",
-      "sprint-context.jar",
-      false)
-    val a = Await.result(f, Duration.Inf)
-    logger.info(a.toString)
+    StackOverflowCrawler.fetch()
   }
 
   def stackoverflow(config: Config) = {
     val summaries = StackOverflowCrawler.fetchQuestionSummaries(config.n)
+    val mongoClient = MongoClient("localhost", 27017)
+    val db = mongoClient("apibook")
+    val coll = db("question")
+
     val writer = CSVWriter.open(config.outFile)
     writer.writeRow(List("Question ID", "Votes", "Title", "Ask API", "Answer With One API", "Link"))
     summaries.foreach(summary => {
       writer.writeRow(List(summary.id, summary.votes, summary.title, "", "", summary.link))
+      val query = MongoDBObject("id" -> summary.id)
+      val update = MongoDBObject("id" -> summary.id, "votes" -> summary.votes, "title" -> summary.title, "link" -> summary.link)
+      coll.update(query, update, upsert = true)
     })
     logger.info(s"Write to ${config.outFile}")
     writer.close()
+  }
+
+  def saveQuestionSummariesToMongo(count: Int) = {
+    val mongoClient = MongoClient("localhost", 27017)
+    val db = mongoClient("apibook")
   }
 
   def fetch(n: Int) = {

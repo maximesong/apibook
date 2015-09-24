@@ -38,16 +38,16 @@ object IndexManager {
 
   private def openIndexDirectory(path: String) = {
     // for lucene 5.x
-    //FSDirectory.open(Paths.get(indexDirectory))
+    FSDirectory.open(Paths.get(indexDirectory))
     // for lucene 4.x
-    FSDirectory.open(new File(path))
+    //FSDirectory.open(new File(path))
   }
 
   private def createIndexWriterConfig(analyzer: Analyzer) = {
     // for lucene 5.x
-    //val indexWriterConfig = new IndexWriterConfig(analyzer)
+    val indexWriterConfig = new IndexWriterConfig(analyzer)
     // for lucene 4.x
-    val indexWriterConfig = new IndexWriterConfig(Version.LUCENE_CURRENT, analyzer)
+    // val indexWriterConfig = new IndexWriterConfig(Version.LUCENE_CURRENT, analyzer)
     indexWriterConfig.setOpenMode(OpenMode.CREATE_OR_APPEND)
     indexWriterConfig
   }
