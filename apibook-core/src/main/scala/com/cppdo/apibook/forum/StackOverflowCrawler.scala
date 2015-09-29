@@ -54,7 +54,10 @@ object StackOverflowCrawler extends LazyLogging {
       val link = question.attr("href")
       val id = link.split("/")(2).toInt
       val title = question.text()
-      val summary = QuestionSummary(id, title, s"http://stackoverflow.com${link}", votes)
+      val views = summaryElement.select("div.views").attr("title").replaceAll("\\D", "").toInt
+      val answers = summaryElement.select("div.stats div.status strong").first().text().toInt
+      println(views)
+      val summary = QuestionSummary(id, title, s"http://stackoverflow.com${link}", votes, views, answers)
       summary
     })
     summaries.toSeq
@@ -65,4 +68,30 @@ object StackOverflowCrawler extends LazyLogging {
     parseListPage(document)
   }
 
+  def parseDetailPage(document: Document): Seq[Answer] = {
+    val postText = document.select("div.post-text").first()
+    val answerElements = document.select("div#answers div.answer").iterator().asScala
+    val answers = answerElements.map(answerElement => {
+      println("Hi")
+      val id = answerElement.attr("data-answerid").toInt
+      val votes = answerElement.select("div.vote span.vote-count-post").first().text().toInt
+      val accepted = answerElement.hasClass("accepted-answer")
+      val codeSections = answerElement.select("div.post-text code").size()
+      val links = answerElement.select(".answercell div.post-text a").size()
+      println(answerElement.select(".answercell .user-info .reputation-score"))
+      val authorReputation = Option(answerElement.select(".answercell .user-info .reputation-score").first()).map(reputationElement => {
+        val reputationText = reputationElement.attr("title").replaceAll("\\D", "")
+        if (reputationText.size > 0) {
+          reputationText.toInt
+        } else {
+          reputationElement.text().replaceAll("\\D", "").toInt
+        }
+      }).getOrElse(0)
+      val answer = Answer(id, votes, accepted, codeSections, links, authorReputation)
+      logger.info(answer.toString)
+      answer
+    })
+    println(answers.size)
+    answers.toSeq
+  }
 }

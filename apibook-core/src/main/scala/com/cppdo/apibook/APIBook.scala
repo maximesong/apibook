@@ -21,6 +21,7 @@ import com.github.tototoshi.csv.CSVWriter
 import com.mongodb.casbah.MongoClient
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
+import org.jsoup.Jsoup
 import slick.driver.JdbcDriver
 import slick.jdbc.meta.MTable
 import slick.model.ForeignKeyAction.NoAction
@@ -101,7 +102,9 @@ object APIBook extends LazyLogging {
   }
 
   def test() = {
-    StackOverflowCrawler.fetch()
+    val url = "http://stackoverflow.com/questions/1104975/for-loop-to-iterate-over-enum-in-java"
+    val document = Jsoup.connect(url).userAgent("apibook").get()
+    StackOverflowCrawler.parseDetailPage(document)
   }
 
   def stackoverflow(config: Config) = {
