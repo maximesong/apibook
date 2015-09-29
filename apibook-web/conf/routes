@@ -3,9 +3,16 @@
 # ~~~~
 
 # Home page
-GET        /                     controllers.Application.index
+GET        /                     controllers.Application.stackoverflow
+
+GET        /apibook                     controllers.Application.index
+GET        /stackoverflow                     controllers.Application.stackoverflow
+
+
 
 POST    /api/search     controllers.Search.post
+
+GET    /api/stackoverflow/summaries controllers.StackOverflow.summaries
 
 # Map static resources from the /public folder to the /assets URL path
 GET        /assets/*file         controllers.Assets.at(path="/public", file)

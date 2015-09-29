@@ -12,7 +12,7 @@ import com.cppdo.apibook.actor.ActorProtocols._
 import com.cppdo.apibook.actor._
 import com.cppdo.apibook.ast.{AstTreeManager, ClassVisitor, JarManager}
 import com.cppdo.apibook.db._
-import com.cppdo.apibook.forum.StackOverflowCrawler
+import com.cppdo.apibook.forum.{StackOverflowMongoDb, StackOverflowCrawler}
 import com.cppdo.apibook.index.IndexManager
 import com.cppdo.apibook.repository.{GitHubRepositoryManager, ArtifactsManager, MavenRepository}
 import com.cppdo.apibook.repository.ArtifactsManager.RichArtifact
@@ -106,17 +106,13 @@ object APIBook extends LazyLogging {
 
   def stackoverflow(config: Config) = {
     val summaries = StackOverflowCrawler.fetchQuestionSummaries(config.n)
-    val mongoClient = MongoClient("localhost", 27017)
-    val db = mongoClient("apibook")
-    val coll = db("question")
+    val mongoClient = new StackOverflowMongoDb("localhost", "apibook")
 
     val writer = CSVWriter.open(config.outFile)
     writer.writeRow(List("Question ID", "Votes", "Title", "Ask API", "Answer With One API", "Link"))
     summaries.foreach(summary => {
       writer.writeRow(List(summary.id, summary.votes, summary.title, "", "", summary.link))
-      val query = MongoDBObject("id" -> summary.id)
-      val update = MongoDBObject("id" -> summary.id, "votes" -> summary.votes, "title" -> summary.title, "link" -> summary.link)
-      coll.update(query, update, upsert = true)
+      mongoClient.upsertQuestionSummary(summary)
     })
     logger.info(s"Write to ${config.outFile}")
     writer.close()

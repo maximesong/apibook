@@ -14,7 +14,6 @@ import scala.collection.JavaConverters._
  * Created by song on 7/21/15.
  */
 
-case class QuestionSummary(id: Int, title: String, link: String, votes: Int)
 object StackOverflowCrawler extends LazyLogging {
   val pageSize = 50
   val pageBaseUrl = s"http://stackoverflow.com/questions/tagged/java?sort=votes&pagesize=${pageSize}"

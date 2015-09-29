@@ -36,5 +36,13 @@ angular.module('apibookApp', [])
                 $scope.search();
             }
         }
+    }])
+    .controller('stackoverflowController', ['$scope', '$http', function($scope, $http) {
+        $http.get("/api/stackoverflow/summaries")
+            .then(function(resp) {
+                $scope.summaries = resp.data
+                console.log(resp.data)
+            });
+        console.log("Hello Stackoverflow")
     }]);
 
