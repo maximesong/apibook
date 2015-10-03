@@ -19,7 +19,7 @@ object StackOverflowCrawler extends LazyLogging {
   val pageBaseUrl = s"http://stackoverflow.com/questions/tagged/java?sort=votes&pagesize=${pageSize}"
   val questionBaseUrl = s"http://stackoverflow.com/questions"
   val userAgent = "apibook"
-  val connectTimeout = 20 * 1000 // 10s for jsoup
+  val connectTimeout = 30 * 1000 // 10s for jsoup
 
   def pageUrl(page: Int) = s"${pageBaseUrl}&page=${page}"
 
@@ -29,7 +29,7 @@ object StackOverflowCrawler extends LazyLogging {
   }
 
   def fetchQuestionOverviews(count: Int): Seq[QuestionOverview] = {
-    val pages = count / pageSize + 1
+    val pages = if (count % pageSize == 0) count / pageSize else count / pageSize + 1
     val overviews = (1 to pages).flatMap(page => {
       logger.info(pageUrl(page))
       val document = Jsoup.connect(pageUrl(page)).userAgent(userAgent).timeout(connectTimeout).get()

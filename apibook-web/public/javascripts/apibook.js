@@ -38,7 +38,7 @@ angular.module('apibookApp', [])
         }
     }])
     .controller('stackoverflowController', ['$scope', '$http', function($scope, $http) {
-        $http.get("/api/stackoverflow/summaries")
+        $http.get("/api/stackoverflow/questions")
             .then(function(resp) {
                 $scope.summaries = resp.data
                 console.log(resp.data)

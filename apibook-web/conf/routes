@@ -12,7 +12,10 @@ GET        /stackoverflow                     controllers.Application.stackoverf
 
 POST    /api/search     controllers.Search.post
 
-GET    /api/stackoverflow/summaries controllers.StackOverflow.summaries
+GET    /api/stackoverflow/overviews controllers.StackOverflow.overviews
+
+GET    /api/stackoverflow/questions controllers.StackOverflow.questions
+
 
 # Map static resources from the /public folder to the /assets URL path
 GET        /assets/*file         controllers.Assets.at(path="/public", file)
