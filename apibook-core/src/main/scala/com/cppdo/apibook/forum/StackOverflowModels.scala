@@ -4,21 +4,23 @@ import play.api.libs.json._
 /**
  * Created by song on 9/24/15.
  */
-case class QuestionSummary(id: Int, title: String, link: String, votes: Int, views: Int, answers: Int)
+case class QuestionOverview(id: Int, title: String, questionUrl: String, voteNum: Int, viewNum: Int, answerNum: Int)
 
 object QuestionSummary {
-  implicit val locationWrites = new Writes[QuestionSummary] {
-    def writes(summary: QuestionSummary) = Json.obj(
-      "id" -> summary.id,
-      "title" -> summary.title,
-      "link" -> summary.link,
-      "votes" -> summary.votes,
-      "views" -> summary.views,
-      "answers" -> summary.answers
+  implicit val locationWrites = new Writes[QuestionOverview] {
+    def writes(overview: QuestionOverview) = Json.obj(
+      "id" -> overview.id,
+      "title" -> overview.title,
+      "questionUrl" -> overview.questionUrl,
+      "voteNum" -> overview.voteNum,
+      "viewNum" -> overview.viewNum,
+      "answerNum" -> overview.answerNum
     )
   }
 }
 
-case class Question(id: Int)
+case class Question(id: Int, title: String, body: String, voteNum: Int, viewNum: Int, answers: Seq[Answer],
+                    codeSectionNum: Int, linkNum: Int)
 
-case class Answer(id: Int, votes: Int, accepted: Boolean, codeSections: Int, links: Int, authorReputation: Int)
+case class Answer(id: Int, questionId:Int, accepted: Boolean, voteNum: Int, authorReputation: Int,
+                  codeSectionNum: Int, linkNum: Int, links: Seq[String])

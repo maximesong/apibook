@@ -10,28 +10,61 @@ import com.typesafe.scalalogging.LazyLogging
 class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
   val mongoClient = MongoClient(host)
   val db = mongoClient(dbName)
+  val questionOverviewCollection = db("question_overviews")
   val questionCollection = db("questions")
-  val answerCollection = db("answers")
 
-  def upsertQuestionSummary(summary: QuestionSummary) = {
-    val query = MongoDBObject("id" -> summary.id)
-    val update = MongoDBObject("id" -> summary.id, "votes" -> summary.votes, "title" -> summary.title, "link" -> summary.link,
-      "views" -> summary.views, "answers" -> summary.answers)
-    questionCollection.update(query, update, upsert=true)
+  def upsertQuestionOverview(overview: QuestionOverview) = {
+    val query = MongoDBObject("id" -> overview.id)
+    val update = MongoDBObject(
+      "id" -> overview.id,
+      "voteNum" -> overview.voteNum,
+      "title" -> overview.title,
+      "questionUrl" -> overview.questionUrl,
+      "viewNum" -> overview.viewNum,
+      "answerNum" -> overview.answerNum)
+    questionOverviewCollection.update(query, update, upsert=true)
   }
 
-  def getQuestionSummaries() = {
-    val summaries = questionCollection.find().map(obj => {
-      QuestionSummary(
+  def getQuestionOverviews() = {
+    val overviews = questionOverviewCollection.find().map(obj => {
+      QuestionOverview(
         obj.as[Int]("id"),
         obj.as[String]("title"),
         obj.as[String]("link"),
-        obj.as[Int]("votes"),
-        obj.as[Int]("views"),
-        obj.as[Int]("answers")
+        obj.as[Int]("voteNum"),
+        obj.as[Int]("viewNum"),
+        obj.as[Int]("answerNum")
       )
     }).toSeq
-    summaries
+    overviews
   }
 
+  def upsertQuestion(question: Question) = {
+    val query = MongoDBObject("id" -> question.id)
+    val update = MongoDBObject(
+      "id" -> question.id,
+      "linkNum" -> question.linkNum,
+      "voteNum" -> question.voteNum,
+      "codeSectionNum" -> question.codeSectionNum,
+      "title" -> question.title,
+      "body" -> question.body,
+      "answers" -> MongoDBList(question.answers.map( answer => {
+        MongoDBObject(
+          "id" -> answer.id,
+          "accepted" -> answer.accepted,
+          "questionId" -> answer.questionId,
+          "voteNum" -> answer.voteNum,
+          "linkNum" -> answer.linkNum,
+          "codeSectionNum" -> answer.codeSectionNum,
+          "authorReputation" -> answer.authorReputation,
+          "links" -> answer.links
+        )
+      }))
+    )
+    questionCollection.update(query, update, upsert=true)
+  }
+
+  def getQuestions() = {
+
+  }
 }

@@ -17,81 +17,94 @@ import scala.collection.JavaConverters._
 object StackOverflowCrawler extends LazyLogging {
   val pageSize = 50
   val pageBaseUrl = s"http://stackoverflow.com/questions/tagged/java?sort=votes&pagesize=${pageSize}"
+  val questionBaseUrl = s"http://stackoverflow.com/questions"
   val userAgent = "apibook"
 
   def pageUrl(page: Int) = s"${pageBaseUrl}&page=${page}"
 
+  def questionUrl(questionId: Int) = s"${questionBaseUrl}/${questionId}"
+
   def fetch() = {
-
-    logger.info("Feftch")
-    val doc = Jsoup.connect(pageUrl(1)).userAgent(userAgent).get()
-    logger.info(pageUrl(1))
-    //val html = Source.fromURL("https://stackoverflow.com/").mkString
-    logger.info(doc.toString)
-    //logger.info(content)
-
-    //parseListPage(html)
   }
 
-  def fetchQuestionSummaries(count: Int): Seq[QuestionSummary] = {
+  def fetchQuestionOverviews(count: Int): Seq[QuestionOverview] = {
     val pages = count / pageSize + 1
-    val summaries = (1 to pages).flatMap(page => {
+    val overviews = (1 to pages).flatMap(page => {
       logger.info(pageUrl(page))
       val document = Jsoup.connect(pageUrl(page)).userAgent(userAgent).get()
       parseListPage(document)
     })
     //logger.info(summaries.toString())
-    summaries.take(count)
+    overviews.take(count)
   }
 
-  def parseListPage(document: Document): Seq[QuestionSummary] = {
+  def fetchQuestion(questionId: Int): Question = {
+    fetchQuestion(questionUrl(questionId))
+  }
+
+  def fetchQuestion(url: String): Question = {
+    val doc = Jsoup.connect(url).userAgent(userAgent).get()
+    parseQuestionPage(doc)
+  }
+
+  def parseListPage(document: Document): Seq[QuestionOverview] = {
     val summaryElements = document.select("div#questions div.question-summary").iterator().asScala
     val summaries = summaryElements.map(summaryElement => {
-      //logger.info(summary.toString)
       val votes = summaryElement.select("div.stats div.vote div.votes strong").first().text().toInt
-      //logger.info(votes.toString)
       val question = summaryElement.select("div.summary a.question-hyperlink").first()
       val link = question.attr("href")
       val id = link.split("/")(2).toInt
       val title = question.text()
       val views = summaryElement.select("div.views").attr("title").replaceAll("\\D", "").toInt
       val answers = summaryElement.select("div.stats div.status strong").first().text().toInt
-      println(views)
-      val summary = QuestionSummary(id, title, s"http://stackoverflow.com${link}", votes, views, answers)
+      val summary = QuestionOverview(id, title, s"http://stackoverflow.com${link}", votes, views, answers)
       summary
     })
     summaries.toSeq
   }
 
-  def parseListPage(html: String): Seq[QuestionSummary] = {
+  def parseListPage(html: String): Seq[QuestionOverview] = {
     val document = Jsoup.parse(html)
     parseListPage(document)
   }
 
-  def parseDetailPage(document: Document): Seq[Answer] = {
-    val postText = document.select("div.post-text").first()
-    val answerElements = document.select("div#answers div.answer").iterator().asScala
+  def parseQuestionPage(document: Document): Question = {
+    val viewNum = document.select("#qinfo tr:nth-child(2) td:nth-child(2) p b").text().replaceAll("\\D", "").toInt
+    val voteNum = document.select("#question .votecell .vote-count-post").text().toInt
+    val id = document.select("#question").attr("data-questionid").toInt
+    val title = document.select("#question-header .question-hyperlink").text()
+    val body = document.select("#question .post-text").first().text()
+    val codeSectionNum = document.select("#question .post-text code").size()
+    val linkNum = document.select("#question .post-text a").size()
+    val answerElements = document.select("#answers div.answer").iterator().asScala
+    val questionId = document.select("#question").attr("data-questionid").toInt
     val answers = answerElements.map(answerElement => {
-      println("Hi")
       val id = answerElement.attr("data-answerid").toInt
       val votes = answerElement.select("div.vote span.vote-count-post").first().text().toInt
       val accepted = answerElement.hasClass("accepted-answer")
       val codeSections = answerElement.select("div.post-text code").size()
-      val links = answerElement.select(".answercell div.post-text a").size()
+      val linkNum = answerElement.select(".answercell div.post-text a").size()
+      val links = answerElement.select(".answercell div.post-text a").iterator().asScala.map(link => {
+        link.attr("href")
+      }).toSeq
       println(answerElement.select(".answercell .user-info .reputation-score"))
-      val authorReputation = Option(answerElement.select(".answercell .user-info .reputation-score").first()).map(reputationElement => {
+      val authorReputation = Option(answerElement.select(".answercell .user-info .reputation-score").last()).map(reputationElement => {
         val reputationText = reputationElement.attr("title").replaceAll("\\D", "")
-        if (reputationText.size > 0) {
+        println("TEXT:" + reputationText)
+        if (reputationText.length > 0) {
           reputationText.toInt
         } else {
           reputationElement.text().replaceAll("\\D", "").toInt
         }
       }).getOrElse(0)
-      val answer = Answer(id, votes, accepted, codeSections, links, authorReputation)
-      logger.info(answer.toString)
+      println("author:" + authorReputation)
+      val answer = Answer(id, questionId, accepted, votes, authorReputation, codeSections, linkNum, links)
+      println(title)
+      println(questionId)
+      println(votes)
+      println(answer.authorReputation)
       answer
-    })
-    println(answers.size)
-    answers.toSeq
+    }).toSeq
+    Question(id, title, body, voteNum, viewNum, answers, codeSectionNum, linkNum)
   }
 }

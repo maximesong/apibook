@@ -103,19 +103,21 @@ object APIBook extends LazyLogging {
 
   def test() = {
     val url = "http://stackoverflow.com/questions/1104975/for-loop-to-iterate-over-enum-in-java"
-    val document = Jsoup.connect(url).userAgent("apibook").get()
-    StackOverflowCrawler.parseDetailPage(document)
+    val question = StackOverflowCrawler.fetchQuestion(url)
+    println(question)
   }
 
   def stackoverflow(config: Config) = {
-    val summaries = StackOverflowCrawler.fetchQuestionSummaries(config.n)
+    val overviews = StackOverflowCrawler.fetchQuestionOverviews(config.n)
     val mongoClient = new StackOverflowMongoDb("localhost", "apibook")
 
     val writer = CSVWriter.open(config.outFile)
     writer.writeRow(List("Question ID", "Votes", "Title", "Ask API", "Answer With One API", "Link"))
-    summaries.foreach(summary => {
-      writer.writeRow(List(summary.id, summary.votes, summary.title, "", "", summary.link))
-      mongoClient.upsertQuestionSummary(summary)
+    overviews.foreach(overview => {
+      writer.writeRow(List(overview.id, overview.voteNum, overview.title, "", "", overview.questionUrl))
+      mongoClient.upsertQuestionOverview(overview)
+      val question = StackOverflowCrawler.fetchQuestion(overview.questionUrl)
+      mongoClient.upsertQuestion(question)
     })
     logger.info(s"Write to ${config.outFile}")
     writer.close()
