@@ -1,0 +1,16 @@
+{
+  "name": "utility",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Maxime Song",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^2.8.1",
+    "mongodb": "^2.0.45"
+  }
+}
