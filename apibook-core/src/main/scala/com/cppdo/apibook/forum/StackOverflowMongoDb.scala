@@ -59,7 +59,9 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
           "linkNum" -> answer.linkNum,
           "codeSectionNum" -> answer.codeSectionNum,
           "authorReputation" -> answer.authorReputation,
-          "links" -> answer.links
+          "links" -> answer.links,
+          "codeList" -> answer.codeList,
+          "inlineCodeList" -> answer.inlineCodeList
         )
       })
     )
@@ -85,12 +87,15 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
               answer.as[Int]("authorReputation"),
               answer.as[Int]("codeSectionNum"),
               answer.as[Int]("linkNum"),
-              answer.as[Seq[String]]("links")
+              answer.as[Seq[String]]("links"),
+              answer.as[Seq[String]]("codeList"),
+              answer.as[Seq[String]]("inlineCodeList")
             )
           }
           case a: Any => {
+            // should not go here!
             println(a.getClass)
-            Answer(0, 0, true, 0, 0, 0, 0, Seq[String]())
+            Answer(0, 0, true, 0, 0, 0, 0, Seq[String](),Seq[String](),Seq[String]())
           }
         },
         //Seq[Answer](),

@@ -29,7 +29,9 @@ object Question {
       "authorReputation" -> answer.authorReputation,
       "codeSectionNum" -> answer.codeSectionNum,
       "linkNum" -> answer.linkNum,
-      "links" -> answer.links
+      "links" -> answer.links,
+      "codeList" -> answer.codeList,
+      "inlineCodeList" -> answer.inlineCodeList
     )
   }
   implicit val questionsWrites = new Writes[Question] {
@@ -61,9 +63,11 @@ object Answer {
       "authorReputation" -> answer.authorReputation,
       "codeSectionNum" -> answer.codeSectionNum,
       "linkNum" -> answer.linkNum,
-      "links" -> answer.links
+      "links" -> answer.links,
+      "codeList"  -> answer.codeList,
+      "inlineCodeList" -> answer.inlineCodeList
     )
   }
 }
 case class Answer(id: Int, questionId:Int, accepted: Boolean, voteNum: Int, authorReputation: Int,
-                  codeSectionNum: Int, linkNum: Int, links: Seq[String])
+                  codeSectionNum: Int, linkNum: Int, links: Seq[String], codeList: Seq[String], inlineCodeList: Seq[String])
