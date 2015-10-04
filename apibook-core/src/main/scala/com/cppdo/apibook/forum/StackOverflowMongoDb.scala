@@ -50,7 +50,7 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
       "codeSectionNum" -> question.codeSectionNum,
       "title" -> question.title,
       "body" -> question.body,
-      "answers" -> MongoDBList(question.answers.map( answer => {
+      "answers" -> question.answers.map( answer => {
         MongoDBObject(
           "id" -> answer.id,
           "accepted" -> answer.accepted,
@@ -61,7 +61,7 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
           "authorReputation" -> answer.authorReputation,
           "links" -> answer.links
         )
-      }))
+      })
     )
     questionCollection.update(query, update, upsert=true)
   }
@@ -69,29 +69,29 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
   def getQuestions() = {
     val questions = questionCollection.find().map(obj => {
       val answers = obj.as[MongoDBList]("answers")
-      println(obj.get("answers").getClass)
       Question(
         obj.as[Int]("id"),
         obj.as[String]("title"),
         obj.as[String]("body"),
         obj.as[Int]("voteNum"),
         obj.as[Int]("viewNum"),
-        obj.as[BasicDBList]("answers").map{ case answer: MongoDBObject => {
-          Answer(
-            answer.as[Int]("id"),
-            answer.as[Int]("questionId"),
-            answer.as[Boolean]("accepted"),
-            answer.as[Int]("voteNum"),
-            answer.as[Int]("authorReputation"),
-            answer.as[Int]("codeSectionNum"),
-            answer.as[Int]("linkNum"),
-            answer.as[Seq[String]]("links")
-          )
-        }
-        case a: Any => {
-          println(a.getClass)
-          Answer(0, 0, true, 0, 0, 0, 0, Seq[String]())
-        }
+        obj.as[BasicDBList]("answers").map{
+          case answer: BasicDBObject => {
+            Answer(
+              answer.as[Int]("id"),
+              answer.as[Int]("questionId"),
+              answer.as[Boolean]("accepted"),
+              answer.as[Int]("voteNum"),
+              answer.as[Int]("authorReputation"),
+              answer.as[Int]("codeSectionNum"),
+              answer.as[Int]("linkNum"),
+              answer.as[Seq[String]]("links")
+            )
+          }
+          case a: Any => {
+            println(a.getClass)
+            Answer(0, 0, true, 0, 0, 0, 0, Seq[String]())
+          }
         },
         //Seq[Answer](),
         obj.as[Int]("codeSectionNum"),
