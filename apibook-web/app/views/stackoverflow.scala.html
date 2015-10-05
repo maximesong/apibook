@@ -1,9 +1,43 @@
 @main("APIBook -- Stackoverflow") {
 <div class="container" ng-controller="stackoverflowController">
     <h1>Stackoverflow</h1>
-    <div ng-repeat="summary in summaries">
-        <div>
-            {{summary.title}}
+    <div ng-repeat="question in questions">
+        <div class="panel  panel-default">
+            <div class="panel-heading">
+                <a ng-href="http://www.stackoverflow.com/questions/{{question.id}}/" target='_blank'>
+                    Question#{{question.id}}&nbsp;&nbsp; {{question.title}}
+                </a>
+            </div>
+            <div class="panel-body">
+                <span>Is this a program task?</span>
+                <span class="text-success" ng-if="questionReviews[question.id].isProgramTask === true">Yes</span>
+                <span class="text-danger" ng-if="questionReviews[question.id].isProgramTask === false">No</span>
+                <span ng-class="{'pull-right':questionReviews[question.id].isProgramTask !== undefined}">
+                    <button class="btn btn-info" ng-click="upsertQuestionReviewField(question.id, 'isProgramTask', true)">Yes</button>
+                    <button class="btn btn-danger" ng-click="upsertQuestionReviewField(question.id, 'isProgramTask', false)">No</button>
+                </span>
+
+            </div>
+            <div class="panel-body">
+                <div class="panel panel-default">
+                    <pre>{{question.body}}</pre>
+                </div>
+                <div ng-repeat="answer in question.answers">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <a ng-href="http://www.stackoverflow.com/questions/{{question.id}}/#answer-{{answer.id}}"
+                                    target="_blank">
+                                Answer#{{answer.id}}
+                            </a>&nbsp;
+                            <span class="glyphicon glyphicon-thumbs-up"></span><span>{{answer.voteNum}}</span>
+                        </div>
+                        <div class="panel-body">
+                            {{answer.codeSectionNum}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>

@@ -13,6 +13,7 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
   val db = mongoClient(dbName)
   val questionOverviewCollection = db("question_overviews")
   val questionCollection = db("questions")
+  val questionReviewCollection = db("question_reviews")
 
   def upsertQuestionOverview(overview: QuestionOverview) = {
     val query = MongoDBObject("id" -> overview.id)
@@ -26,7 +27,7 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
     questionOverviewCollection.update(query, update, upsert=true)
   }
 
-  def getQuestionOverviews() = {
+  def getQuestionOverviews(): Seq[QuestionOverview] = {
     val overviews = questionOverviewCollection.find().map(obj => {
       QuestionOverview(
         obj.as[Int]("id"),
@@ -68,7 +69,7 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
     questionCollection.update(query, update, upsert=true)
   }
 
-  def getQuestions() = {
+  def getQuestions(): Seq[Question] = {
     val questions = questionCollection.find().map(obj => {
       val answers = obj.as[MongoDBList]("answers")
       Question(
@@ -105,4 +106,34 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
     }).toSeq
     questions
   }
+
+  def upsertQuestionReview(questionReview: QuestionReview) = {
+    val query = MongoDBObject("id" -> questionReview.id, "reviewer" -> questionReview.reviewer)
+    val update = MongoDBObject(
+      "id" -> questionReview.id,
+      "reviewer" -> questionReview.reviewer,
+      "isProgramTask" -> questionReview.isProgramTask,
+      "answerIdUsingApi" -> questionReview.answerIdUsingApi
+    )
+    questionReviewCollection.update(query, update, upsert=true)
+  }
+
+  def getQuestionReviews(): Seq[QuestionReview] = {
+    val questionReviews = questionReviewCollection.find().map(obj => {
+      QuestionReview(
+        obj.as[Int]("id"),
+        obj.getAs[Boolean]("isProgramTask").getOrElse(false),
+        obj.getAs[Int]("apiAnswerId").getOrElse(0),
+        obj.as[String]("reviewer")
+      )
+    }).toSeq
+    questionReviews
+  }
+
+  def upsertQuestionReviewField(id: Int, reviewer: String, field: String, value: Any): Unit = {
+    val query = MongoDBObject("id" -> id, "reviewer" -> reviewer)
+    val update = $set(field -> value)
+    questionReviewCollection.update(query, update, upsert = true)
+  }
+
 }

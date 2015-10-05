@@ -38,10 +38,34 @@ angular.module('apibookApp', [])
         }
     }])
     .controller('stackoverflowController', ['$scope', '$http', function($scope, $http) {
+        $scope.upsertQuestionReviewField = function(id, field, value) {
+            console.log("update!");
+            $http.post("/api/stackoverflow/questions/" + id + "/review/update",
+                {
+                    "id": id,
+                    "reviewer": "author",
+                    "field": field,
+                    "value": value
+                }
+            ).then(function(resp) {
+                if (resp.status === 200) {
+                    $scope.questionReviews[id][field] = value;
+                }
+            });
+        }
+
         $http.get("/api/stackoverflow/questions")
             .then(function(resp) {
-                $scope.summaries = resp.data
+                $scope.questions = resp.data
                 console.log(resp.data)
+            });
+        $http.get("/api/stackoverflow/questions/reviews")
+            .then(function(resp) {
+             $scope.questionReviews = {};
+             _(resp.data).each(function(review) {
+                $scope.questionReviews[review.id] = review
+             });
+             console.log($scope.questionReviews);
             });
         console.log("Hello Stackoverflow")
     }]);

@@ -18,10 +18,15 @@ function read() {
   MongoClient.connect(mongoUrl, function(err, db) {
     var questions = db.collection("questions")
     questions.find({}).toArray(function(err, data) {
-      console.log(JSON.stringify(data, null, 4));
+      for (question in data) {
+        console.log(question)
+      }
+      //console.log(JSON.stringify(data, null, 4));
       db.close();
     })
     console.log(err);
   })
 }
 program.parse(process.argv);
+var c = 1;
+console.log(`${c}`);

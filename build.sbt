@@ -54,6 +54,7 @@ lazy val web = (project in file("./apibook-web")).enablePlugins(PlayScala).depen
     specs2 % Test,
     "org.webjars" %% "webjars-play" % "2.4.0-1",
     "org.webjars" % "angularjs" % "1.4.4",
+    "org.webjars" % "angular-ui-bootstrap" % "0.13.3",
     "org.webjars" % "bootstrap" % "3.3.5",
     "org.webjars" % "underscorejs" % "1.8.3",
     "org.webjars" % "modernizr" % "2.8.3",

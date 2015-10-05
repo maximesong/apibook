@@ -71,3 +71,17 @@ object Answer {
 }
 case class Answer(id: Int, questionId:Int, accepted: Boolean, voteNum: Int, authorReputation: Int,
                   codeSectionNum: Int, linkNum: Int, links: Seq[String], codeList: Seq[String], inlineCodeList: Seq[String])
+
+case class QuestionReview(id: Int, isProgramTask: Boolean,
+                          answerIdUsingApi: Int = 0, reviewer: String = "author")
+
+object QuestionReview {
+  implicit val questionReviewWrites = new Writes[QuestionReview] {
+    def writes(questionReview: QuestionReview) = Json.obj(
+      "id" -> questionReview.id,
+      "reviewer" -> questionReview.reviewer,
+      "isProgramTask" -> questionReview.isProgramTask,
+      "answerIdWithApi" -> questionReview.answerIdUsingApi
+    )
+  }
+}
