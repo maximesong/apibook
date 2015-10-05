@@ -123,7 +123,7 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
       QuestionReview(
         obj.as[Int]("id"),
         obj.getAs[Boolean]("isProgramTask").getOrElse(false),
-        obj.getAs[Int]("apiAnswerId").getOrElse(0),
+        obj.getAs[Int]("answerIdUsingApi").getOrElse(0),
         obj.as[String]("reviewer")
       )
     }).toSeq

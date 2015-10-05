@@ -81,7 +81,7 @@ object QuestionReview {
       "id" -> questionReview.id,
       "reviewer" -> questionReview.reviewer,
       "isProgramTask" -> questionReview.isProgramTask,
-      "answerIdWithApi" -> questionReview.answerIdUsingApi
+      "answerIdUsingApi" -> questionReview.answerIdUsingApi
     )
   }
 }
