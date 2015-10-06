@@ -1,5 +1,8 @@
 angular.module('apibookApp', [])
-    .controller('APIBookController', ['$scope', '$http', function($scope, $http) {
+    .config(function($locationProvider) {
+        $locationProvider.html5Mode(true);
+    })
+    .controller('APIBookController', ['$scope', '$http', function($scope, $http, $location) {
         console.log("HI");
         var postJson = function (url, data, success, error) {
             $.ajax({
@@ -37,7 +40,7 @@ angular.module('apibookApp', [])
             }
         }
     }])
-    .controller('stackoverflowController', ['$scope', '$http', function($scope, $http) {
+    .controller('stackoverflowController', ['$scope', '$http', '$location', '$anchorScroll', function($scope, $http, $location, $anchorScroll) {
         $scope.upsertQuestionReviewField = function(id, field, value) {
             console.log("update!");
             $http.post("/api/stackoverflow/questions/" + id + "/review/update",
@@ -58,18 +61,37 @@ angular.module('apibookApp', [])
         }
 
         $scope.setNotProgramTask = function(id) {
-            $scope.upsertQuestionReviewField(id, "isProgramTask", false)
-            $scope.upsertQuestionReviewField(id, "answerIdUsingApi", 0)
+            $scope.upsertQuestionReviewField(id, "isProgramTask", false);
+            $scope.upsertQuestionReviewField(id, "answerIdUsingApi", 0);
+            $scope.upsertQuestionReviewField(id, 'singleKeyApi', false);
+        }
+
+        $scope.setUsingMutipleApi = function(questionId, answerId) {
+            $scope.upsertQuestionReviewField(id, "isProgramTask", true);
+            $scope.upsertQuestionReviewField(questionId, 'answerIdUsingApi', answerId);
+            $scope.upsertQuestionReviewField(questionId, 'singleKeyApi', false);
+        }
+
+        $scope.setUsingSingleApi = function(questionId, answerId) {
+            $scope.upsertQuestionReviewField(id, "isProgramTask", true);
+            $scope.upsertQuestionReviewField(questionId, 'answerIdUsingApi', answerId);
+            $scope.upsertQuestionReviewField(questionId, 'singleKeyApi', true);
         }
 
         $scope.setQuestionIndex = function(i) {
             console.log("next!", i);
             $scope.questionIndex = i;
             $scope.question = $scope.questions[$scope.questionIndex];
+            console.log($scope.question);
+            console.log($scope.questionReviews[$scope.question.id]);
         }
 
         $scope.click = function() {
             console.log("click");
+        }
+
+        $scope.jumpToAnswers = function() {
+            $anchorScroll("answers");
         }
 
         $scope.jumpNextToReview = function() {
@@ -77,7 +99,8 @@ angular.module('apibookApp', [])
             for (var i = 0; i != $scope.questions.length; ++i) {
                 var question = $scope.questions[i];
                 review = $scope.questionReviews[question.id];
-                if (review === undefined || review.isProgramTask === undefined || review.answerIdUsingApi === undefined) {
+                if (review === undefined || review.isProgramTask == null || review.answerIdUsingApi == null ||
+                    review.singleKeyApi == null) {
                     $scope.setQuestionIndex(i);
                     return;
                 }
@@ -87,7 +110,6 @@ angular.module('apibookApp', [])
         $http.get("/api/stackoverflow/questions")
             .then(function(resp) {
                 $scope.questions = resp.data;
-                console.log(resp.data);
                 $scope.setQuestionIndex(0);
             });
         $http.get("/api/stackoverflow/questions/reviews")
@@ -96,7 +118,6 @@ angular.module('apibookApp', [])
              _(resp.data).each(function(review) {
                 $scope.questionReviews[review.id] = review
              });
-             console.log($scope.questionReviews);
             });
         console.log("Hello Stackoverflow")
     }]);

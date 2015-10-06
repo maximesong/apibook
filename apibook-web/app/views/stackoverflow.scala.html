@@ -23,63 +23,106 @@
                 </a>
             </div>
             <div class="panel-body">
-                <div class="row">
-                    <div class="col-md-12 review-question">
-                        <span>Is this a program task?</span>
-                        <span class="text-success" ng-if="questionReviews[question.id].isProgramTask === true">Yes</span>
-                        <span class="text-danger" ng-if="questionReviews[question.id].isProgramTask === false">No</span>
-                        <span ng-class="{'pull-right':questionReviews[question.id].isProgramTask !== undefined}">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <td class="col-md-4">Question</td>
+                            <td class="col-md-4">Answer</td>
+                            <td class="col-md-4">Action</td>
+                        </tr>
+                    </thead>
+                    <tr>
+                        <td>Is this a program task?</td>
+                        <td>
+                            <span class="text-success" ng-if="questionReviews[question.id].isProgramTask === true">Yes</span>
+                            <span class="text-danger" ng-if="questionReviews[question.id].isProgramTask === false">No</span>
+                        </td>
+                        <td>
                             <button class="btn btn-info" ng-click="upsertQuestionReviewField(question.id, 'isProgramTask', true)">Yes</button>
                             <button class="btn btn-danger" ng-click="setNotProgramTask(question.id)">No</button>
-                        </span>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-12 review-quetion">
-                        <span>Answer Id using API</span>
-                        <span class="text-danger" ng-if="questionReviews[question.id].answerIdUsingApi === 0">No</span>
-                        <span class="text-success" ng-if="questionReviews[question.id].answerIdUsingApi !== 0">
-                            #{{questionReviews[question.id].answerIdUsingApi}}
-                        </span>
-                        <button class="btn btn-info"
-                                ng-class="{'pull-right':questionReviews[question.id].answerIdUsingApi !== undefined}"
-                                ng-click="upsertQuestionReviewField(question.id, 'answerIdUsingApi', 0)">
-                            No
-                        </button>
-                    </div>
-                </div>
-
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Answer Id using API</td>
+                        <td>
+                            <span class="text-danger" ng-if="questionReviews[question.id].answerIdUsingApi === 0">No</span>
+                            <span class="text-success" ng-if="questionReviews[question.id].answerIdUsingApi !== 0">
+                                #{{questionReviews[question.id].answerIdUsingApi}}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-info" ng-click="jumpToAnswers()">
+                                View Answers
+                            </button>
+                            <button class="btn btn-danger"
+                                    ng-click="upsertQuestionReviewField(question.id, 'answerIdUsingApi', 0)">
+                                No
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Use single key API?</td>
+                        <td>
+                            <span class="text-success" ng-if="questionReviews[question.id].singleKeyApi === true">Yes</span>
+                            <span class="text-danger" ng-if="questionReviews[question.id].singleKeyApi === false">No</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-info"
+                                    ng-click="upsertQuestionReviewField(question.id, 'singleKeyApi', true)">
+                                Yes
+                            </button>
+                            <button class="btn btn-danger"
+                                    ng-click="upsertQuestionReviewField(question.id, 'singleKeyApi', false)">
+                                No
+                            </button>
+                        </td>
+                    </tr>
+                </table>
             </div>
             <div class="panel-body">
                 <div class="panel panel-default">
                     <pre>{{question.body}}</pre>
                 </div>
-                <div ng-repeat="answer in question.answers">
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <a ng-href="http://www.stackoverflow.com/questions/{{question.id}}/#answer-{{answer.id}}"
-                               target="_blank">
-                                Answer#{{answer.id}}
-                            </a>&nbsp;
-                            <span class="glyphicon glyphicon-thumbs-up"></span><span>{{answer.voteNum}}</span>
-                            <span class="label label-success" ng-if="answer.id === questionReviews[question.id].answerIdUsingApi">API</span>
-                        </div>
-                        <div class="panel-body">
-                            <div>
-                                <button class="btn btn-info pull-right"
-                                        ng-click="upsertQuestionReviewField(question.id, 'answerIdUsingApi', answer.id)">
-                                    Using API
-                                </button>
+                <div id="answers">
+                    <div ng-repeat="answer in question.answers">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <a ng-href="http://www.stackoverflow.com/questions/{{question.id}}/#answer-{{answer.id}}"
+                                   target="_blank">
+                                    Answer#{{answer.id}}
+                                </a>&nbsp;
+                                <span class="glyphicon glyphicon-thumbs-up"></span><span>{{answer.voteNum}}</span>
+                                <span class="label label-success" ng-if="answer.id === questionReviews[question.id].singleKeyApi">Single</span>&nbsp;
+                                <span class="label label-success" ng-if="answer.id === questionReviews[question.id].answerIdUsingApi">API</span>
+
                             </div>
-                            <div>
-                                <pre ng-repeat="code in answer.codeList track by $index">{{code}}</pre>
-                            </div>
-                            <div>
-                                <div ng-repeat="link in answer.links track by $index">
-                                    <a ng-href="link">{{link}}</a>
+                            <div class="panel-body">
+                                <div class="row section">
+                                    <div class="pull-right">
+                                        <button class="btn btn-info"
+                                                ng-click="setUsingMutipleApi(question.id, answer.id)">
+                                            Using Mutiple API
+                                        </button>
+                                        <span>&nbsp;&nbsp;</span>
+                                        <button class="btn btn-info"
+                                                ng-click="setUsingSingleApi(question.id, answer.id)">
+                                            Using Single API
+                                        </button>
+                                    </div>
                                 </div>
+                                <div>
+                                    <pre ng-repeat="code in answer.codeList track by $index">{{code}}</pre>
+                                </div>
+                                <div>
+                                    <pre ng-repeat="code in answer.inlineCodeList track by $index">{{code}}</pre>
+                                </div>
+                                <div>
+                                    <div ng-repeat="link in answer.links track by $index">
+                                        <a ng-href="link">{{link}}</a>
+                                    </div>
+                                </div>
+                                {{answer.codeSectionNum}}
                             </div>
-                            {{answer.codeSectionNum}}
                         </div>
                     </div>
                 </div>

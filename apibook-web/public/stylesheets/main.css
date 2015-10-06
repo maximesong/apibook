@@ -17,3 +17,11 @@
     width: 100%;
     z-index: 100;
 }
+
+.section {
+    margin: 15px;
+}
+
+pre {
+ white-space: pre-wrap;       /* css-3 */
+}

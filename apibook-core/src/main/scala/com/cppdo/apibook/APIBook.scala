@@ -22,6 +22,7 @@ import com.mongodb.casbah.MongoClient
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.jsoup.Jsoup
+import play.libs.Json
 import slick.driver.JdbcDriver
 import slick.jdbc.meta.MTable
 import slick.model.ForeignKeyAction.NoAction
@@ -105,15 +106,21 @@ object APIBook extends LazyLogging {
   }
 
   def test() = {
-    val url = "http://stackoverflow.com/questions/1104975/for-loop-to-iterate-over-enum-in-java"
+    val url = "http://stackoverflow.com/questions/215497/in-java-whats-the-difference-between-public-default-protected-and-private"
     val question = StackOverflowCrawler.fetchQuestion(url)
-    println(question)
+    question.answers.foreach(answer => {
+      println(answer.voteNum)
+      answer.inlineCodeList.foreach(code => {
+        println(code)
+      })
+    })
+    println(Json.prettyPrint(Json.toJson(question)))
   }
 
   def stackoverflow(config: Config) = {
     val overviews = StackOverflowCrawler.fetchQuestionOverviews(config.n)
     val mongoClient = new StackOverflowMongoDb("localhost", "apibook")
-    val waitTime = 1 * 1000
+    val waitTime = 1 * 100
 
     val writer = CSVWriter.open(config.outFile)
     writer.writeRow(List("Question ID", "Votes", "Title", "Ask API", "Answer With One API", "Link"))

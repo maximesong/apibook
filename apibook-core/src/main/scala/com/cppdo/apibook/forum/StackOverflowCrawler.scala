@@ -108,8 +108,8 @@ object StackOverflowCrawler extends LazyLogging {
       val votes = answerElement.select("div.vote span.vote-count-post").first().text().toInt
       val accepted = answerElement.hasClass("accepted-answer")
       val codeSections = answerElement.select("div.post-text code").size()
-      val codeList = answerElement.select(".post-text pre code").iterator().asScala.map(_.text()).toSeq
-      val inlineCodeList = answerElement.select(".post-text p code").iterator().asScala.map(_.text()).toSeq
+      val codeList = answerElement.select(".post-text pre > code").iterator().asScala.map(_.text()).toSeq
+      val inlineCodeList = answerElement.select(".post-text :not(pre) > code").iterator().asScala.map(_.text()).toSeq
       val linkNum = answerElement.select(".answercell div.post-text a").size()
       val links = answerElement.select(".answercell div.post-text a").iterator().asScala.map(link => {
         link.attr("href")
