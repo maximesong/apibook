@@ -70,7 +70,7 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
   }
 
   def getQuestions(): Seq[Question] = {
-    val questions = questionCollection.find().map(obj => {
+    val questions = questionCollection.find().sort(MongoDBObject("voteNum" -> -1)).map(obj => {
       val answers = obj.as[MongoDBList]("answers")
       Question(
         obj.as[Int]("id"),

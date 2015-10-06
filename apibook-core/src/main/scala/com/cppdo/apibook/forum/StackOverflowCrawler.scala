@@ -35,20 +35,13 @@ object StackOverflowCrawler extends LazyLogging {
     val overviews = (1 to pages).flatMap(page => {
       logger.info(pageUrl(page))
       try {
-        logger.info("HERE")
         val document = Jsoup.connect(pageUrl(page)).userAgent(userAgent).timeout(connectTimeout).get()
-        logger.info("THERE")
         parseListPage(document)
       } catch {
         case e: SocketTimeoutException => {
           logger.warn("Retry Fetch!")
           val document = Jsoup.connect(pageUrl(page)).userAgent(userAgent).timeout(connectTimeout).get()
           parseListPage(document)
-        }
-        case e: Any => {
-          logger.warn("Other Exception")
-          logger.warn(e.getClass.toString)
-          Seq[QuestionOverview]()
         }
       }
 
