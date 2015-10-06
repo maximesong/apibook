@@ -66,14 +66,19 @@ angular.module('apibookApp', [])
             $scope.upsertQuestionReviewField(id, 'singleKeyApi', false);
         }
 
+        $scope.setNoAnswerIdUsingApi = function(id) {
+            $scope.upsertQuestionReviewField(id, 'answerIdUsingApi', 0);
+            $scope.upsertQuestionReviewField(id, 'singleKeyApi', false);
+        }
+
         $scope.setUsingMutipleApi = function(questionId, answerId) {
-            $scope.upsertQuestionReviewField(id, "isProgramTask", true);
+            $scope.upsertQuestionReviewField(questionId, "isProgramTask", true);
             $scope.upsertQuestionReviewField(questionId, 'answerIdUsingApi', answerId);
             $scope.upsertQuestionReviewField(questionId, 'singleKeyApi', false);
         }
 
         $scope.setUsingSingleApi = function(questionId, answerId) {
-            $scope.upsertQuestionReviewField(id, "isProgramTask", true);
+            $scope.upsertQuestionReviewField(questionId, "isProgramTask", true);
             $scope.upsertQuestionReviewField(questionId, 'answerIdUsingApi', answerId);
             $scope.upsertQuestionReviewField(questionId, 'singleKeyApi', true);
         }
@@ -91,17 +96,23 @@ angular.module('apibookApp', [])
         }
 
         $scope.jumpToAnswers = function() {
-            $anchorScroll("answers");
+            var review = $scope.questionReviews[$scope.question.id];
+            if (review.answerIdUsingApi > 0) {
+                $anchorScroll("answer-" + review.answerIdUsingApi);
+            } else {
+                $anchorScroll("answers");
+            }
         }
 
         $scope.jumpNextToReview = function() {
             console.log("Jump!");
             for (var i = 0; i != $scope.questions.length; ++i) {
                 var question = $scope.questions[i];
-                review = $scope.questionReviews[question.id];
+                var review = $scope.questionReviews[question.id];
                 if (review === undefined || review.isProgramTask == null || review.answerIdUsingApi == null ||
                     review.singleKeyApi == null) {
                     $scope.setQuestionIndex(i);
+                    $anchorScroll("question");
                     return;
                 }
             }
