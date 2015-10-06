@@ -41,13 +41,16 @@ import com.mongodb.casbah.Imports._
  */
 object APIBook extends LazyLogging {
 
-  case class Config(mode: String = "", n: Int = 20, outFile: String = "out.csv")
+  case class Config(mode: String = "", n: Int = 20, outFile: String = "out.csv", from: Int = 0)
   def main(args: Array[String]): Unit = {
     val parser = new scopt.OptionParser[Config]("apibook") {
       head("APIBook", "1.0")
 
       opt[Int]('n', "number") action {
         (n, c) => c.copy(n=n)
+      }
+      opt[Int]('f', "from") action {
+        (from, c) => c.copy(from=from)
       }
       opt[String]('o', "out") action {
         (outFile, c) => c.copy(outFile=outFile)
@@ -110,14 +113,21 @@ object APIBook extends LazyLogging {
   def stackoverflow(config: Config) = {
     val overviews = StackOverflowCrawler.fetchQuestionOverviews(config.n)
     val mongoClient = new StackOverflowMongoDb("localhost", "apibook")
+    val waitTime = 1 * 1000
 
     val writer = CSVWriter.open(config.outFile)
     writer.writeRow(List("Question ID", "Votes", "Title", "Ask API", "Answer With One API", "Link"))
+    var i = 0
     overviews.foreach(overview => {
+      i += 1
       writer.writeRow(List(overview.id, overview.voteNum, overview.title, "", "", overview.questionUrl))
       mongoClient.upsertQuestionOverview(overview)
-      val question = StackOverflowCrawler.fetchQuestion(overview.questionUrl)
-      mongoClient.upsertQuestion(question)
+      logger.info(s"Fetching Question #${overview.id} [${i}/${config.n}]")
+      if (i >= config.from) {
+        val question = StackOverflowCrawler.fetchQuestion(overview.questionUrl)
+        Thread.sleep(waitTime)
+        mongoClient.upsertQuestion(question)
+      }
     })
     logger.info(s"Write to ${config.outFile}")
     writer.close()

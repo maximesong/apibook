@@ -30,7 +30,7 @@
                         <span class="text-danger" ng-if="questionReviews[question.id].isProgramTask === false">No</span>
                         <span ng-class="{'pull-right':questionReviews[question.id].isProgramTask !== undefined}">
                             <button class="btn btn-info" ng-click="upsertQuestionReviewField(question.id, 'isProgramTask', true)">Yes</button>
-                            <button class="btn btn-danger" ng-click="upsertQuestionReviewField(question.id, 'isProgramTask', false)">No</button>
+                            <button class="btn btn-danger" ng-click="setNotProgramTask(question.id)">No</button>
                         </span>
                     </div>
                 </div>

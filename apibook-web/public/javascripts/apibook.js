@@ -49,9 +49,17 @@ angular.module('apibookApp', [])
                 }
             ).then(function(resp) {
                 if (resp.status === 200) {
+                    if ($scope.questionReviews[id] === undefined) {
+                        $scope.questionReviews[id] = {};
+                    }
                     $scope.questionReviews[id][field] = value;
                 }
             });
+        }
+
+        $scope.setNotProgramTask = function(id) {
+            $scope.upsertQuestionReviewField(id, "isProgramTask", false)
+            $scope.upsertQuestionReviewField(id, "answerIdUsingApi", 0)
         }
 
         $scope.setQuestionIndex = function(i) {

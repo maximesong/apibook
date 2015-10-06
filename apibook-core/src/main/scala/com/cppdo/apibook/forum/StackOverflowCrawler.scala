@@ -1,5 +1,7 @@
 package com.cppdo.apibook.forum
 
+import java.net.{SocketException, SocketTimeoutException}
+
 import com.cppdo.apibook.db.Project
 import com.typesafe.scalalogging.LazyLogging
 import org.jsoup.Jsoup
@@ -19,7 +21,7 @@ object StackOverflowCrawler extends LazyLogging {
   val pageBaseUrl = s"http://stackoverflow.com/questions/tagged/java?sort=votes&pagesize=${pageSize}"
   val questionBaseUrl = s"http://stackoverflow.com/questions"
   val userAgent = "apibook"
-  val connectTimeout = 30 * 1000 // 10s for jsoup
+  val connectTimeout = 20 * 1000 // 60s for jsoup
 
   def pageUrl(page: Int) = s"${pageBaseUrl}&page=${page}"
 
@@ -32,8 +34,24 @@ object StackOverflowCrawler extends LazyLogging {
     val pages = if (count % pageSize == 0) count / pageSize else count / pageSize + 1
     val overviews = (1 to pages).flatMap(page => {
       logger.info(pageUrl(page))
-      val document = Jsoup.connect(pageUrl(page)).userAgent(userAgent).timeout(connectTimeout).get()
-      parseListPage(document)
+      try {
+        logger.info("HERE")
+        val document = Jsoup.connect(pageUrl(page)).userAgent(userAgent).timeout(connectTimeout).get()
+        logger.info("THERE")
+        parseListPage(document)
+      } catch {
+        case e: SocketTimeoutException => {
+          logger.warn("Retry Fetch!")
+          val document = Jsoup.connect(pageUrl(page)).userAgent(userAgent).timeout(connectTimeout).get()
+          parseListPage(document)
+        }
+        case e: Any => {
+          logger.warn("Other Exception")
+          logger.warn(e.getClass.toString)
+          Seq[QuestionOverview]()
+        }
+      }
+
     })
     //logger.info(summaries.toString())
     overviews.take(count)
@@ -44,8 +62,21 @@ object StackOverflowCrawler extends LazyLogging {
   }
 
   def fetchQuestion(url: String): Question = {
-    val doc = Jsoup.connect(url).userAgent(userAgent).timeout(connectTimeout).get()
-    parseQuestionPage(doc)
+    try {
+      val doc = Jsoup.connect(url).userAgent(userAgent).timeout(connectTimeout).get()
+      parseQuestionPage(doc)
+    } catch {
+      case e: SocketTimeoutException => {
+        logger.warn("Retry Fetch!")
+        val doc = Jsoup.connect(url).userAgent(userAgent).timeout(connectTimeout).get()
+        parseQuestionPage(doc)
+      }
+      case e: SocketException => {
+        logger.warn("Retry Fetch!")
+        val doc = Jsoup.connect(url).userAgent(userAgent).timeout(connectTimeout).get()
+        parseQuestionPage(doc)
+      }
+    }
   }
 
   def parseListPage(document: Document): Seq[QuestionOverview] = {
@@ -90,22 +121,15 @@ object StackOverflowCrawler extends LazyLogging {
       val links = answerElement.select(".answercell div.post-text a").iterator().asScala.map(link => {
         link.attr("href")
       }).toSeq
-      println(answerElement.select(".answercell .user-info .reputation-score"))
       val authorReputation = Option(answerElement.select(".answercell .user-info .reputation-score").last()).map(reputationElement => {
         val reputationText = reputationElement.attr("title").replaceAll("\\D", "")
-        println("TEXT:" + reputationText)
         if (reputationText.length > 0) {
           reputationText.toInt
         } else {
           reputationElement.text().replaceAll("\\D", "").toInt
         }
       }).getOrElse(0)
-      println("author:" + authorReputation)
       val answer = Answer(id, questionId, accepted, votes, authorReputation, codeSections, linkNum, links, codeList, inlineCodeList)
-      println(title)
-      println(questionId)
-      println(votes)
-      println(answer.authorReputation)
       answer
     }).toSeq
     Question(id, title, body, voteNum, viewNum, answers, codeSectionNum, linkNum)
