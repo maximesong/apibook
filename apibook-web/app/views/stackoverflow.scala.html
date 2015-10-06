@@ -96,7 +96,8 @@
                                     Answer#{{answer.id}}
                                 </a>&nbsp;
                                 <span class="glyphicon glyphicon-thumbs-up"></span><span>{{answer.voteNum}}</span>
-                                <span class="label label-success" ng-if="questionReviews[question.id].singleKeyApi">Single</span>&nbsp;
+                                <span class="label label-success" ng-if="answer.accepted">Accepted</span>&nbsp;
+                                <span class="label label-success" ng-if="answer.id === questionReviews[question.id].answerIdUsingApi && questionReviews[question.id].singleKeyApi">Single</span>&nbsp;
                                 <span class="label label-success" ng-if="answer.id === questionReviews[question.id].answerIdUsingApi">API</span>
 
                             </div>
