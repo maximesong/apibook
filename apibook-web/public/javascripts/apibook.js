@@ -54,10 +54,33 @@ angular.module('apibookApp', [])
             });
         }
 
+        $scope.setQuestionIndex = function(i) {
+            console.log("next!", i);
+            $scope.questionIndex = i;
+            $scope.question = $scope.questions[$scope.questionIndex];
+        }
+
+        $scope.click = function() {
+            console.log("click");
+        }
+
+        $scope.jumpNextToReview = function() {
+            console.log("Jump!");
+            for (var i = 0; i != $scope.questions.length; ++i) {
+                var question = $scope.questions[i];
+                review = $scope.questionReviews[question.id];
+                if (review === undefined || review.isProgramTask === undefined || review.answerIdUsingApi === undefined) {
+                    $scope.setQuestionIndex(i);
+                    return;
+                }
+            }
+        }
+
         $http.get("/api/stackoverflow/questions")
             .then(function(resp) {
-                $scope.questions = resp.data
-                console.log(resp.data)
+                $scope.questions = resp.data;
+                console.log(resp.data);
+                $scope.setQuestionIndex(0);
             });
         $http.get("/api/stackoverflow/questions/reviews")
             .then(function(resp) {

@@ -5,3 +5,15 @@
 .methodItem {
     margin: 10px;
 }
+
+.review-question {
+    margin: 10px;
+}
+
+.stackoverflow-heading {
+    background-color: gray;
+    position: fixed;
+    bottom: 0px;
+    width: 100%;
+    z-index: 100;
+}

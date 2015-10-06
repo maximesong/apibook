@@ -1,7 +1,21 @@
 @main("APIBook -- Stackoverflow") {
-<div class="container" ng-controller="stackoverflowController">
-    <h1>Stackoverflow</h1>
-    <div ng-repeat="question in questions">
+<div  ng-controller="stackoverflowController">
+    <div class="stackoverflow-heading">
+        <div class="row">
+            <div class="col-md-3">
+                <button class="btn btn-default" ng-click="setQuestionIndex(questionIndex - 1)">Previous</button>
+            </div>
+            <div class="col-md-6">
+                <input type="number" ng-model="questionIndex" ng-change="setQuestionIndex(questionIndex)">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary" ng-click="setQuestionIndex(questionIndex + 1)">Next</button>
+                <button class="btn btn-info" ng-click="jumpNextToReview()">Next to Review</button>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <h1>Stackoverflow</h1>
         <div class="panel  panel-default">
             <div class="panel-heading">
                 <a ng-href="http://www.stackoverflow.com/questions/{{question.id}}/" target='_blank'>
@@ -10,7 +24,7 @@
             </div>
             <div class="panel-body">
                 <div class="row">
-                    <div class="col-md-12">
+                    <div class="col-md-12 review-question">
                         <span>Is this a program task?</span>
                         <span class="text-success" ng-if="questionReviews[question.id].isProgramTask === true">Yes</span>
                         <span class="text-danger" ng-if="questionReviews[question.id].isProgramTask === false">No</span>
@@ -21,7 +35,7 @@
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-md-12">
+                    <div class="col-md-12 review-quetion">
                         <span>Answer Id using API</span>
                         <span class="text-danger" ng-if="questionReviews[question.id].answerIdUsingApi === 0">No</span>
                         <span class="text-success" ng-if="questionReviews[question.id].answerIdUsingApi !== 0">
@@ -44,7 +58,7 @@
                     <div class="panel panel-default">
                         <div class="panel-heading">
                             <a ng-href="http://www.stackoverflow.com/questions/{{question.id}}/#answer-{{answer.id}}"
-                                    target="_blank">
+                               target="_blank">
                                 Answer#{{answer.id}}
                             </a>&nbsp;
                             <span class="glyphicon glyphicon-thumbs-up"></span><span>{{answer.voteNum}}</span>
@@ -57,12 +71,19 @@
                                     Using API
                                 </button>
                             </div>
+                            <div>
+                                <pre ng-repeat="code in answer.codeList track by $index">{{code}}</pre>
+                            </div>
+                            <div>
+                                <div ng-repeat="link in answer.links track by $index">
+                                    <a ng-href="link">{{link}}</a>
+                                </div>
+                            </div>
                             {{answer.codeSectionNum}}
                         </div>
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
