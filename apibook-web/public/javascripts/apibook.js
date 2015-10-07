@@ -41,6 +41,38 @@ angular.module('apibookApp', [])
         }
     }])
     .controller('stackoverflowController', ['$scope', '$http', '$location', '$anchorScroll', function($scope, $http, $location, $anchorScroll) {
+
+        $scope.showOnlyProgramTask = true;
+        $scope.filterChanged = function() {
+            console.log("changed", $scope.questions, $scope.showOnlyProgramTask, $scope.questionReviews)
+            if ($scope.showOnlyProgramTask) {
+                if ($scope.questionReviews == null) {
+                    $scope.questions = []
+                } else {
+                     $scope.questions = _($scope.originQuestions).filter(function(question) {
+                                        var review = $scope.questionReviews[question.id];
+                                        return review != null && review.isProgramTask === true;
+                     });
+                }
+
+                console.log($scope.questions)
+            } else {
+                $scope.questions = $scope.originQuestions;
+            }
+            if ($scope.question) {
+                for (var i = 0; i != $scope.questions.length; ++i) {
+                    console.log($scope.questions.length, i)
+                    if ($scope.questions[i].id == $scope.question.id) {
+                        $scope.setQuestionIndex(i);
+                        return;
+                    }
+                }
+            }
+            if ($scope.questions.length > 0) {
+                $scope.setQuestionIndex(0);
+            }
+        }
+
         $scope.upsertQuestionReviewField = function(id, field, value) {
             console.log("update!");
             $http.post("/api/stackoverflow/questions/" + id + "/review/update",
@@ -124,15 +156,16 @@ angular.module('apibookApp', [])
 
         $http.get("/api/stackoverflow/questions")
             .then(function(resp) {
-                $scope.questions = resp.data;
-                $scope.setQuestionIndex(0);
+                $scope.originQuestions = resp.data;
+                $scope.filterChanged();
             });
         $http.get("/api/stackoverflow/questions/reviews")
             .then(function(resp) {
-             $scope.questionReviews = {};
-             _(resp.data).each(function(review) {
-                $scope.questionReviews[review.id] = review
-             });
+                 $scope.questionReviews = {};
+                 _(resp.data).each(function(review) {
+                    $scope.questionReviews[review.id] = review
+                 });
+                 $scope.filterChanged();
             });
         console.log("Hello Stackoverflow")
     }]);

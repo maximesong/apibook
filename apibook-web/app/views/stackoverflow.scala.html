@@ -5,8 +5,11 @@
             <div class="col-md-3">
                 <button class="btn btn-default" ng-click="setQuestionIndex(questionIndex - 1)">Previous</button>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-2">
                 <input type="number" ng-model="questionIndex" ng-change="setQuestionIndex(questionIndex)">
+            </div>
+            <div class="col-md-2">
+                <label>Program Task</label>&nbsp;<input type="checkbox" ng-model="showOnlyProgramTask" ng-change="filterChanged()">
             </div>
             <div class="col-md-3">
                 <button class="btn btn-primary" ng-click="setQuestionIndex(questionIndex + 1)">Next</button>
