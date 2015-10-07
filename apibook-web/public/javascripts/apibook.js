@@ -60,6 +60,10 @@ angular.module('apibookApp', [])
             });
         }
 
+        $scope.onKeypress = function(event) {
+            //console.log(event);
+        }
+
         $scope.setNotProgramTask = function(id) {
             $scope.upsertQuestionReviewField(id, "isProgramTask", false);
             $scope.upsertQuestionReviewField(id, "answerIdUsingApi", 0);

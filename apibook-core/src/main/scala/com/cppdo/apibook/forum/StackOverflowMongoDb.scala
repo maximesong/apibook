@@ -70,7 +70,7 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
   }
 
   def getQuestions(): Seq[Question] = {
-    val questions = questionCollection.find().sort(MongoDBObject("voteNum" -> -1)).limit(300).map(obj => {
+    val questions = questionCollection.find().sort(MongoDBObject("voteNum" -> -1)).limit(700).map(obj => {
       val answers = obj.as[MongoDBList]("answers")
       Question(
         obj.as[Int]("id"),
@@ -132,9 +132,13 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
   }
 
   def upsertQuestionReviewField(id: Int, reviewer: String, field: String, value: Any): Unit = {
+    val mongoClient = MongoClient(host)
+    val db = mongoClient(dbName)
+    val questionReviewCollection = db("question_reviews")
     val query = MongoDBObject("id" -> id, "reviewer" -> reviewer)
     val update = $set(field -> value)
     questionReviewCollection.update(query, update, upsert = true)
+    mongoClient.close()
   }
 
 }

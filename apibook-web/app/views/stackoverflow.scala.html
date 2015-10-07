@@ -1,5 +1,5 @@
 @main("APIBook -- Stackoverflow") {
-<div  ng-controller="stackoverflowController">
+<div  ng-controller="stackoverflowController" ng-keypress="onKeypress($event)">
     <div class="stackoverflow-heading">
         <div class="row">
             <div class="col-md-3">
@@ -20,7 +20,8 @@
             <div class="panel-heading">
                 <a ng-href="http://www.stackoverflow.com/questions/{{question.id}}/" target='_blank'>
                     Question#{{question.id}}&nbsp;&nbsp; {{question.title}}
-                </a>
+                </a>&nbsp;
+                <span class="glyphicon glyphicon-thumbs-up"></span><span>{{question.voteNum}}</span>
             </div>
             <div class="panel-body">
                 <table class="table">
