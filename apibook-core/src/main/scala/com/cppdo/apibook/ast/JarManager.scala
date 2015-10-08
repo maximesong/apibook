@@ -24,7 +24,8 @@ object JarManager extends LazyLogging {
       val inputStream = jarFile.getInputStream(entry)
       val reader = new ClassReader(inputStream)
       val classNode = new ClassNode()
-      reader.accept(classNode, ClassReader.SKIP_CODE)
+      reader.accept(classNode, 0)
+      //reader.accept(classNode, ClassReader.SKIP_CODE)
       classNode
     }).toSeq
     classNodes

@@ -2,13 +2,14 @@ package com.cppdo.apibook.ast
 
 
 import com.cppdo.apibook.APIBook._
-import com.cppdo.apibook.db.{Artifact, Class, Method}
+import com.cppdo.apibook.db._
 import com.typesafe.scalalogging.LazyLogging
 import org.eclipse.jdt.core.dom._
 import org.objectweb.asm.Opcodes
-import org.objectweb.asm.tree.{FieldNode, ParameterNode, MethodNode, ClassNode}
+import org.objectweb.asm.tree._
 import org.objectweb.asm.util.Textifier
 import scala.collection.JavaConverters._
+import org.objectweb.asm.{Type=>AsmType}
 
 /**
  * Created by song on 3/11/15.
@@ -32,6 +33,65 @@ object AstTreeManager extends LazyLogging {
 
   def buildFrom(methodNode: MethodNode, klass: Class): Method = {
     Method(methodNode.name, methodNode.textifiedSignature, methodNode.textifiedParameters, klass.id.get)
+  }
+
+  def calculateMethodUsage(classNode: ClassNode): Set[String] = {
+    val classType = AsmType.getObjectType(classNode.name)
+    var invocationMethodSet = Set[String]()
+    val superClassType = Option(classNode.superName).map(name => AsmType.getObjectType(name))
+    methodNodesOf(classNode).foreach(methodNode => {
+      methodNode.instructions.iterator().asScala.filter({
+        case _: MethodInsnNode => true
+        case _ => false
+      }).foreach({case methodInsNode: MethodInsnNode => {
+        methodInsNode.name
+        val ownerType = AsmType.getObjectType(methodInsNode.owner)
+        val methodFullName = s"${ownerType.getClassName}.${methodInsNode.name}"
+        invocationMethodSet += methodFullName
+      }})
+    })
+    invocationMethodSet
+  }
+
+  def buildCodeClass(classNode: ClassNode, onlyPublic: Boolean = true) = {
+    val classType = AsmType.getObjectType(classNode.name)
+    val superClassType = Option(classNode.superName).map(name => AsmType.getObjectType(name))
+    val methods = methodNodesOf(classNode).map(methodNode => {
+      if (methodNode.parameters != null) {
+        logger.info("PARAS" + methodNode.parameters.size().toString)
+        methodNode.parameters.asScala.foreach(p => {
+          println(p.getClass)
+        })
+      }
+      if (methodNode.instructions.size() != 0) {
+        logger.info("INS" + methodNode.instructions.size().toString)
+        methodNode.instructions.iterator().asScala.foreach({
+          case a: MethodInsnNode => {
+            println(a.desc)
+            println(a.owner)
+          }
+          case a:Any => {
+            println(a.getClass)
+            true
+          }
+        })
+      }
+      if (methodNode.localVariables != null && methodNode.localVariables.size() != 0) {
+        logger.info("LOCALS" + methodNode.localVariables.size().toString)
+        methodNode.localVariables.asScala.foreach(v => {
+          println(v.getClass)
+        })
+      }
+      val methodType = AsmType.getMethodType(methodNode.desc)
+      val parameterTypes = methodType.getArgumentTypes.map(parameterType => {
+        parameterType.getClassName
+      })
+      val returnType = methodType.getReturnType.getClassName
+      CodeMethod(methodNode.name, methodNode.getMethodAccess, methodNode.isStatic, parameterTypes, returnType)
+    }).filter(method => {
+      !onlyPublic || method.access == "public"
+    })
+    CodeClass(classType.getClassName, superClassType.map(t => t.getClassName), classNode.getClassAccess, methods)
   }
 
   def buildFrom(typeDeclaration: TypeDeclaration, artifact: Artifact): Class = {
@@ -87,6 +147,19 @@ object AstTreeManager extends LazyLogging {
       (classNode.access & Opcodes.ACC_PUBLIC) != 0
     }
 
+    def getClassAccess: String = {
+      if ((classNode.access & Opcodes.ACC_PUBLIC) != 0) {
+        "public"
+      }
+      else if ((classNode.access & Opcodes.ACC_PRIVATE) != 0) {
+        "private"
+      } else if ((classNode.access & Opcodes.ACC_PROTECTED) != 0) {
+        "protected"
+      } else {
+        "unknown"
+      }
+    }
+
     def isRegular: Boolean = {
       !classNode.name.contains("$")
     }
@@ -101,8 +174,24 @@ object AstTreeManager extends LazyLogging {
       getTextifiedParameters(methodNode)
     }
 
+    def getMethodAccess: String = {
+      if ((methodNode.access & Opcodes.ACC_PUBLIC) != 0) {
+        "public"
+      }
+      else if ((methodNode.access & Opcodes.ACC_PRIVATE) != 0) {
+        "private"
+      } else if ((methodNode.access & Opcodes.ACC_PROTECTED) != 0) {
+        "protected"
+      } else {
+        "unknown"
+      }
+    }
     def isPublic: Boolean = {
       (methodNode.access & Opcodes.ACC_PUBLIC) != 0
+    }
+
+    def isStatic: Boolean = {
+      (methodNode.access & Opcodes.ACC_STATIC) != 0
     }
 
     def isRegular: Boolean = {

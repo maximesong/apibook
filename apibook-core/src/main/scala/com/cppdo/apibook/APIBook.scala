@@ -21,6 +21,9 @@ import com.github.tototoshi.csv.CSVWriter
 import com.mongodb.casbah.MongoClient
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
+import org.objectweb.asm.Type
+import com.novus.salat._
+import com.novus.salat.global._
 import org.jsoup.Jsoup
 import play.libs.Json
 import slick.driver.JdbcDriver
@@ -68,6 +71,12 @@ object APIBook extends LazyLogging {
       cmd("so") action {
         (_, c) => c.copy(mode="stackoverflow")
       }
+      cmd("db") action {
+        (_, c) => c.copy(mode="db")
+      }
+      cmd("find") action {
+        (_, c) => c.copy(mode="find")
+      }
     }
     parser.parse(args, Config()) match {
       case Some(config) => {
@@ -77,6 +86,8 @@ object APIBook extends LazyLogging {
           case "build" => buildIndex()
           case "test" => test()
           case "stackoverflow" => stackoverflow(config)
+          case "db" => db(config)
+          case "find" => find(config)
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -105,7 +116,32 @@ object APIBook extends LazyLogging {
 
   }
 
+  def db(config: Config) = {
+    val runtimeJarPath = "/Users/song/Projects/apibook/java/rt.jar"
+    val classNodes = JarManager.getClassNodes(runtimeJarPath)
+    val db = new CodeMongoDb("localhost","apibook")
+
+    classNodes.foreach(classNode => {
+      val codeClass = AstTreeManager.buildCodeClass(classNode)
+      db.upsertClass(codeClass)
+    })
+  }
+
+  def find(config: Config) = {
+    findMethodConvertTo("java.io.InputStream", "java.lang.String")
+  }
+
+  def findMethodConvertTo(from: String, to: String) = {
+    val db = new CodeMongoDb("localhost","apibook")
+    val classNodes = db.findMethodConvert(from, to)
+    classNodes.foreach(classNode => {
+      println(classNode.fullName)
+    })
+    println(classNodes.size)
+  }
+
   def test() = {
+    /*
     val url = "http://stackoverflow.com/questions/215497/in-java-whats-the-difference-between-public-default-protected-and-private"
     val question = StackOverflowCrawler.fetchQuestion(url)
     question.answers.foreach(answer => {
@@ -115,6 +151,27 @@ object APIBook extends LazyLogging {
       })
     })
     println(Json.prettyPrint(Json.toJson(question)))
+    */
+
+
+    /*
+    val db = new CodeMongoDb("localhost","apibook")
+    println(db.findClassAccept("java.io.Reader").size)
+    println(db.findClassReturn("java.io.Reader").size)
+    */
+
+
+    //val classNodes = JarManager.getClassNodes("/Users/song/Projects/apibook/java/rt.jar")
+    val classNodes = JarManager.getClassNodes("/Users/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12.jar")
+    //println(classNodes.size)
+    classNodes.foreach(node => {
+      //println(Type.getObjectType(node.name).getClassName)
+      AstTreeManager.buildCodeClass(node)
+    })
+    val codeClass = AstTreeManager.buildCodeClass(classNodes(0))
+    //val dbo = grater[CodeClass].asDBObject(codeClass)
+    //println(dbo.toString)
+
   }
 
   def stackoverflow(config: Config) = {

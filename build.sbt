@@ -22,6 +22,7 @@ lazy val core = (project in file("./apibook-core"))
     "com.typesafe.akka" %% "akka-testkit" % "2.3.9",
     "com.typesafe.play" %% "play-json" % "2.4.3",
     "org.mongodb" %% "casbah-core" % "2.8.2",
+    "com.novus" %% "salat" % "1.9.9",
 
     "org.apache.httpcomponents" % "httpclient" % "4.5",
 
