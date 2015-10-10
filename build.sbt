@@ -45,6 +45,9 @@ lazy val core = (project in file("./apibook-core"))
     "org.ow2.asm" % "asm-all" % "5.0.4",
     "org.scalatest" %% "scalatest" % "2.2.4" % "test")
   )
+  .settings(
+    unmanagedJars in Compile += file("java/tools.jar")
+  )
 
 lazy val web = (project in file("./apibook-web")).enablePlugins(PlayScala).dependsOn(core)
   .settings(commonSettings: _*)

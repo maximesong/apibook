@@ -19,6 +19,7 @@ import com.cppdo.apibook.repository.ArtifactsManager.RichArtifact
 import com.cppdo.apibook.repository.MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
 import com.github.tototoshi.csv.CSVWriter
 import com.mongodb.casbah.MongoClient
+import com.sun.tools.javadoc.{Main=>JavaDocMain}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.objectweb.asm.Type
@@ -92,6 +93,9 @@ object APIBook extends LazyLogging {
       cmd("const") action {
         (_, c) => c.copy(mode="const")
       }
+      cmd("doc") action {
+        (_, c) => c.copy(mode="doc")
+      }
     }
     parser.parse(args, Config()) match {
       case Some(config) => {
@@ -105,6 +109,7 @@ object APIBook extends LazyLogging {
           case "usage" => usage(config)
           case "find" => find(config)
           case "const" => buildConstant(config)
+          case "doc" => buildDoc(config)
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -131,6 +136,11 @@ object APIBook extends LazyLogging {
     //testGithub()
     //test()
 
+  }
+
+  def buildDoc(config: Config) = {
+    val args = Array("-doclet", "com.cppdo.apibook.doc.StoreDoc", "/Users/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12-sources/org/junit/runners/JUnit4.java")
+    JavaDocMain.execute(args: _*)
   }
 
   def db(config: Config) = {
