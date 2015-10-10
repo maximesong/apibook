@@ -53,35 +53,35 @@ object AstTreeManager extends LazyLogging {
     invocationMethodSet
   }
 
+  def calculateConstantParameter(classNode: ClassNode) = {
+    val classType = AsmType.getObjectType(classNode.name)
+    var invocationMethodSet = Set[String]()
+    methodNodesOf(classNode).foreach(methodNode => {
+      methodNode.instructions.iterator().asScala.foreach {
+        case methodInsNode: MethodInsnNode => {
+          methodInsNode.name
+          val ownerType = AsmType.getObjectType(methodInsNode.owner)
+          val methodFullName = s"${ownerType.getClassName}.${methodInsNode.name}"
+          invocationMethodSet += methodFullName
+        }
+        case ldcInsNode: LdcInsnNode => {
+          ldcInsNode.cst match  {
+            case str: String => {
+              println(str)
+            }
+            case _ => {} // nothing
+
+          }
+        }
+        case _ => {}// nothing
+      }
+    })
+  }
+
   def buildCodeClass(classNode: ClassNode, onlyPublic: Boolean = true) = {
     val classType = AsmType.getObjectType(classNode.name)
     val superClassType = Option(classNode.superName).map(name => AsmType.getObjectType(name))
     val methods = methodNodesOf(classNode).map(methodNode => {
-      if (methodNode.parameters != null) {
-        logger.info("PARAS" + methodNode.parameters.size().toString)
-        methodNode.parameters.asScala.foreach(p => {
-          println(p.getClass)
-        })
-      }
-      if (methodNode.instructions.size() != 0) {
-        logger.info("INS" + methodNode.instructions.size().toString)
-        methodNode.instructions.iterator().asScala.foreach({
-          case a: MethodInsnNode => {
-            println(a.desc)
-            println(a.owner)
-          }
-          case a:Any => {
-            println(a.getClass)
-            true
-          }
-        })
-      }
-      if (methodNode.localVariables != null && methodNode.localVariables.size() != 0) {
-        logger.info("LOCALS" + methodNode.localVariables.size().toString)
-        methodNode.localVariables.asScala.foreach(v => {
-          println(v.getClass)
-        })
-      }
       val methodType = AsmType.getMethodType(methodNode.desc)
       val parameterTypes = methodType.getArgumentTypes.map(parameterType => {
         parameterType.getClassName

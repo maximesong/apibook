@@ -8,4 +8,4 @@ case class CodeClass(fullName: String, superFullName: Option[String], access: St
 
 case class CodeMethod(name: String, access: String, isStatic: Boolean, parameterTypes: Seq[String], returnType: String)
 
-case class ClassInvocations()
+case class MethodInvocations(methodFullName: String, invokedBy: Map[String, Boolean])

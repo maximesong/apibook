@@ -35,6 +35,8 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.duration._
 import scala.io.Source
 
+import scala.collection.JavaConverters._
+
 import sys.process._
 //import slick.driver.H2Driver.api._
 import com.mongodb.casbah.Imports._
@@ -45,7 +47,8 @@ import com.mongodb.casbah.Imports._
  */
 object APIBook extends LazyLogging {
 
-  case class Config(mode: String = "", n: Int = 20, outFile: String = "out.csv", from: Int = 0)
+  case class Config(mode: String = "", n: Int = 20, outFile: String = "out.csv", begin: Int = 0,
+                    directory: Option[String] = None, file: Option[String] = None)
   def main(args: Array[String]): Unit = {
     val parser = new scopt.OptionParser[Config]("apibook") {
       head("APIBook", "1.0")
@@ -53,11 +56,17 @@ object APIBook extends LazyLogging {
       opt[Int]('n', "number") action {
         (n, c) => c.copy(n=n)
       }
-      opt[Int]('f', "from") action {
-        (from, c) => c.copy(from=from)
+      opt[Int]('b', "begin") action {
+        (begin, c) => c.copy(begin=begin)
       }
       opt[String]('o', "out") action {
         (outFile, c) => c.copy(outFile=outFile)
+      }
+      opt[String]('d', "directory") action {
+        (directory, c) => c.copy(directory=Some(directory))
+      }
+      opt[String]('f', "file") action {
+        (file, c) => c.copy(file=Some(file))
       }
       cmd("fetch")  action {
         (_, c) => c.copy(mode="fetch")
@@ -77,6 +86,12 @@ object APIBook extends LazyLogging {
       cmd("find") action {
         (_, c) => c.copy(mode="find")
       }
+      cmd("usage") action {
+        (_, c) => c.copy(mode="usage")
+      }
+      cmd("const") action {
+        (_, c) => c.copy(mode="const")
+      }
     }
     parser.parse(args, Config()) match {
       case Some(config) => {
@@ -87,7 +102,9 @@ object APIBook extends LazyLogging {
           case "test" => test()
           case "stackoverflow" => stackoverflow(config)
           case "db" => db(config)
+          case "usage" => usage(config)
           case "find" => find(config)
+          case "const" => buildConstant(config)
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -117,13 +134,69 @@ object APIBook extends LazyLogging {
   }
 
   def db(config: Config) = {
+    val db = new CodeMongoDb("localhost","apibook")
+    config.directory.foreach(directory => {
+      val files = FileUtils.listFiles(new File(directory), Array("jar"), true)
+      files.asScala.foreach(file => {
+        println(file.getAbsolutePath)
+        val classNodes = JarManager.getClassNodes(file.getAbsolutePath)
+        classNodes.foreach(classNode => {
+          val codeClass = AstTreeManager.buildCodeClass(classNode)
+          db.upsertClass(codeClass)
+        })
+      })
+    })
+    config.file.foreach(file => {
+      val classNodes = JarManager.getClassNodes(file)
+      classNodes.foreach(classNode => {
+        val codeClass = AstTreeManager.buildCodeClass(classNode)
+        db.upsertClass(codeClass)
+      })
+    })
     val runtimeJarPath = "/Users/song/Projects/apibook/java/rt.jar"
-    val classNodes = JarManager.getClassNodes(runtimeJarPath)
+
+
+  }
+
+  def buildConstant(config: Config) = {
+    val classNodes = JarManager.getClassNodes("/Users/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12.jar")
+    classNodes.foreach(classNode => {
+      AstTreeManager.calculateConstantParameter(classNode)
+    })
+
+  }
+
+  def usage(config: Config) = {
+    //val classNodes = JarManager.getClassNodes("/Users/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12.jar")
+    //val runtimeJarPath = "/Users/song/Projects/apibook/java/rt.jar"
+    //val classNodes = JarManager.getClassNodes(runtimeJarPath)
     val db = new CodeMongoDb("localhost","apibook")
 
-    classNodes.foreach(classNode => {
-      val codeClass = AstTreeManager.buildCodeClass(classNode)
-      db.upsertClass(codeClass)
+    config.file.foreach(filename => {
+      val classNodes = JarManager.getClassNodes(filename)
+      classNodes.foreach(classNode => {
+        val classType = Type.getObjectType(classNode.name)
+        val methodSet = AstTreeManager.calculateMethodUsage(classNode)
+        logger.info(s"${classType.getClassName}...")
+        methodSet.foreach(method => {
+          db.upsertMethodInvocation(method, classType.getClassName)
+        })
+      })
+    })
+
+    config.directory.foreach(directory => {
+      val files = FileUtils.listFiles(new File(directory), Array("jar"), true)
+      files.asScala.foreach(file => {
+        val classNodes = JarManager.getClassNodes(file.getAbsolutePath)
+        classNodes.foreach(classNode => {
+          val classType = Type.getObjectType(classNode.name)
+          val methodSet = AstTreeManager.calculateMethodUsage(classNode)
+          logger.info(s"${classType.getClassName}...")
+          methodSet.foreach(method => {
+            db.upsertMethodInvocation(method, classType.getClassName)
+          })
+        })
+      })
     })
   }
 
@@ -135,9 +208,15 @@ object APIBook extends LazyLogging {
     val db = new CodeMongoDb("localhost","apibook")
     val classNodes = db.findMethodConvert(from, to)
     classNodes.foreach(classNode => {
-      println(classNode.fullName)
+      classNode.methods.foreach(method => {
+        if (method.parameterTypes.contains(from) && method.returnType == to) {
+          println(s"${classNode.fullName}.${method.name}")
+        }
+      })
     })
     println(classNodes.size)
+    val targetClass = db.findClassReturn(to)
+
   }
 
   def test() = {
@@ -154,14 +233,11 @@ object APIBook extends LazyLogging {
     */
 
 
-    /*
     val db = new CodeMongoDb("localhost","apibook")
-    println(db.findClassAccept("java.io.Reader").size)
-    println(db.findClassReturn("java.io.Reader").size)
-    */
 
 
     //val classNodes = JarManager.getClassNodes("/Users/song/Projects/apibook/java/rt.jar")
+    /*
     val classNodes = JarManager.getClassNodes("/Users/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12.jar")
     //println(classNodes.size)
     classNodes.foreach(node => {
@@ -169,6 +245,7 @@ object APIBook extends LazyLogging {
       AstTreeManager.buildCodeClass(node)
     })
     val codeClass = AstTreeManager.buildCodeClass(classNodes(0))
+    */
     //val dbo = grater[CodeClass].asDBObject(codeClass)
     //println(dbo.toString)
 
@@ -187,7 +264,7 @@ object APIBook extends LazyLogging {
       writer.writeRow(List(overview.id, overview.voteNum, overview.title, "", "", overview.questionUrl))
       mongoClient.upsertQuestionOverview(overview)
       logger.info(s"Fetching Question #${overview.id} [${i}/${config.n}]")
-      if (i >= config.from) {
+      if (i >= config.begin) {
         val question = StackOverflowCrawler.fetchQuestion(overview.questionUrl)
         Thread.sleep(waitTime)
         mongoClient.upsertQuestion(question)
