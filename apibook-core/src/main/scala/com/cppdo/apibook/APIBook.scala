@@ -139,8 +139,18 @@ object APIBook extends LazyLogging {
   }
 
   def buildDoc(config: Config) = {
-    val args = Array("-doclet", "com.cppdo.apibook.doc.StoreDoc", "/Users/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12-sources/org/junit/runners/JUnit4.java")
-    JavaDocMain.execute(args: _*)
+    config.directory.foreach(directory => {
+      val files = FileUtils.listFiles(new File(directory), Array("java"), true)
+      val fileNames = files.asScala.map(_.getAbsolutePath)
+      //val args = Array("-doclet", "com.cppdo.apibook.doc.StoreDoc", "*.java")
+      val args = Seq("-doclet", "com.cppdo.apibook.doc.StoreDoc") ++ fileNames
+      JavaDocMain.execute(args: _*)
+    })
+    config.file.foreach(file => {
+      val args = Seq("-doclet", "com.cppdo.apibook.doc.StoreDoc", file)
+      JavaDocMain.execute(args: _*)
+    })
+    //val args = Array("-doclet", "com.cppdo.apibook.doc.StoreDoc", "/Users/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12-sources/org/junit/runners/JUnit4.java")
   }
 
   def db(config: Config) = {

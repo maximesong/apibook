@@ -14,6 +14,9 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
   val db = mongoClient(dbName)
   val classCollection = db("classes")
   val invocationCollection = db("invocations")
+  val methodInfoCollection = db("method_info")
+  val classInfoCollection = db("class_info")
+
   invocationCollection.createIndex(MongoDBObject(
     "methodFullName" -> 1,
     "typeFullName" -> 1
@@ -21,6 +24,15 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
   classCollection.createIndex(MongoDBObject(
     "fullName" -> 1
   ))
+
+  methodInfoCollection.createIndex(MongoDBObject(
+    "fullName" -> 1
+  ))
+
+  classInfoCollection.createIndex(MongoDBObject(
+    "fullName" -> 1
+  ))
+
   def upsertClass(codeClass: CodeClass): Unit = {
     val query = MongoDBObject(
       "fullName" -> codeClass.fullName
@@ -76,5 +88,21 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
       "typeFullName" -> typeFullName
     )
     invocationCollection.update(query, update, upsert=true)
+  }
+
+  def upsertMethodDetail(methodDetail: MethodInfo) = {
+    val query = MongoDBObject(
+      "fullName" -> methodDetail.fullName
+    )
+    val update = grater[MethodInfo].asDBObject(methodDetail)
+    methodInfoCollection.update(query, update, upsert=true)
+  }
+
+  def upsertClassInfo(classInfo: ClassInfo) = {
+    val query = MongoDBObject(
+      "fullName" -> classInfo.fullName
+    )
+    val update = grater[ClassInfo].asDBObject(classInfo)
+    classInfoCollection.update(query, update, upsert=true)
   }
 }

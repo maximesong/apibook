@@ -31,6 +31,15 @@ object JarManager extends LazyLogging {
     classNodes
   }
 
+  def getSource(jarPath: String): String = {
+    val jarFile = new JarFile(jarPath)
+    val sourceEntries = jarFile.entries().asScala.filter(_.getName endsWith ".java")
+    sourceEntries.foreach(entry => {
+      val inputStream = jarFile.getInputStream(entry)
+    })
+    ""
+  }
+
   def getDocEntry(jarPath: String, klass: Class): Option[JarEntry] = {
     val entries = getDocEntries(jarPath, klass)
     selectDocEntry(entries, klass)
