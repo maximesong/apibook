@@ -16,18 +16,21 @@ object StackOverflow extends Controller {
   def overviews = Action {
     val client = new StackOverflowMongoDb("localhost", "apibook")
     val overviews = client.getQuestionOverviews()
+    client.close()
     Ok(Json.toJson(overviews))
   }
 
   def questions = Action {
     val client = new StackOverflowMongoDb("localhost", "apibook")
     val questions = client.getQuestions()
+    client.close()
     Ok(Json.prettyPrint(Json.toJson(questions))).as(ContentTypes.JSON)
   }
 
   def questionReviews = Action {
     var client = new StackOverflowMongoDb("localhost", "apibook")
     val questionReviews = client.getQuestionReviews()
+    client.close()
     Ok(Json.prettyPrint(Json.toJson(questionReviews))).as(ContentTypes.JSON)
   }
 
@@ -44,6 +47,7 @@ object StackOverflow extends Controller {
     val reviewer = (request.body \ "reviewer").as[String]
     val client = new StackOverflowMongoDb("localhost", "apibook")
     client.upsertQuestionReviewField(id, reviewer, field, parsed)
+    client.close()
     Ok(Json.obj(
       "result" -> 200
     ))

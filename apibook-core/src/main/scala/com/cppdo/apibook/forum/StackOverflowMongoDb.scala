@@ -141,4 +141,8 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
     mongoClient.close()
   }
 
+  def close() = {
+    mongoClient.close()
+  }
+
 }

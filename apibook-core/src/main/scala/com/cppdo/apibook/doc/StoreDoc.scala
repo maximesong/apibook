@@ -27,6 +27,7 @@ object StoreDoc extends Doclet {
         db.upsertMethodInfo(methodDetail)
       })
     })
+    db.close()
     true
   }
 }

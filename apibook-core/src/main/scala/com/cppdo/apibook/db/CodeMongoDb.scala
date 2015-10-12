@@ -91,26 +91,22 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
   }
 
   def upsertMethodInfo(methodInfo: MethodInfo) = {
-    val mongoClient = MongoClient(host)
-    val db = mongoClient(dbName)
-    val methodInfoCollection = db("method_info")
     val query = MongoDBObject(
       "fullName" -> methodInfo.fullName
     )
     val update = grater[MethodInfo].asDBObject(methodInfo)
     methodInfoCollection.update(query, update, upsert=true)
-    mongoClient.close()
   }
 
   def upsertClassInfo(classInfo: ClassInfo) = {
-    val mongoClient = MongoClient(host)
-    val db = mongoClient(dbName)
-    val classInfoCollection = db("class_info")
     val query = MongoDBObject(
       "fullName" -> classInfo.fullName
     )
     val update = grater[ClassInfo].asDBObject(classInfo)
     classInfoCollection.update(query, update, upsert=true)
+  }
+
+  def close() = {
     mongoClient.close()
   }
 }
