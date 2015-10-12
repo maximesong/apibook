@@ -49,7 +49,7 @@ import com.mongodb.casbah.Imports._
 object APIBook extends LazyLogging {
 
   case class Config(mode: String = "", n: Int = 20, outFile: String = "out.csv", begin: Int = 0,
-                    directory: Option[String] = None, file: Option[String] = None)
+                    directory: Option[String] = None, file: Option[String] = None, repository: Option[String] = None)
   def main(args: Array[String]): Unit = {
     val parser = new scopt.OptionParser[Config]("apibook") {
       head("APIBook", "1.0")
@@ -68,6 +68,9 @@ object APIBook extends LazyLogging {
       }
       opt[String]('f', "file") action {
         (file, c) => c.copy(file=Some(file))
+      }
+      opt[String]('r', "repository") action {
+        (repository, c) => c.copy(repository=Some(repository))
       }
       cmd("fetch")  action {
         (_, c) => c.copy(mode="fetch")
@@ -149,6 +152,20 @@ object APIBook extends LazyLogging {
     config.file.foreach(file => {
       val args = Seq("-doclet", "com.cppdo.apibook.doc.StoreDoc", file)
       JavaDocMain.execute(args: _*)
+    })
+    config.repository.foreach(repository => {
+      val jarSourceFiles = FileUtils.listFiles(new File(repository), Array("jar"), true)
+        .asScala.filter(file => file.getName.contains("-sources.jar"))
+      jarSourceFiles.foreach(file => {
+        val optionalDirectory = JarManager.extractSource(file.getAbsolutePath)
+        optionalDirectory.foreach(directory => {
+          val files = FileUtils.listFiles(new File(directory), Array("java"), true)
+          val fileNames = files.asScala.map(_.getAbsolutePath)
+          //val args = Array("-doclet", "com.cppdo.apibook.doc.StoreDoc", "*.java")
+          val args = Seq("-doclet", "com.cppdo.apibook.doc.StoreDoc") ++ fileNames
+          JavaDocMain.execute(args: _*)
+        })
+      })
     })
     //val args = Array("-doclet", "com.cppdo.apibook.doc.StoreDoc", "/Users/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12-sources/org/junit/runners/JUnit4.java")
   }
@@ -253,8 +270,8 @@ object APIBook extends LazyLogging {
     */
 
 
-    val db = new CodeMongoDb("localhost","apibook")
-
+    //val db = new CodeMongoDb("localhost","apibook")
+    JarManager.extractSource("/Users/song/Projects/apibook/repository/org.apache.commons/commons-lang3/3.4/commons-lang3-3.4-sources.jar")
 
     //val classNodes = JarManager.getClassNodes("/Users/song/Projects/apibook/java/rt.jar")
     /*

@@ -4,6 +4,7 @@
 target
 /repository
 /client-repository
+/db
 *.sqlite
 .history
 db.sqlite-journal

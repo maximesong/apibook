@@ -82,12 +82,13 @@ object AstTreeManager extends LazyLogging {
     val classType = AsmType.getObjectType(classNode.name)
     val superClassType = Option(classNode.superName).map(name => AsmType.getObjectType(name))
     val methods = methodNodesOf(classNode).map(methodNode => {
+      val methodName = if (methodNode.name == "<init>") classType.getClassName.split(".").last else methodNode.name
       val methodType = AsmType.getMethodType(methodNode.desc)
       val parameterTypes = methodType.getArgumentTypes.map(parameterType => {
         parameterType.getClassName
       })
       val returnType = methodType.getReturnType.getClassName
-      CodeMethod(methodNode.name, methodNode.getMethodAccess, methodNode.isStatic, parameterTypes, returnType)
+      CodeMethod(methodName, methodNode.getMethodAccess, methodNode.isStatic, parameterTypes, returnType)
     }).filter(method => {
       !onlyPublic || method.access == "public"
     })

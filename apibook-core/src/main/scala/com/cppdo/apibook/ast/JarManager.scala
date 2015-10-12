@@ -1,6 +1,7 @@
 package com.cppdo.apibook.ast
 
-import java.io.InputStream
+import java.io.{File, FileWriter, InputStream}
+import java.nio.file.Paths
 import java.util.jar.{JarEntry, JarFile}
 
 import com.cppdo.apibook.db.{Class, Method}
@@ -31,13 +32,22 @@ object JarManager extends LazyLogging {
     classNodes
   }
 
-  def getSource(jarPath: String): String = {
+  def extractSource(jarPath: String): Option[String] = {
+    val path = new File(jarPath)
+    val directory = path.getParent
     val jarFile = new JarFile(jarPath)
     val sourceEntries = jarFile.entries().asScala.filter(_.getName endsWith ".java")
     sourceEntries.foreach(entry => {
       val inputStream = jarFile.getInputStream(entry)
+      val file = new File(s"${directory}/src/${entry.getName}")
+      FileUtils.copyInputStreamToFile(inputStream, file)
     })
-    ""
+    val sourceDirectory = new File(s"${directory}/src/")
+    if (sourceDirectory.isDirectory) {
+      Some(sourceDirectory.getAbsolutePath)
+    } else {
+      None
+    }
   }
 
   def getDocEntry(jarPath: String, klass: Class): Option[JarEntry] = {

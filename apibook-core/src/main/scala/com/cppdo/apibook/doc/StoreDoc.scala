@@ -24,7 +24,7 @@ object StoreDoc extends Doclet {
           methodDoc.commentText())
       })
       methodDetails.foreach(methodDetail => {
-        db.upsertMethodDetail(methodDetail)
+        db.upsertMethodInfo(methodDetail)
       })
     })
     true

@@ -14,7 +14,7 @@ import org.apache.lucene.index.IndexWriterConfig.OpenMode
 import org.apache.lucene.index._
 import org.apache.lucene.store.FSDirectory
 import org.objectweb.asm.tree.ClassNode
-import com.cppdo.apibook.db.{Class, Method}
+import com.cppdo.apibook.db.{MethodInfo, CodeMethod, Class, Method}
 import com.typesafe.config.ConfigFactory
 
 /**
@@ -159,4 +159,16 @@ object IndexManager {
     document.add(parameterField)
     document
   }
+
+  def buildDocument(codeMethod: CodeMethod, methodInfo: Option[MethodInfo]): Document = {
+    val document = new Document
+    val nameField = new TextField(FieldName.Name.toString, codeMethod.name, Field.Store.YES)
+    val typeField = new StringField(FieldName.Type.toString, DocumentType.Method.toString, Field.Store.YES)
+    //val signatureField = new TextField(FieldName.Signature.toString, method.signature, Field.Store.YES)
+    //val parameterField = new TextField(FieldName.Parameters.toString, method.parameters, Field.Store.YES)
+    document.add(nameField)
+    document.add(typeField)
+    //document.add(signatureField)
+    //document.add(parameterField)
+    document  }
 }
