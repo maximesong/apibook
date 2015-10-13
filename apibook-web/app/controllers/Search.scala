@@ -86,4 +86,14 @@ object Search extends Controller with LazyLogging {
       "result" -> result
     ))
   }
+
+  def searchMethod = Action(parse.json) { implicit request =>
+    val searchText = (request.body \ "searchText").as[String]
+    val resultEntries = IndexManager.searchMethod(searchText).map(document => {
+      document.get(IndexManager.FieldName.FullName.toString)
+    })
+    Ok(Json.obj(
+      "result" -> resultEntries
+    ))
+  }
 }

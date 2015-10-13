@@ -12,6 +12,8 @@ GET        /stackoverflow                     controllers.Application.stackoverf
 
 POST    /api/search     controllers.Search.post
 
+POST    /api/search/method controllers.Search.searchMethod
+
 GET    /api/stackoverflow/overviews controllers.StackOverflow.overviews
 
 GET    /api/stackoverflow/questions controllers.StackOverflow.questions

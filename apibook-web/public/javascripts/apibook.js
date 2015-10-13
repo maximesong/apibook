@@ -19,7 +19,7 @@ angular.module('apibookApp', [])
             var searchOptions = {
                 searchText: $scope.searchText
             };
-            var response = $http.post("/api/search", searchOptions)
+            var response = $http.post("/api/search/method", searchOptions)
             response.success(function(data) {
                 console.log(data);
                 $scope.items = data.result;

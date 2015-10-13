@@ -57,6 +57,12 @@ object APIBook extends LazyLogging {
       opt[Int]('n', "number") action {
         (n, c) => c.copy(n=n)
       }
+      opt[Unit]("rt") action {
+        (_, c) => c.copy(file=Some("java/rt.jar"))
+      }
+      opt[Unit]("std") action {
+        (_, c) => c.copy(directory=Some("java/classses"))
+      }
       opt[Int]('b', "begin") action {
         (begin, c) => c.copy(begin=begin)
       }
@@ -84,8 +90,8 @@ object APIBook extends LazyLogging {
       cmd("so") action {
         (_, c) => c.copy(mode="stackoverflow")
       }
-      cmd("db") action {
-        (_, c) => c.copy(mode="db")
+      cmd("class") action {
+        (_, c) => c.copy(mode="class")
       }
       cmd("find") action {
         (_, c) => c.copy(mode="find")
@@ -96,8 +102,11 @@ object APIBook extends LazyLogging {
       cmd("const") action {
         (_, c) => c.copy(mode="const")
       }
-      cmd("doc") action {
-        (_, c) => c.copy(mode="doc")
+      cmd("info") action {
+        (_, c) => c.copy(mode="info")
+      }
+      cmd("index") action {
+        (_, c) => c.copy(mode="index")
       }
     }
     parser.parse(args, Config()) match {
@@ -108,11 +117,12 @@ object APIBook extends LazyLogging {
           case "build" => buildIndex()
           case "test" => test()
           case "stackoverflow" => stackoverflow(config)
-          case "db" => db(config)
+          case "class" => buildClasses(config)
           case "usage" => usage(config)
           case "find" => find(config)
           case "const" => buildConstant(config)
-          case "doc" => buildDoc(config)
+          case "info" => buildFromDoc(config)
+          case "index" => buildMethodIndex(config)
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -141,7 +151,20 @@ object APIBook extends LazyLogging {
 
   }
 
-  def buildDoc(config: Config) = {
+  def buildMethodIndex(config: Config) = {
+    val db = new CodeMongoDb("localhost","apibook")
+    val codeClasses = db.getCodeClasses()
+    codeClasses.foreach(codeClass => {
+      println(codeClass.fullName)
+      val documents = codeClass.methods.map(method => {
+        val methodInfo = db.getMethodInfo(s"${codeClass.fullName}.${method.name}")
+        IndexManager.buildDocument(codeClass, method, methodInfo)
+      })
+      IndexManager.addDocuments(documents)
+    })
+  }
+
+  def buildFromDoc(config: Config) = {
     config.directory.foreach(directory => {
       val files = FileUtils.listFiles(new File(directory), Array("java"), true)
       val fileNames = files.asScala.map(_.getAbsolutePath)
@@ -170,7 +193,7 @@ object APIBook extends LazyLogging {
     //val args = Array("-doclet", "com.cppdo.apibook.doc.StoreDoc", "/Users/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12-sources/org/junit/runners/JUnit4.java")
   }
 
-  def db(config: Config) = {
+  def buildClasses(config: Config) = {
     val db = new CodeMongoDb("localhost","apibook")
     config.directory.foreach(directory => {
       val files = FileUtils.listFiles(new File(directory), Array("jar"), true)
@@ -191,8 +214,6 @@ object APIBook extends LazyLogging {
       })
     })
     val runtimeJarPath = "/Users/song/Projects/apibook/java/rt.jar"
-
-
   }
 
   def buildConstant(config: Config) = {

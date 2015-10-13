@@ -49,6 +49,22 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
     })
   }
 
+  def getCodeClasses(): Seq[CodeClass] = {
+    val codeClasses = classCollection.find().map(obj => {
+      grater[CodeClass].asObject(obj)
+    })
+    codeClasses.toSeq
+  }
+
+  def getMethodInfo(fullName: String): Option[MethodInfo] = {
+    val query = MongoDBObject(
+      "fullName" -> fullName
+    )
+    methodInfoCollection.find(query).toSeq.headOption.map(obj => {
+      grater[MethodInfo].asObject(obj)
+    })
+  }
+
   def findClassAccept(typeName: String): Seq[CodeClass] = {
     val query = "methods" $elemMatch MongoDBObject(
       "parameterTypes" -> typeName

@@ -3,6 +3,7 @@ package com.cppdo.apibook.index
 import java.io.File
 import java.nio.file.Paths
 import org.apache.lucene.analysis.Analyzer
+import org.apache.lucene.document.Field
 import org.apache.lucene.queryparser.classic.QueryParser
 import org.apache.lucene.search._
 import org.apache.lucene.util.Version
@@ -14,7 +15,7 @@ import org.apache.lucene.index.IndexWriterConfig.OpenMode
 import org.apache.lucene.index._
 import org.apache.lucene.store.FSDirectory
 import org.objectweb.asm.tree.ClassNode
-import com.cppdo.apibook.db.{MethodInfo, CodeMethod, Class, Method}
+import com.cppdo.apibook.db.{Field => ClassField, Class, Method, CodeMethod, CodeClass, MethodInfo}
 import com.typesafe.config.ConfigFactory
 
 /**
@@ -27,7 +28,8 @@ object IndexManager {
   object FieldName extends Enumeration {
     type FieldName = Value
 
-    val Name, Type, DbId, EnclosingClassDbId, FieldNames, Signature, Parameters = Value
+    val Name, Type, DbId, EnclosingClassDbId, FieldNames, Signature, Parameters, CommentText,
+      MethodName, ClassName, FullName = Value
   }
 
   object DocumentType extends Enumeration {
@@ -70,13 +72,12 @@ object IndexManager {
     indexWriter.close()
   }
 
-  def buildIndex(classNode: ClassNode) = {
+  def addDocuments(documents: Seq[Document]) = {
     val directory = openIndexDirectory(indexDirectory)
     val analyzer = new SourceCodeAnalyzer()
     val indexWriterConfig = createIndexWriterConfig(analyzer)
     val indexWriter = new IndexWriter(directory, indexWriterConfig)
-    val document = buildDocument(classNode)
-    indexWriter.addDocument(document)
+    indexWriter.addDocuments(documents.asJava)
     indexWriter.close()
   }
 
@@ -123,6 +124,32 @@ object IndexManager {
     })
   }
 
+  def searchMethod(queryText: String): Seq[Document] = {
+    val directory = openIndexDirectory(indexDirectory)
+    val reader = DirectoryReader.open(directory)
+    val searcher = new IndexSearcher(reader)
+
+    val terms = queryText.split(" ")
+
+    val booleanQuery = new BooleanQuery()
+
+    terms.foreach(term => {
+      Array(FieldName.Name, FieldName.ClassName, FieldName.FieldNames,
+          FieldName.Signature, FieldName.Parameters, FieldName.CommentText).foreach(name => {
+        val query = new TermQuery(new Term(name.toString, term))
+        booleanQuery.add(query, BooleanClause.Occur.SHOULD)
+      })
+    })
+    //val q = new MatchAllDocsQuery()
+    val topDocs = searcher.search(booleanQuery, 100)
+
+    //val topDocs = searcher.search(q, null, 100)
+    println("Total hits: " + topDocs.totalHits)
+    topDocs.scoreDocs.map(scoreDoc => {
+      searcher.doc(scoreDoc.doc)
+    })
+  }
+
   private def buildDocument(classNode: ClassNode): Document = {
     val document = new Document
     val nameField = new TextField(fieldName, classNode.name, Field.Store.YES)
@@ -160,15 +187,28 @@ object IndexManager {
     document
   }
 
-  def buildDocument(codeMethod: CodeMethod, methodInfo: Option[MethodInfo]): Document = {
+  def buildDocument(codeClass: CodeClass, codeMethod: CodeMethod, methodInfo: Option[MethodInfo]): Document = {
     val document = new Document
-    val nameField = new TextField(FieldName.Name.toString, codeMethod.name, Field.Store.YES)
+    val methodNameField = new TextField(FieldName.MethodName.toString, codeMethod.name, Field.Store.YES)
+    val fullNameField = new TextField(FieldName.FullName.toString, s"${codeClass.fullName}.${codeMethod.name}", Field.Store.YES)
+    val classNameField = new TextField(FieldName.ClassName.toString, codeClass.fullName, Field.Store.YES)
     val typeField = new StringField(FieldName.Type.toString, DocumentType.Method.toString, Field.Store.YES)
-    //val signatureField = new TextField(FieldName.Signature.toString, method.signature, Field.Store.YES)
+    val signatureTypes = codeMethod.parameterTypes ++ Seq(codeMethod.returnType)
+    val signatureField = new TextField(FieldName.Signature.toString, signatureTypes.mkString(" ") , Field.Store.YES)
     //val parameterField = new TextField(FieldName.Parameters.toString, method.parameters, Field.Store.YES)
-    document.add(nameField)
     document.add(typeField)
-    //document.add(signatureField)
+    document.add(methodNameField)
+    document.add(classNameField)
+    document.add(fullNameField)
+    document.add(signatureField)
+    methodInfo.foreach(info => {
+      val parameterNames = info.parameters.map(_.name)
+      val parameterField = new TextField(FieldName.Parameters.toString, parameterNames.mkString(" "), Field.Store.YES)
+      val commentField = new TextField(FieldName.CommentText.toString, info.commentText, Field.Store.YES)
+      document.add(parameterField)
+      document.add(commentField)
+    })
     //document.add(parameterField)
-    document  }
+    document
+  }
 }
