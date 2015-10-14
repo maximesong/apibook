@@ -3,6 +3,7 @@ package com.cppdo.apibook
 import java.io.{FileNotFoundException, File}
 import java.net.URL
 import java.nio.file.{Path, Paths, Files}
+import java.util.Properties
 
 import akka.actor.{PoisonPill, Props, ActorSystem}
 import akka.pattern._
@@ -17,15 +18,25 @@ import com.cppdo.apibook.index.IndexManager
 import com.cppdo.apibook.repository.{GitHubRepositoryManager, ArtifactsManager, MavenRepository}
 import com.cppdo.apibook.repository.ArtifactsManager.RichArtifact
 import com.cppdo.apibook.repository.MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
+import com.cppdo.apibook.search.SearchManager
 import com.github.tototoshi.csv.CSVWriter
 import com.mongodb.casbah.MongoClient
 import com.sun.tools.javadoc.{Main=>JavaDocMain}
 import com.typesafe.scalalogging.LazyLogging
+import edu.mit.jwi.Dictionary
+import edu.mit.jwi.item.POS
+import edu.stanford.nlp.dcoref.CoNLL2011DocumentReader.NamedEntityAnnotation
+import edu.stanford.nlp.ling.CoreAnnotations.{PartOfSpeechAnnotation, TextAnnotation, TokensAnnotation, SentencesAnnotation}
+import edu.stanford.nlp.pipeline.{Annotation, StanfordCoreNLP}
+import edu.stanford.nlp.semgraph.SemanticGraphCoreAnnotations.CollapsedCCProcessedDependenciesAnnotation
+import edu.stanford.nlp.trees.TreeCoreAnnotations.TreeAnnotation
+import edu.stanford.nlp.util.CoreMap
 import org.apache.commons.io.FileUtils
 import org.objectweb.asm.Type
 import com.novus.salat._
 import com.novus.salat.global._
 import org.jsoup.Jsoup
+import org.objectweb.asm.tree.ClassNode
 import play.libs.Json
 import slick.driver.JdbcDriver
 import slick.jdbc.meta.MTable
@@ -49,7 +60,8 @@ import com.mongodb.casbah.Imports._
 object APIBook extends LazyLogging {
 
   case class Config(mode: String = "", n: Int = 20, outFile: String = "out.csv", begin: Int = 0,
-                    directory: Option[String] = None, file: Option[String] = None, repository: Option[String] = None)
+                    directory: Option[String] = None, file: Option[String] = None, repository: Option[String] = None,
+                     args: Seq[String] = Seq())
   def main(args: Array[String]): Unit = {
     val parser = new scopt.OptionParser[Config]("apibook") {
       head("APIBook", "1.0")
@@ -108,6 +120,12 @@ object APIBook extends LazyLogging {
       cmd("index") action {
         (_, c) => c.copy(mode="index")
       }
+      cmd("search") action {
+        (_, c) => c.copy(mode="search")
+      }
+      arg[String]("<arg>...") optional() unbounded() action {
+        (arg, c) => c.copy(args=c.args :+ arg)
+      }
     }
     parser.parse(args, Config()) match {
       case Some(config) => {
@@ -118,11 +136,12 @@ object APIBook extends LazyLogging {
           case "test" => test()
           case "stackoverflow" => stackoverflow(config)
           case "class" => buildClasses(config)
-          case "usage" => usage(config)
+          case "usage" => updateUsage(config)
           case "find" => find(config)
           case "const" => buildConstant(config)
           case "info" => buildFromDoc(config)
           case "index" => buildMethodIndex(config)
+          case "search" => search(config)
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -157,11 +176,12 @@ object APIBook extends LazyLogging {
     codeClasses.foreach(codeClass => {
       println(codeClass.fullName)
       val documents = codeClass.methods.map(method => {
-        val methodInfo = db.getMethodInfo(s"${codeClass.fullName}.${method.name}")
+        val methodInfo = db.getMethodInfo(method.canonicalName)
         IndexManager.buildDocument(codeClass, method, methodInfo)
       })
       IndexManager.addDocuments(documents)
     })
+    db.close()
   }
 
   def buildFromDoc(config: Config) = {
@@ -193,27 +213,31 @@ object APIBook extends LazyLogging {
     //val args = Array("-doclet", "com.cppdo.apibook.doc.StoreDoc", "/Users/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12-sources/org/junit/runners/JUnit4.java")
   }
 
-  def buildClasses(config: Config) = {
+  def buildClasses(db: CodeMongoDb, jarPath: String): Unit = {
+    logger.info(jarPath)
+    val classNodes = JarManager.getClassNodes(jarPath)
+    classNodes.foreach(classNode => {
+      val codeClass = AstTreeManager.buildCodeClass(classNode)
+      db.upsertClass(codeClass)
+      codeClass.methods.foreach(method => {
+        db.upsertMethod(method)
+      })
+    })
+  }
+  def buildClasses(config: Config): Unit = {
     val db = new CodeMongoDb("localhost","apibook")
-    config.directory.foreach(directory => {
-      val files = FileUtils.listFiles(new File(directory), Array("jar"), true)
-      files.asScala.foreach(file => {
-        println(file.getAbsolutePath)
-        val classNodes = JarManager.getClassNodes(file.getAbsolutePath)
-        classNodes.foreach(classNode => {
-          val codeClass = AstTreeManager.buildCodeClass(classNode)
-          db.upsertClass(codeClass)
+    config.args.foreach(path => {
+      val file = new File(path)
+      if (file.isDirectory) {
+        val files = FileUtils.listFiles(file, Array("jar"), true)
+        files.asScala.foreach(jarFile => {
+          buildClasses(db, jarFile.getAbsolutePath)
+
         })
-      })
+      } else if (file.isFile) {
+        buildClasses(db, file.getAbsolutePath)
+      }
     })
-    config.file.foreach(file => {
-      val classNodes = JarManager.getClassNodes(file)
-      classNodes.foreach(classNode => {
-        val codeClass = AstTreeManager.buildCodeClass(classNode)
-        db.upsertClass(codeClass)
-      })
-    })
-    val runtimeJarPath = "/Users/song/Projects/apibook/java/rt.jar"
   }
 
   def buildConstant(config: Config) = {
@@ -224,38 +248,39 @@ object APIBook extends LazyLogging {
 
   }
 
-  def usage(config: Config) = {
+  def updateUsage(db: CodeMongoDb, jarPath: String): Unit = {
+    val classNodes = JarManager.getClassNodes(jarPath)
+    classNodes.foreach(classNode => {
+      val classType = Type.getObjectType(classNode.name)
+      logger.info(s"${classType.getClassName}...")
+      val (typeSet, methodSet) = AstTreeManager.calculateUsage(classNode)
+      methodSet.foreach(method => {
+        db.upsertMethodUsage(method, classType.getClassName)
+      })
+      typeSet.foreach(t => {
+        db.upsertClassUsage(t, classType.getClassName)
+      })
+    })
+  }
+
+  def updateUsage(config: Config): Unit = {
     //val classNodes = JarManager.getClassNodes("/Users/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12.jar")
     //val runtimeJarPath = "/Users/song/Projects/apibook/java/rt.jar"
     //val classNodes = JarManager.getClassNodes(runtimeJarPath)
     val db = new CodeMongoDb("localhost","apibook")
 
-    config.file.foreach(filename => {
-      val classNodes = JarManager.getClassNodes(filename)
-      classNodes.foreach(classNode => {
-        val classType = Type.getObjectType(classNode.name)
-        val methodSet = AstTreeManager.calculateMethodUsage(classNode)
-        logger.info(s"${classType.getClassName}...")
-        methodSet.foreach(method => {
-          db.upsertMethodInvocation(method, classType.getClassName)
+    config.args.foreach(path => {
+      val file = new File(path)
+      if (file.isDirectory) {
+        val files = FileUtils.listFiles(file, Array("jar"), true)
+        files.asScala.foreach(file => {
+          updateUsage(db, file.getAbsolutePath)
         })
-      })
+      } else if (file.isFile) {
+        updateUsage(db, file.getAbsolutePath)
+      }
     })
-
-    config.directory.foreach(directory => {
-      val files = FileUtils.listFiles(new File(directory), Array("jar"), true)
-      files.asScala.foreach(file => {
-        val classNodes = JarManager.getClassNodes(file.getAbsolutePath)
-        classNodes.foreach(classNode => {
-          val classType = Type.getObjectType(classNode.name)
-          val methodSet = AstTreeManager.calculateMethodUsage(classNode)
-          logger.info(s"${classType.getClassName}...")
-          methodSet.foreach(method => {
-            db.upsertMethodInvocation(method, classType.getClassName)
-          })
-        })
-      })
-    })
+    db.close()
   }
 
   def find(config: Config) = {
@@ -268,7 +293,7 @@ object APIBook extends LazyLogging {
     classNodes.foreach(classNode => {
       classNode.methods.foreach(method => {
         if (method.parameterTypes.contains(from) && method.returnType == to) {
-          println(s"${classNode.fullName}.${method.name}")
+          println(method.fullName)
         }
       })
     })
@@ -278,35 +303,10 @@ object APIBook extends LazyLogging {
   }
 
   def test() = {
-    /*
-    val url = "http://stackoverflow.com/questions/215497/in-java-whats-the-difference-between-public-default-protected-and-private"
-    val question = StackOverflowCrawler.fetchQuestion(url)
-    question.answers.foreach(answer => {
-      println(answer.voteNum)
-      answer.inlineCodeList.foreach(code => {
-        println(code)
-      })
-    })
-    println(Json.prettyPrint(Json.toJson(question)))
-    */
-
-
-    //val db = new CodeMongoDb("localhost","apibook")
-    JarManager.extractSource("/Users/song/Projects/apibook/repository/org.apache.commons/commons-lang3/3.4/commons-lang3-3.4-sources.jar")
-
-    //val classNodes = JarManager.getClassNodes("/Users/song/Projects/apibook/java/rt.jar")
-    /*
-    val classNodes = JarManager.getClassNodes("/Users/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12.jar")
-    //println(classNodes.size)
-    classNodes.foreach(node => {
-      //println(Type.getObjectType(node.name).getClassName)
-      AstTreeManager.buildCodeClass(node)
-    })
-    val codeClass = AstTreeManager.buildCodeClass(classNodes(0))
-    */
-    //val dbo = grater[CodeClass].asDBObject(codeClass)
-    //println(dbo.toString)
-
+    val db = new CodeMongoDb("localhost","apibook")
+    println(db.findMethodsAccept("java.io.InputStream").size)
+    println(db.findMethodsReturn("java.io.InputStream").size)
+    println(db.findMethodsRelated("java.io.InputStream").size)
   }
 
   def stackoverflow(config: Config) = {
@@ -423,6 +423,12 @@ object APIBook extends LazyLogging {
       })
 
     })
+  }
+  def search(config: Config) = {
+    val searchText = config.args.mkString(" ")
+    val manager = new SearchManager("localhost", "apibook")
+    val methodNames = manager.searchMethod(searchText)
+    println(methodNames.mkString("\n"))
   }
 
   def search(query: String) = {

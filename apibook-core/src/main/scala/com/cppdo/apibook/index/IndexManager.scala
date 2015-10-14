@@ -16,6 +16,7 @@ import org.apache.lucene.index._
 import org.apache.lucene.store.FSDirectory
 import org.objectweb.asm.tree.ClassNode
 import com.cppdo.apibook.db.{Field => ClassField, Class, Method, CodeMethod, CodeClass, MethodInfo}
+import com.cppdo.apibook.db.Imports._
 import com.typesafe.config.ConfigFactory
 
 /**
@@ -124,21 +125,29 @@ object IndexManager {
     })
   }
 
-  def searchMethod(queryText: String): Seq[Document] = {
-    val directory = openIndexDirectory(indexDirectory)
-    val reader = DirectoryReader.open(directory)
-    val searcher = new IndexSearcher(reader)
-
+  def buildBooleanQuery(queryText: String) = {
     val terms = queryText.split(" ")
 
     val booleanQuery = new BooleanQuery()
 
     terms.foreach(term => {
       Array(FieldName.Name, FieldName.ClassName, FieldName.FieldNames,
-          FieldName.Signature, FieldName.Parameters, FieldName.CommentText).foreach(name => {
+        FieldName.Signature, FieldName.Parameters, FieldName.CommentText).foreach(name => {
         val query = new TermQuery(new Term(name.toString, term))
         booleanQuery.add(query, BooleanClause.Occur.SHOULD)
       })
+    })
+    booleanQuery
+  }
+  def searchMethod(queryText: String, typeFullName: Option[String] = None): Seq[(Document, Float)] = {
+    val directory = openIndexDirectory(indexDirectory)
+    val reader = DirectoryReader.open(directory)
+    val searcher = new IndexSearcher(reader)
+
+    val booleanQuery = buildBooleanQuery(queryText: String)
+    typeFullName.foreach(fullName => {
+      val query = new TermQuery(new Term(FieldName.ClassName.toString, fullName))
+      booleanQuery.add(query, BooleanClause.Occur.MUST)
     })
     //val q = new MatchAllDocsQuery()
     val topDocs = searcher.search(booleanQuery, 100)
@@ -146,7 +155,7 @@ object IndexManager {
     //val topDocs = searcher.search(q, null, 100)
     println("Total hits: " + topDocs.totalHits)
     topDocs.scoreDocs.map(scoreDoc => {
-      searcher.doc(scoreDoc.doc)
+      (searcher.doc(scoreDoc.doc), scoreDoc.score)
     })
   }
 

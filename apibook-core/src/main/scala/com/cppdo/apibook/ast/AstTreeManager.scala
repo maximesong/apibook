@@ -10,6 +10,7 @@ import org.objectweb.asm.tree._
 import org.objectweb.asm.util.Textifier
 import scala.collection.JavaConverters._
 import org.objectweb.asm.{Type=>AsmType}
+import com.cppdo.apibook.db.Imports
 
 /**
  * Created by song on 3/11/15.
@@ -35,9 +36,15 @@ object AstTreeManager extends LazyLogging {
     Method(methodNode.name, methodNode.textifiedSignature, methodNode.textifiedParameters, klass.id.get)
   }
 
-  def calculateMethodUsage(classNode: ClassNode): Set[String] = {
+  /**
+   *
+   * @param classNode
+   * @return type usage set and method usage set
+   */
+  def calculateUsage(classNode: ClassNode): (Set[String], Set[String]) = {
     val classType = AsmType.getObjectType(classNode.name)
-    var invocationMethodSet = Set[String]()
+    var methodUsageSet = Set[String]()
+    var typeUsageSet = Set[String]()
     val superClassType = Option(classNode.superName).map(name => AsmType.getObjectType(name))
     methodNodesOf(classNode).foreach(methodNode => {
       methodNode.instructions.iterator().asScala.filter({
@@ -47,10 +54,11 @@ object AstTreeManager extends LazyLogging {
         methodInsNode.name
         val ownerType = AsmType.getObjectType(methodInsNode.owner)
         val methodFullName = s"${ownerType.getClassName}.${methodInsNode.name}"
-        invocationMethodSet += methodFullName
+        typeUsageSet += ownerType.getClassName
+        methodUsageSet += methodFullName
       }})
     })
-    invocationMethodSet
+    (typeUsageSet, methodUsageSet)
   }
 
   def calculateConstantParameter(classNode: ClassNode) = {
@@ -88,7 +96,10 @@ object AstTreeManager extends LazyLogging {
         parameterType.getClassName
       })
       val returnType = methodType.getReturnType.getClassName
-      CodeMethod(methodName, methodNode.getMethodAccess, methodNode.isStatic, parameterTypes, returnType)
+      val methodFullName = s"${classType.getClassName}.${methodName}"
+      val canonicalName = CodeMethod.buildCanonicalName(methodFullName, parameterTypes, returnType)
+      CodeMethod(canonicalName, methodFullName, classType.getClassName,
+          parameterTypes, returnType, methodNode.getMethodAccess, methodNode.isStatic)
     }).filter(method => {
       !onlyPublic || method.access == "public"
     })

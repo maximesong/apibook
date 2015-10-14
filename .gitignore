@@ -12,3 +12,4 @@ db.sqlite-journal
 out.csv
 java
 data_backup
+dict

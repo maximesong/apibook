@@ -8,6 +8,8 @@ import com.cppdo.apibook.ast.JarManager
 import com.cppdo.apibook.db.DatabaseManager
 import com.cppdo.apibook.index.IndexManager
 import com.cppdo.apibook.index.IndexManager.FieldName
+import com.cppdo.apibook.nlp.CoreNLP
+import com.cppdo.apibook.search.SearchManager
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{JsString, JsArray}
@@ -89,9 +91,9 @@ object Search extends Controller with LazyLogging {
 
   def searchMethod = Action(parse.json) { implicit request =>
     val searchText = (request.body \ "searchText").as[String]
-    val resultEntries = IndexManager.searchMethod(searchText).map(document => {
-      document.get(IndexManager.FieldName.FullName.toString)
-    })
+    val searchManager = new SearchManager("localhost", "apibook")
+    val resultEntries = searchManager.searchMethod(searchText)
+    searchManager.close()
     Ok(Json.obj(
       "result" -> resultEntries
     ))

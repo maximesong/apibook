@@ -13,20 +13,35 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
   val mongoClient = MongoClient(host)
   val db = mongoClient(dbName)
   val classCollection = db("classes")
-  val invocationCollection = db("invocations")
+  val methodCollection = db("methods")
+  val methodUsageCollection = db("method_usage")
+  val classUsageCollection = db("class_usage")
   val methodInfoCollection = db("method_info")
   val classInfoCollection = db("class_info")
 
-  invocationCollection.createIndex(MongoDBObject(
+  classUsageCollection.createIndex(MongoDBObject(
+    "typeFullName" -> 1,
+    "usedByTypeFullName" -> 1
+  ))
+  methodUsageCollection.createIndex(MongoDBObject(
     "methodFullName" -> 1,
-    "typeFullName" -> 1
+    "usedByTypeFullName" -> 1
   ))
   classCollection.createIndex(MongoDBObject(
     "fullName" -> 1
   ))
+  methodCollection.createIndex(MongoDBObject(
+    "canonicalName" -> 1
+  ))
+  methodCollection.createIndex(MongoDBObject(
+    "parameterTypes" -> 1
+  ))
+  methodCollection.createIndex(MongoDBObject(
+    "returnType" -> 1
+  ))
 
   methodInfoCollection.createIndex(MongoDBObject(
-    "fullName" -> 1
+    "canonicalName" -> 1
   ))
 
   classInfoCollection.createIndex(MongoDBObject(
@@ -41,10 +56,29 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
     classCollection.update(query, update, upsert=true)
   }
 
+  def upsertMethod(codeMethod: CodeMethod): Unit = {
+    val query = MongoDBObject(
+      "canonicalName" -> codeMethod.canonicalName
+    )
+    val update = grater[CodeMethod].asDBObject(codeMethod)
+    methodCollection.update(query, update, upsert=true)
+  }
+
   def getCodeClass(fullName: String): Option[CodeClass] = {
     classCollection.find(MongoDBObject(
       "fullName" -> fullName
     )).toSeq.headOption.map(obj => {
+      grater[CodeClass].asObject(obj)
+    })
+  }
+
+  def findClassOfName(name: String): Seq[CodeClass] = {
+    classCollection.find(MongoDBObject(
+      "fullName" -> MongoDBObject(
+        "$regex" -> s"[.]${name}$$",
+        "$options" -> "i"
+      )
+    )).toSeq.map(obj => {
       grater[CodeClass].asObject(obj)
     })
   }
@@ -62,6 +96,37 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
     )
     methodInfoCollection.find(query).toSeq.headOption.map(obj => {
       grater[MethodInfo].asObject(obj)
+    })
+  }
+
+  def findMethodsAccept(fullTypeName: String): Seq[CodeMethod] = {
+    methodCollection.find(MongoDBObject(
+      "parameterTypes" -> fullTypeName
+    )).toSeq.map(obj => {
+      grater[CodeMethod].asObject(obj)
+    })
+  }
+
+  def findMethodsReturn(fullTypeName: String): Seq[CodeMethod] = {
+    methodCollection.find(MongoDBObject(
+      "returnType" -> fullTypeName
+    )).toSeq.map(obj => {
+      grater[CodeMethod].asObject(obj)
+    })
+  }
+
+  def findMethodsRelated(fullTypeName: String): Seq[CodeMethod] = {
+    methodCollection.find(MongoDBObject(
+      "$or" -> MongoDBList(
+        MongoDBObject(
+          "parameterTypes" -> fullTypeName
+        ),
+        MongoDBObject(
+          "returnType" -> fullTypeName
+        )
+      )
+    )).toSeq.map(obj => {
+      grater[CodeMethod].asObject(obj)
     })
   }
 
@@ -83,6 +148,12 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
     })
   }
 
+  def findClassRelated(typeFullName: String): Seq[CodeClass] = {
+    val classesReturn = findClassReturn(typeFullName)
+    val classesAccept = findClassAccept(typeFullName)
+    classesReturn ++ classesAccept
+  }
+
   def findMethodConvert(fromTypeName: String, toTypeName: String): Seq[CodeClass] = {
     val query = "methods" $elemMatch MongoDBObject(
       "parameterTypes" -> fromTypeName,
@@ -94,17 +165,46 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
     results
   }
 
-  def upsertMethodInvocation(methodFullName: String, typeFullName: String) = {
+  def upsertMethodUsage(methodFullName: String, usedByTypeFullName: String) = {
     val query = MongoDBObject(
       "methodFullName" -> methodFullName,
-      "typeFullName" -> typeFullName
+      "usedByTypeFullName" -> usedByTypeFullName
     )
     val update = MongoDBObject(
       "methodFullName" -> methodFullName,
-      "typeFullName" -> typeFullName
+      "usedByTypeFullName" -> usedByTypeFullName
     )
-    invocationCollection.update(query, update, upsert=true)
+    methodUsageCollection.update(query, update, upsert=true)
   }
+
+  def getMethodUsage(methodFullName: String): Seq[String] = {
+    methodUsageCollection.find(MongoDBObject(
+      "methodFullName" -> methodFullName
+    )).toSeq.map(obj => {
+      obj.as[String]("usedByTypeFullName")
+    })
+  }
+
+  def getClassUsage(typeFullName: String): Seq[String] = {
+    classUsageCollection.find(MongoDBObject(
+      "typeFullName" -> typeFullName
+    )).toSeq.map(obj => {
+      obj.as[String]("usedByTypeFullName")
+    })
+  }
+
+  def upsertClassUsage(typeFullName: String, usedByTypeFullName: String) = {
+    val query = MongoDBObject(
+      "typeFullName" -> typeFullName,
+      "usedByTypeFullName" -> usedByTypeFullName
+    )
+    val update = MongoDBObject(
+      "typeFullName" -> typeFullName,
+      "usedByTypeFullName" -> usedByTypeFullName
+    )
+    classUsageCollection.update(query, update, upsert=true)
+  }
+
 
   def upsertMethodInfo(methodInfo: MethodInfo) = {
     val query = MongoDBObject(

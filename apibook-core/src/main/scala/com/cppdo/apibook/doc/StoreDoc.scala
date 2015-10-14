@@ -20,7 +20,10 @@ object StoreDoc extends Doclet {
         val parameters = methodDoc.parameters().map(parameter => {
           Parameter(parameter.name(), parameter.`type`().qualifiedTypeName())
         })
-        MethodInfo(methodDoc.qualifiedName(), parameters, methodDoc.returnType().qualifiedTypeName(),
+        val parameterTypes = parameters.map(_.typeName)
+        val returnType = methodDoc.returnType().qualifiedTypeName()
+        val canonicalName = CodeMethod.buildCanonicalName(methodDoc.qualifiedName(), parameterTypes, returnType)
+        MethodInfo(canonicalName, methodDoc.qualifiedName(), parameters, returnType,
           methodDoc.commentText())
       })
       methodDetails.foreach(methodDetail => {

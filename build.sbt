@@ -23,6 +23,8 @@ lazy val core = (project in file("./apibook-core"))
     "com.typesafe.play" %% "play-json" % "2.4.3",
     "org.mongodb" %% "casbah-core" % "2.8.2",
     "com.novus" %% "salat" % "1.9.9",
+    "edu.stanford.nlp" % "stanford-corenlp" % "3.5.2",
+    "edu.stanford.nlp" % "stanford-corenlp" % "3.5.2" classifier "models",
 
     "org.apache.httpcomponents" % "httpclient" % "4.5",
 
