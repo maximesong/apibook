@@ -39,6 +39,9 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
   methodCollection.createIndex(MongoDBObject(
     "returnType" -> 1
   ))
+  methodCollection.createIndex(MongoDBObject(
+    "typeFullName" -> 1
+  ))
 
   methodInfoCollection.createIndex(MongoDBObject(
     "canonicalName" -> 1
@@ -92,7 +95,7 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
 
   def getMethodInfo(fullName: String): Option[MethodInfo] = {
     val query = MongoDBObject(
-      "fullName" -> fullName
+      "canonicalName" -> fullName
     )
     methodInfoCollection.find(query).toSeq.headOption.map(obj => {
       grater[MethodInfo].asObject(obj)
@@ -123,6 +126,9 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
         ),
         MongoDBObject(
           "returnType" -> fullTypeName
+        ),
+        MongoDBObject(
+          "typeFullName" -> fullTypeName
         )
       )
     )).toSeq.map(obj => {

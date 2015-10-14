@@ -15,6 +15,7 @@ import com.cppdo.apibook.ast.{AstTreeManager, ClassVisitor, JarManager}
 import com.cppdo.apibook.db._
 import com.cppdo.apibook.forum.{StackOverflowMongoDb, StackOverflowCrawler}
 import com.cppdo.apibook.index.IndexManager
+import com.cppdo.apibook.index.IndexManager.FieldName
 import com.cppdo.apibook.repository.{GitHubRepositoryManager, ArtifactsManager, MavenRepository}
 import com.cppdo.apibook.repository.ArtifactsManager.RichArtifact
 import com.cppdo.apibook.repository.MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
@@ -32,6 +33,7 @@ import edu.stanford.nlp.semgraph.SemanticGraphCoreAnnotations.CollapsedCCProcess
 import edu.stanford.nlp.trees.TreeCoreAnnotations.TreeAnnotation
 import edu.stanford.nlp.util.CoreMap
 import org.apache.commons.io.FileUtils
+import org.apache.lucene.document.Document
 import org.objectweb.asm.Type
 import com.novus.salat._
 import com.novus.salat.global._
@@ -172,15 +174,23 @@ object APIBook extends LazyLogging {
 
   def buildMethodIndex(config: Config) = {
     val db = new CodeMongoDb("localhost","apibook")
+    val cachedSize = 10000
     val codeClasses = db.getCodeClasses()
+    var documentsToAdd = Seq[Document]()
     codeClasses.foreach(codeClass => {
       println(codeClass.fullName)
       val documents = codeClass.methods.map(method => {
         val methodInfo = db.getMethodInfo(method.canonicalName)
         IndexManager.buildDocument(codeClass, method, methodInfo)
       })
-      IndexManager.addDocuments(documents)
+      documentsToAdd ++= documents
+      if (documentsToAdd.size > cachedSize) {
+        logger.info("Add documents...")
+        IndexManager.addDocuments(documentsToAdd)
+        documentsToAdd = Seq[Document]()
+      }
     })
+    IndexManager.addDocuments(documentsToAdd)
     db.close()
   }
 
@@ -303,10 +313,11 @@ object APIBook extends LazyLogging {
   }
 
   def test() = {
-    val db = new CodeMongoDb("localhost","apibook")
-    println(db.findMethodsAccept("java.io.InputStream").size)
-    println(db.findMethodsReturn("java.io.InputStream").size)
-    println(db.findMethodsRelated("java.io.InputStream").size)
+    val docs = IndexManager.searchMethod("iterate HashMap")
+    println(docs.size)
+    docs.foreach(scoredDoc => {
+        println(scoredDoc.document.get(FieldName.CanonicalName.toString), scoredDoc.score)
+    })
   }
 
   def stackoverflow(config: Config) = {
@@ -428,7 +439,7 @@ object APIBook extends LazyLogging {
     val searchText = config.args.mkString(" ")
     val manager = new SearchManager("localhost", "apibook")
     val methodNames = manager.searchMethod(searchText)
-    println(methodNames.mkString("\n"))
+    //println(methodNames.mkString("\n"))
   }
 
   def search(query: String) = {

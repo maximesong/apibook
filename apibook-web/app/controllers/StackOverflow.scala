@@ -22,14 +22,14 @@ object StackOverflow extends Controller {
 
   def questions = Action {
     val client = new StackOverflowMongoDb("localhost", "apibook")
-    val questions = client.getQuestions()
+    val questions = client.getQuestions().toList
     client.close()
     Ok(Json.prettyPrint(Json.toJson(questions))).as(ContentTypes.JSON)
   }
 
   def questionReviews = Action {
     var client = new StackOverflowMongoDb("localhost", "apibook")
-    val questionReviews = client.getQuestionReviews()
+    val questionReviews = client.getQuestionReviews().toList
     client.close()
     Ok(Json.prettyPrint(Json.toJson(questionReviews))).as(ContentTypes.JSON)
   }

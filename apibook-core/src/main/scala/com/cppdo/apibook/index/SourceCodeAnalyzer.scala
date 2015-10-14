@@ -3,6 +3,7 @@ package com.cppdo.apibook.index
 import java.io.Reader
 
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
+import org.apache.lucene.analysis.en.{PorterStemFilter, KStemFilter}
 import org.apache.lucene.analysis.miscellaneous.WordDelimiterFilter
 import org.apache.lucene.analysis.{standard, TokenStream}
 import org.apache.lucene.analysis.core.{StopFilter, LowerCaseFilter, StopAnalyzer}
@@ -26,6 +27,8 @@ class SourceCodeAnalyzer extends StopwordAnalyzerBase {
       WordDelimiterFilter.GENERATE_WORD_PARTS, null)
     tok = new LowerCaseFilter(tok)
     tok = new StopFilter(tok, stopwords)
+    //tok = new PorterStemFilter(tok)
+    tok = new KStemFilter(tok)
     new TokenStreamComponents(src, tok) {
       override def setReader(reader: Reader) {
         src.setMaxTokenLength(maxTokenLength)

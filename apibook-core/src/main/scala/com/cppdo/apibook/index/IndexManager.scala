@@ -2,11 +2,15 @@ package com.cppdo.apibook.index
 
 import java.io.File
 import java.nio.file.Paths
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.lucene.analysis.Analyzer
+import org.apache.lucene.analysis.en.KStemmer
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.document.Field
 import org.apache.lucene.queryparser.classic.QueryParser
 import org.apache.lucene.search._
 import org.apache.lucene.util.Version
+import org.tartarus.snowball.ext.PorterStemmer
 
 import scala.collection.JavaConverters._
 import org.apache.lucene.analysis.standard.StandardAnalyzer
@@ -22,7 +26,7 @@ import com.typesafe.config.ConfigFactory
 /**
  * Created by song on 3/4/15.
  */
-object IndexManager {
+object IndexManager extends LazyLogging{
   val indexDirectory = "data"
   val fieldName = "Name"
 
@@ -31,7 +35,7 @@ object IndexManager {
 
     val Name, DbId, EnclosingClassDbId, FieldNames, Signature, Parameters, // field names in this line is deprecated
       Type, MethodName, ClassName, ClassFullName, MethodFullName, CanonicalName, ParameterTypes, ParameterNames,
-      CommentText, ReturnType= Value
+      CommentText, ReturnType, ParameterTags, ReturnTags = Value
   }
 
   object DocumentType extends Enumeration {
@@ -126,9 +130,7 @@ object IndexManager {
     })
   }
 
-  def buildBooleanQuery(queryText: String) = {
-    val terms = queryText.split(" ")
-
+  def buildBooleanQuery(terms: Seq[String]) = {
     val booleanQuery = new BooleanQuery()
 
     terms.foreach(term => {
@@ -140,12 +142,27 @@ object IndexManager {
     })
     booleanQuery
   }
-  def searchMethod(queryText: String, canonicalName: Option[String] = None, typeFullName: Option[String] = None): Seq[(Document, Float)] = {
+  def searchMethod(queryText: String, n: Int = 10000, canonicalName: Option[String] = None, typeFullName: Option[String] = None): Seq[ScoredDocument] = {
     val directory = openIndexDirectory(indexDirectory)
     val reader = DirectoryReader.open(directory)
     val searcher = new IndexSearcher(reader)
-
-    val booleanQuery = buildBooleanQuery(queryText: String)
+    val analyzer = new SourceCodeAnalyzer()
+    /*
+    val queryParser = new QueryParser(null, analyzer)
+    val q = queryParser.createBooleanQuery("a", "iterate a file running runs HashMap iteration")
+    println(q.toString)
+    */
+    val stream = analyzer.tokenStream(null, queryText)
+    val cattr = stream.addAttribute(classOf[CharTermAttribute])
+    stream.reset()
+    var analyzedTerms = Seq[String]()
+    while (stream.incrementToken()) {
+      analyzedTerms :+= cattr.toString
+    }
+    stream.end()
+    stream.close()
+    logger.info(s"analyzed terms:${analyzedTerms.mkString(" ")}")
+    val booleanQuery = buildBooleanQuery(analyzedTerms)
     typeFullName.foreach(fullName => {
       val query = new TermQuery(new Term(FieldName.ClassName.toString, fullName))
       booleanQuery.add(query, BooleanClause.Occur.MUST)
@@ -156,12 +173,12 @@ object IndexManager {
       booleanQuery.add(query, BooleanClause.Occur.MUST)
     })
     //val q = new MatchAllDocsQuery()
-    val topDocs = searcher.search(booleanQuery, 100)
+    val topDocs = searcher.search(booleanQuery, n)
 
     //val topDocs = searcher.search(q, null, 100)
     println("Total hits: " + topDocs.totalHits)
     topDocs.scoreDocs.map(scoreDoc => {
-      (searcher.doc(scoreDoc.doc), scoreDoc.score)
+      ScoredDocument(searcher.doc(scoreDoc.doc), scoreDoc.score)
     })
   }
 
@@ -212,6 +229,7 @@ object IndexManager {
     val parameterTypesField = new TextField(FieldName.ParameterTypes.toString, codeMethod.parameterTypes.mkString(" "),
         Field.Store.YES)
     val returnTypeField = new TextField(FieldName.ReturnType.toString, codeMethod.returnType, Field.Store.YES)
+
     val typeField = new StringField(FieldName.Type.toString, DocumentType.Method.toString, Field.Store.YES)
     document.add(canonicalNameField)
     document.add(methodFullNameField)
@@ -227,10 +245,20 @@ object IndexManager {
       val parameterNames = info.parameters.map(_.name)
       val parameterField = new TextField(FieldName.ParameterNames.toString, parameterNames.mkString(" "), Field.Store.YES)
       val commentField = new TextField(FieldName.CommentText.toString, info.commentText, Field.Store.YES)
+      val parameterTagsField = new TextField(FieldName.ParameterTags.toString,
+        info.parameterTags.map(_.text).mkString(" "), Field.Store.YES)
       document.add(parameterField)
       document.add(commentField)
+      document.add(parameterTagsField)
+      info.returnTag.foreach(returnTag => {
+        val returnTagField = new TextField(FieldName.ReturnTags.toString,
+          returnTag.text, Field.Store.YES)
+        document.add(returnTagField)
+      })
     })
     //document.add(parameterField)
     document
   }
 }
+
+case class ScoredDocument(document: Document, score: Float)
