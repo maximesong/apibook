@@ -208,7 +208,7 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
 
   def upsertMethodInfo(methodInfo: MethodInfo) = {
     val query = MongoDBObject(
-      "fullName" -> methodInfo.fullName
+      "canonicalName" -> methodInfo.canonicalName
     )
     val update = grater[MethodInfo].asDBObject(methodInfo)
     methodInfoCollection.update(query, update, upsert=true)

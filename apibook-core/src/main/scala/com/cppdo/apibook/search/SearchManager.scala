@@ -2,6 +2,7 @@ package com.cppdo.apibook.search
 
 import com.cppdo.apibook.db.CodeMongoDb
 import com.cppdo.apibook.index.IndexManager
+import com.cppdo.apibook.index.IndexManager.FieldName
 import com.cppdo.apibook.nlp.CoreNLP
 import com.typesafe.scalalogging.LazyLogging
 
@@ -31,19 +32,37 @@ class SearchManager(mongoHost: String, mongoDatabase: String) extends LazyLoggin
         else false
       })
     })
+    val filteredQueryText = filteredTokens.mkString(" ")
+    logger.info(s"Filtered QueryText: ${filteredQueryText}")
+
     nouns.foreach(noun => {
       val codeClasses = db.findClassOfName(noun)
       codeClasses.foreach(codeClass => {
         val usages = db.getClassUsage(codeClass.fullName)
         println(s"${codeClass.fullName}:${usages.size}")
-        val relatedClasses = db.findClassRelated(codeClass.fullName)
+        val classMethods = codeClass.methods
+        classMethods.foreach(method => {
+          val scoredDocs = IndexManager.searchMethod(filteredQueryText, Some(method.fullName))
+          scoredDocs.foreach(scoredDoc => {
+            val (doc, score) = scoredDoc
+            //println(s"${doc.get(FieldName.FullName.toString)}: ${score}")
+          })
+        })
+        val relatedMethods = db.findMethodsRelated(codeClass.fullName)
+        relatedMethods.foreach(method => {
+          val scoredDocs = IndexManager.searchMethod(filteredQueryText, Some(method.fullName))
+          scoredDocs.foreach(scoredDoc => {
+            val (doc, score) = scoredDoc
+            //println(s"${doc.get(FieldName.FullName.toString)}: ${score}")
+          })
+        })
+        println(classMethods.size)
+        println(relatedMethods.size)
       })
     })
-    val filteredQueryText = filteredTokens.mkString(" ")
-    logger.info(s"Filtered QueryText: ${filteredQueryText}")
     val methodNames = IndexManager.searchMethod(filteredQueryText).map(docScored => {
       val (document, _) = docScored
-      document.get(IndexManager.FieldName.FullName.toString)
+      document.get(IndexManager.FieldName.MethodFullName.toString)
     })
     methodNames
   }

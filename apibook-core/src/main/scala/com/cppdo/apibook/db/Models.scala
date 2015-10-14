@@ -24,9 +24,11 @@ object CodeMethod {
 case class MethodInvocations(methodFullName: String, invokedBy: Map[String, Boolean])
 
 case class MethodInfo(canonicalName: String, fullName: String,
-                        parameters: Seq[Parameter], returnType: String, commentText: String)
+                        parameters: Seq[Parameter], returnType: String, commentText: String,
+                        parameterTags: Seq[Tag], returnTag: Option[Tag])
 
 case class Parameter(name: String, typeName: String)
+case class Tag(name: String, text: String)
 
 case class Field(name: String, typeName: String)
 
@@ -39,5 +41,7 @@ object Imports {
 
   implicit class RichCodeMethod(codeMethod: CodeMethod) {
     def name: String = codeMethod.fullName.split("[.]").last
+
+    def typeName: String = codeMethod.typeFullName.split("[.]").last
   }
 }

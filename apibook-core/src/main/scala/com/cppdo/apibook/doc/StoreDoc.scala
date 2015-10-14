@@ -17,6 +17,12 @@ object StoreDoc extends Doclet {
       db.upsertClassInfo(classInfo)
       val methodDetails = classDoc.methods().map(methodDoc => {
         println(s"${classDoc.name}.${methodDoc.name()}")
+        val returnTag = methodDoc.tags("return").map(tag => {
+          Tag("return", tag.text())
+        }).headOption
+        val paramTags = methodDoc.paramTags().map(tag => {
+          Tag(tag.parameterName(), tag.parameterComment())
+        })
         val parameters = methodDoc.parameters().map(parameter => {
           Parameter(parameter.name(), parameter.`type`().qualifiedTypeName())
         })
@@ -24,7 +30,7 @@ object StoreDoc extends Doclet {
         val returnType = methodDoc.returnType().qualifiedTypeName()
         val canonicalName = CodeMethod.buildCanonicalName(methodDoc.qualifiedName(), parameterTypes, returnType)
         MethodInfo(canonicalName, methodDoc.qualifiedName(), parameters, returnType,
-          methodDoc.commentText())
+          methodDoc.commentText(), paramTags, returnTag)
       })
       methodDetails.foreach(methodDetail => {
         db.upsertMethodInfo(methodDetail)
