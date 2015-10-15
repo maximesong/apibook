@@ -120,6 +120,9 @@ object APIBook extends LazyLogging {
       cmd("index") action {
         (_, c) => c.copy(mode="index")
       }
+      cmd("review") action {
+        (_, c) => c.copy(mode="review")
+      }
       cmd("search") action {
         (_, c) => c.copy(mode="search")
       }
@@ -142,6 +145,7 @@ object APIBook extends LazyLogging {
           case "info" => buildFromDoc(config)
           case "index" => buildMethodIndex(config)
           case "search" => search(config)
+          case "review" => review(config)
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -168,6 +172,37 @@ object APIBook extends LazyLogging {
     //testGithub()
     //test()
 
+  }
+
+  def review(config: Config) = {
+    val stackoverflowDb = new StackOverflowMongoDb("localhost","apibook")
+    val questionReviews = stackoverflowDb.getQuestionReviews()
+    val questionCount = stackoverflowDb.getQuestions().size
+    var programTaskCounts = 0
+    var questionReviewed = 0
+    var answersUsingAPI = 0
+    var singleAPICount = 0
+    questionReviews.foreach(review => {
+      questionReviewed += 1
+      if (review.isProgramTask.contains(true)) {
+        programTaskCounts += 1
+      }
+      if (review.singleKeyApi.contains(true)) {
+        singleAPICount += 1
+      }
+      if (review.answerIdUsingApi.exists(_ > 0)) {
+        answersUsingAPI += 1
+      }
+    })
+    println(s"Reviewed: ${questionReviewed}/${questionCount}")
+    println(s"Program Task: ${programTaskCounts}/${questionReviewed}")
+    println(s"Has answer using APIs: ${answersUsingAPI}/${programTaskCounts}")
+    println(s"Has answer using single API: ${singleAPICount}/${answersUsingAPI}")
+
+    val methodReviews = stackoverflowDb.getQuestionMethodReviews()
+    methodReviews.foreach(review => {
+      println(s"${review.questionId}: ${review.relevance.get}")
+    })
   }
 
   def buildMethodIndex(config: Config) = {
@@ -492,6 +527,7 @@ object APIBook extends LazyLogging {
       //val insertActions = projects.map(project => projectsTable.insertOrUpdate(project))
       //Await.result(db.run(setup), Duration.Inf)
   }
+
 
 
   /*

@@ -25,11 +25,11 @@
                 </a>&nbsp;
                 <span class="glyphicon glyphicon-thumbs-up"></span><span>{{question.voteNum}}</span>
             </div>
-            <table class="table table-stripped">
+            <table class="table table-stripped fixed-table">
                 <tr>
-                   <td class="col-md-6">Answer</td>
-                    <td class="col-md-3">State</td>
-                    <td class="col-md-3">Action</td>
+                   <td class="col-md-8">Answer</td>
+                    <td class="col-md-2">State</td>
+                    <td class="col-md-2">Action</td>
                 </tr>
                 <tr ng-repeat="item in resultItems">
                     <td>
@@ -162,7 +162,7 @@
                                 </div>
                                 <div>
                                     <div ng-repeat="link in answer.links track by $index">
-                                        <a ng-href="link">{{link}}</a>
+                                        <a ng-href="{{link}}">{{link}}</a>
                                     </div>
                                 </div>
                                 {{answer.codeSectionNum}}

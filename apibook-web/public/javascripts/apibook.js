@@ -108,8 +108,8 @@ angular.module('apibookApp', [])
                     if ($scope.questionMethodReviews[id] === undefined) {
                         $scope.questionMethodReviews[id] = {};
                     }
-                    $scope.questionReviews[id][canonicalName] = relevance;
-                    console.log($scope.questionReviews);
+                    $scope.questionMethodReviews[id][canonicalName] = relevance;
+                    console.log($scope.questionMethodReviews);
                 }
             });
         }

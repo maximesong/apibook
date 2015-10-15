@@ -25,3 +25,10 @@
 pre {
  white-space: pre-wrap;       /* css-3 */
 }
+
+.fixed-table {
+    table-layout: fixed;
+}
+
+.fixed-table .td {
+}
