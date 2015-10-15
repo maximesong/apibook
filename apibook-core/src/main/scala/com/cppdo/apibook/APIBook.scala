@@ -35,8 +35,6 @@ import edu.stanford.nlp.util.CoreMap
 import org.apache.commons.io.FileUtils
 import org.apache.lucene.document.Document
 import org.objectweb.asm.Type
-import com.novus.salat._
-import com.novus.salat.global._
 import org.jsoup.Jsoup
 import org.objectweb.asm.tree.ClassNode
 import play.libs.Json

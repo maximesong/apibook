@@ -5,15 +5,22 @@ import com.mongodb.casbah.MongoClient
 import com.typesafe.scalalogging.LazyLogging
 import scala.collection.JavaConverters._
 
+import com.novus.salat._
+import com.novus.salat.global._
+
 /**
  * Created by song on 9/24/15.
  */
 class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
+  ctx.clearAllGraters()
+  ctx.registerClassLoader(classOf[QuestionMethodReview].getClassLoader)
+
   val mongoClient = MongoClient(host)
   val db = mongoClient(dbName)
   val questionOverviewCollection = db("question_overviews")
   val questionCollection = db("questions")
   val questionReviewCollection = db("question_reviews")
+  val questionMethodReviewCollection = db("question_method_reviews")
 
   def upsertQuestionOverview(overview: QuestionOverview) = {
     val query = MongoDBObject("id" -> overview.id)
@@ -131,6 +138,16 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
     questionReviews
   }
 
+  def getQuestionMethodReviews(): Seq[QuestionMethodReview] = {
+    questionMethodReviewCollection.find().toSeq.map(obj => {
+      grater[QuestionMethodReview].asObject(obj)
+    })
+  }
+  def getQuestionMethodReviewsInJson(): String = {
+    val reviews = getQuestionMethodReviews()
+    grater[QuestionMethodReview].toPrettyJSONArray(reviews)
+  }
+
   def upsertQuestionReviewField(id: Int, reviewer: String, field: String, value: Any): Unit = {
     val mongoClient = MongoClient(host)
     val db = mongoClient(dbName)
@@ -139,6 +156,16 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
     val update = $set(field -> value)
     questionReviewCollection.update(query, update, upsert = true)
     mongoClient.close()
+  }
+
+  def upsertQuestionMethodReview(questionMethodReview: QuestionMethodReview): Unit = {
+    val query = MongoDBObject(
+      "questionId" -> questionMethodReview.questionId,
+      "canonicalName" -> questionMethodReview.canonicalName,
+      "reviewer" -> questionMethodReview.reviewer
+    )
+    val update = grater[QuestionMethodReview].asDBObject(questionMethodReview)
+    questionMethodReviewCollection.update(query, update, upsert=true)
   }
 
   def close() = {

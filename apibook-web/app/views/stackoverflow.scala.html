@@ -18,6 +18,41 @@
         </div>
     </div>
     <div class="container">
+        <div class="panel  panel-default">
+            <div class="panel-heading">
+                <a ng-href="http://www.stackoverflow.com/questions/{{question.id}}/" target='_blank'>
+                    Question#{{question.id}}&nbsp;&nbsp; {{question.title}}
+                </a>&nbsp;
+                <span class="glyphicon glyphicon-thumbs-up"></span><span>{{question.voteNum}}</span>
+            </div>
+            <table class="table table-stripped">
+                <tr>
+                   <td class="col-md-6">Answer</td>
+                    <td class="col-md-3">State</td>
+                    <td class="col-md-3">Action</td>
+                </tr>
+                <tr ng-repeat="item in resultItems">
+                    <td>
+                        <div>{{item.codeMethod.fullName}}</div>
+                        <div>{{item.codeMethod.parameterTypes | limitTo:5}} &nbsp;&nbsp; {{item.codeMethod.returnType}}</div>
+
+                    </td>
+                    <td>
+                        <span class="label label-success" ng-if="questionMethodReviews[question.id][item.codeMethod.canonicalName] == 'strong'">Strong</span>
+                        <span class="label label-warning" ng-if="questionMethodReviews[question.id][item.codeMethod.canonicalName] == 'weak'">Weak</span>
+                    </td>
+                    <td>
+                        <button class="btn btn-success"
+                                ng-click="upsertQuestionMethodReview(question.id, item.codeMethod.canonicalName, item.codeMethod.fullName, 'strong')">Strong</button>&nbsp;&nbsp;
+                        <button class="btn btn-warning"
+                                ng-click="upsertQuestionMethodReview(question.id, item.codeMethod.canonicalName, item.codeMethod.fullName, 'weak')"
+                                >Weak</button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="container">
         <h1>Stackoverflow</h1>
         <div id="question" class="panel  panel-default">
             <div class="panel-heading">

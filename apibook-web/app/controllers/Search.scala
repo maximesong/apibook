@@ -9,18 +9,26 @@ import com.cppdo.apibook.db.DatabaseManager
 import com.cppdo.apibook.index.IndexManager
 import com.cppdo.apibook.index.IndexManager.FieldName
 import com.cppdo.apibook.nlp.CoreNLP
-import com.cppdo.apibook.search.SearchManager
+import com.cppdo.apibook.search.{MethodScore, SearchManager}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
+import play.api.Play
 import play.api.libs.json.{JsString, JsArray}
 import play.api.mvc._
 import play.api.libs.json.Json
 import com.cppdo.apibook.repository.ArtifactsManager.{RichArtifact, RichDocEntry}
 import com.cppdo.apibook.repository.MavenRepository.MavenArtifact
+
+import play.api.Play.current
+
+
+
+
 /**
  * Created by song on 3/11/15.
  */
 object Search extends Controller with LazyLogging {
+
   def post = Action(parse.json) { implicit request =>
     val searchText = (request.body \ "searchText").as[String]
     val resultEntries = IndexManager.trivial_search(searchText).map(document => {
@@ -91,8 +99,8 @@ object Search extends Controller with LazyLogging {
 
   def searchMethod = Action(parse.json) { implicit request =>
     val searchText = (request.body \ "searchText").as[String]
-    val searchManager = new SearchManager("localhost", "apibook")
-    val resultEntries = searchManager.searchMethod(searchText)
+    val searchManager = new SearchManager("localhost", "apibook", classLoader=Some(Play.classloader))
+    val resultEntries = searchManager.searchMethodAndReturnJson(searchText, 50).toList
     searchManager.close()
     Ok(Json.obj(
       "result" -> resultEntries

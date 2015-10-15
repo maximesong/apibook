@@ -20,7 +20,11 @@ GET    /api/stackoverflow/questions controllers.StackOverflow.questions
 
 GET   /api/stackoverflow/questions/reviews controllers.StackOverflow.questionReviews
 
+GET   /api/stackoverflow/questions/method/reviews controllers.StackOverflow.questionMethodReviews
+
 POST   /api/stackoverflow/questions/:id/review controllers.StackOverflow.upsertQuestionReview(id: Int)
+
+POST   /api/stackoverflow/questions/:id/review/method/update controllers.StackOverflow.upsertQuestionMethodReview(id: Int)
 
 POST    /api/stackoverflow/questions/:id/review/update controllers.StackOverflow.upsertQuestionReviewField(id: Int)
 

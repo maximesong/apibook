@@ -5,23 +5,40 @@ import com.cppdo.apibook.index.IndexManager
 import com.cppdo.apibook.index.IndexManager.FieldName
 import com.cppdo.apibook.nlp.CoreNLP
 import com.typesafe.scalalogging.LazyLogging
+import play.api.libs.json.{JsArray, Json, JsValue}
 
 /**
  * Created by song on 10/13/15.
  */
-class SearchManager(mongoHost: String, mongoDatabase: String) extends LazyLogging{
+case class MethodScore(codeMethod: CodeMethod, value: Float)
 
-  val db = new CodeMongoDb(mongoHost, mongoDatabase)
+class SearchManager(mongoHost: String, mongoDatabase: String, classLoader: Option[ClassLoader] = None) extends LazyLogging{
 
-  def searchMethod(searchText: String): Seq[String] = {
-    case class MethodScore(codeMethod: CodeMethod, value: Float)
+  val db = new CodeMongoDb(mongoHost, mongoDatabase, classLoader = classLoader)
+
+  def toJson(methodScores: Seq[MethodScore]): Seq[JsValue] = {
+    methodScores.map(methodScore => {
+      //Json.parse(grater[MethodScore].toPrettyJSON(methodScore))
+      //JsValue()
+      ""
+    })
+    Seq[JsValue]()
+  }
+
+  def searchMethodAndReturnJson(searchText: String, n:Int = 1000): Seq[JsValue] = {
+    val methodScores = searchMethod(searchText, n)
+    methodScores.map(score => {
+      Json.parse(db.toJson(score))
+    })
+  }
+  def searchMethod(searchText: String, n: Int = 1000): Seq[MethodScore] = {
     case class ClassScore(codeClass: CodeClass, value: Float)
     case class ScorePair(key: String, value: Float)
     val posMap = CoreNLP.getPOSMap(searchText)
-    val db = new CodeMongoDb("localhost", "apibook")
     logger.info(posMap.toString)
     var verbs = Seq[String]()
     var nouns = Seq[String]()
+    var adjs = Seq[String]()
     val filteredTokens = searchText.split(" ").filter(token => {
       posMap.get(token).exists(tag => {
         if (tag.startsWith("VB")) {
@@ -30,6 +47,10 @@ class SearchManager(mongoHost: String, mongoDatabase: String) extends LazyLoggin
         }
         else if (tag.startsWith("NN")) {
           nouns :+= token
+          true
+        }
+        else if (tag.startsWith("JJ")) {
+          adjs :+= token
           true
         }
         else false
@@ -69,22 +90,24 @@ class SearchManager(mongoHost: String, mongoDatabase: String) extends LazyLoggin
     val mentionedTypes = mentionedNounTypes.flatMap(_._2)
 
     println("################# Using --------------------------------------------\n\n\n")
-    usingScores.toSeq.sortBy(-_.value)foreach(score => {
+    usingScores.toSeq.sortBy(-_.value).take(300).foreach(score => {
       println(s"${score.key}: ${score.value}")
     })
     println("################# Matching --------------------------------------------\n\n\n")
-    matchingScores.take(200).foreach(score => {
+    matchingScores.take(300).foreach(score => {
       println(s"${score.key}: ${score.value}")
     })
-    val scores = (usingScores ++ matchingScores).groupBy(_.key).mapValues(scores => {
+    val methodScores = (usingScores ++ matchingScores).groupBy(_.key).mapValues(scores => {
       scores.map(_.value).sum
     }).toSeq.sortBy(_._2).reverse
     println("################# Scoring --------------------------------------------\n\n\n")
-    scores.take(200).foreach(scorePair => {
+    methodScores.take(300).foreach(scorePair => {
       val (method, score) = scorePair
       println(method, score)
     })
-    scores.map(_._1).toSeq
+    val codeMethods = db.getCodeMethods(methodScores.take(n).map(_._1))
+    val scores =  methodScores.map(_._2)
+    codeMethods.zip(scores).map(pair => MethodScore(pair._1, pair._2))
   }
 
   def close() = {

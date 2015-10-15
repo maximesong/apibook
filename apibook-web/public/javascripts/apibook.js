@@ -40,7 +40,8 @@ angular.module('apibookApp', [])
             }
         }
     }])
-    .controller('stackoverflowController', ['$scope', '$http', '$location', '$anchorScroll', function($scope, $http, $location, $anchorScroll) {
+    .controller('stackoverflowController', ['$scope', '$http', '$location', '$anchorScroll', '$timeout',
+        function($scope, $http, $location, $anchorScroll, $timeout) {
 
         $scope.showOnlyProgramTask = true;
         $scope.filterChanged = function() {
@@ -54,8 +55,8 @@ angular.module('apibookApp', [])
                                         return review != null && review.isProgramTask === true;
                      });
                 }
-
-                console.log($scope.questions)
+                // DEBUG
+                // console.log($scope.questions)
             } else {
                 $scope.questions = $scope.originQuestions;
             }
@@ -92,6 +93,27 @@ angular.module('apibookApp', [])
             });
         }
 
+        $scope.upsertQuestionMethodReview = function(id, canonicalName, methodFullName, relevance) {
+            console.log("relevance!");
+            $http.post("/api/stackoverflow/questions/" + id + "/review/method/update",
+                {
+                    "id": id,
+                    "reviewer": "author",
+                    "relevance": relevance,
+                    "canonicalName": canonicalName,
+                    "methodFullName": methodFullName
+                }
+            ).then(function(resp) {
+                if (resp.status === 200) {
+                    if ($scope.questionMethodReviews[id] === undefined) {
+                        $scope.questionMethodReviews[id] = {};
+                    }
+                    $scope.questionReviews[id][canonicalName] = relevance;
+                    console.log($scope.questionReviews);
+                }
+            });
+        }
+
         $scope.onKeypress = function(event) {
             //console.log(event);
         }
@@ -123,8 +145,21 @@ angular.module('apibookApp', [])
             console.log("next!", i);
             $scope.questionIndex = i;
             $scope.question = $scope.questions[$scope.questionIndex];
-            console.log($scope.question);
-            console.log($scope.questionReviews[$scope.question.id]);
+            var searchOptions = {
+                searchText: $scope.question.title
+            };
+            // search for title
+            $scope.resultItems = []
+            $timeout(function() {
+                var response = $http.post("/api/search/method", searchOptions)
+                response.success(function(data) {
+                    $scope.resultItems = data.result;
+                    console.log($scope.resultItems);
+                });
+            }, 0)
+            //console.log($scope.question.title);
+            //console.log($scope.question);
+            //console.log($scope.questionReviews[$scope.question.id]);
         }
 
         $scope.click = function() {
@@ -166,6 +201,17 @@ angular.module('apibookApp', [])
                     $scope.questionReviews[review.id] = review
                  });
                  $scope.filterChanged();
+            });
+        $http.get("/api/stackoverflow/questions/method/reviews")
+            .then(function(resp) {
+                 $scope.questionMethodReviews = {};
+                 _(resp.data).each(function(review) {
+                    if ($scope.questionMethodReviews[review.questionId] == null) {
+                        $scope.questionMethodReviews[review.questionId] = {}
+                    }
+                    $scope.questionMethodReviews[review.questionId][review.canonicalName] = review.relevance
+                 });
+                 //$scope.filterChanged();
             });
         console.log("Hello Stackoverflow")
     }]);

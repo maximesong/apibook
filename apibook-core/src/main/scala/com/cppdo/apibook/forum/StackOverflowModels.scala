@@ -86,3 +86,6 @@ object QuestionReview {
     )
   }
 }
+
+case class QuestionMethodReview(questionId: Int, canonicalName: String, methodFullName: String,
+                                relevance: Option[String], reviewer: String)

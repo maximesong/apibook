@@ -4,10 +4,7 @@ import play.api.http.ContentTypes
 import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}
 
-import com.cppdo.apibook.forum.QuestionOverview
-import com.cppdo.apibook.forum.QuestionReview
-import com.cppdo.apibook.forum.Answer
-import com.cppdo.apibook.forum.StackOverflowMongoDb
+import com.cppdo.apibook.forum._
 
 /**
  * Created by song on 9/24/15.
@@ -25,6 +22,13 @@ object StackOverflow extends Controller {
     val questions = client.getQuestions().toList
     client.close()
     Ok(Json.prettyPrint(Json.toJson(questions))).as(ContentTypes.JSON)
+  }
+
+  def questionMethodReviews = Action {
+    var client = new StackOverflowMongoDb("localhost", "apibook")
+    val reviewsJson = client.getQuestionMethodReviewsInJson()
+    client.close()
+    Ok(reviewsJson).as(ContentTypes.JSON)
   }
 
   def questionReviews = Action {
@@ -47,6 +51,20 @@ object StackOverflow extends Controller {
     val reviewer = (request.body \ "reviewer").as[String]
     val client = new StackOverflowMongoDb("localhost", "apibook")
     client.upsertQuestionReviewField(id, reviewer, field, parsed)
+    client.close()
+    Ok(Json.obj(
+      "result" -> 200
+    ))
+  }
+
+  def upsertQuestionMethodReview(id: Int) = Action(parse.json) { request =>
+    val canonicalName = (request.body \ "canonicalName").as[String]
+    val methodFullName = (request.body \ "methodFullName").as[String]
+    val relevance = (request.body \ "relevance").as[String]
+    val reviewer = (request.body \ "reviewer").as[String]
+    val review = QuestionMethodReview(id, canonicalName, methodFullName, Some(relevance), reviewer)
+    val client = new StackOverflowMongoDb("localhost", "apibook")
+    client.upsertQuestionMethodReview(review)
     client.close()
     Ok(Json.obj(
       "result" -> 200

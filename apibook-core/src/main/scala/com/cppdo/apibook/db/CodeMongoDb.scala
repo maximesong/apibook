@@ -1,15 +1,23 @@
 package com.cppdo.apibook.db
 
+import com.cppdo.apibook.search.MethodScore
 import com.mongodb.casbah.MongoClient
 import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.commons.MongoDBObject
 import com.typesafe.scalalogging.LazyLogging
 import com.novus.salat._
 import com.novus.salat.global._
+import play.api.libs.json.{JsObject, JsValue}
+import play.libs.Json
+
 /**
  * Created by song on 10/8/15.
  */
-class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
+class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader] = None) extends LazyLogging {
+  classLoader.foreach(classLoader => {
+    ctx.clearAllGraters()
+    ctx.registerClassLoader(classOf[CodeClass].getClassLoader)
+  })
   val mongoClient = MongoClient(host)
   val db = mongoClient(dbName)
   val classCollection = db("classes")
@@ -75,11 +83,16 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
     })
   }
 
+  def toJson(methodScore: MethodScore): String = {
+    grater[MethodScore].toPrettyJSON(methodScore)
+  }
+
   def findClassOfName(name: String): Seq[CodeClass] = {
+    var regex = if (name.contains(".")) s"${name}$$" else s"[.]${name}$$"
     classCollection.find(MongoDBObject(
       "fullName" -> MongoDBObject(
-        "$regex" -> s"[.]${name}$$",
-        "$options" -> "i"
+        "$regex" -> regex
+        //"$options" -> "i"
       )
     )).toSeq.map(obj => {
       grater[CodeClass].asObject(obj)
@@ -91,6 +104,12 @@ class CodeMongoDb(host: String, dbName: String) extends LazyLogging {
       grater[CodeClass].asObject(obj)
     })
     codeClasses.toSeq
+  }
+
+  def getCodeMethods(canonicalNames: Seq[String]): Seq[CodeMethod] = {
+    methodCollection.find("canonicalName" $in canonicalNames).toSeq.map(obj => {
+      grater[CodeMethod].asObject(obj)
+    })
   }
 
   def getMethodInfo(fullName: String): Option[MethodInfo] = {
