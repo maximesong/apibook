@@ -16,6 +16,7 @@ object MavenWebPageParser {
   val monthYearFormat = DateTimeFormat.forPattern("(MMM, y)")
   val monthDayYearFormat = DateTimeFormat.forPattern("(MMM dd, y)")
   val ArtifactLinkRegex = "/artifact/([^/]+)/([^/]+)/([^/]+)".r
+  val ArtifactLinkRegex2 = "([^/]+)/([^/]+)".r
   val ProjectLinkRegex = "/artifact/([^/]+)/([^/]+)".r
   case class VersionLink(name: String, link: String, releaseType: String, dateTime: DateTime)
 
@@ -38,6 +39,7 @@ object MavenWebPageParser {
       val link = row.select("td a.vbtn").attr("href")
       link match {
         case ArtifactLinkRegex(group, name, version) => Artifact(name, group, version)
+        case ArtifactLinkRegex2(name, version) => Artifact(name, null, version)
       }
     }).toSeq
   }

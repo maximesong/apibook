@@ -59,15 +59,16 @@ import com.mongodb.casbah.Imports._
  */
 object APIBook extends LazyLogging {
 
-  case class Config(mode: String = "", n: Int = 20, outFile: String = "out.csv", begin: Int = 0,
+  case class Config(mode: String = "", n: Option[Int] = None, outputPath: Option[String] = None, begin: Int = 0,
+                   overwrite: Option[Boolean] = None,
                     directory: Option[String] = None, file: Option[String] = None, repository: Option[String] = None,
-                     args: Seq[String] = Seq())
+                     args: Seq[String] = Seq(), dbHost: String = "localhost", dbName: String = "apibook")
   def main(args: Array[String]): Unit = {
     val parser = new scopt.OptionParser[Config]("apibook") {
       head("APIBook", "1.0")
 
       opt[Int]('n', "number") action {
-        (n, c) => c.copy(n=n)
+        (n, c) => c.copy(n=Some(n))
       }
       opt[Unit]("rt") action {
         (_, c) => c.copy(file=Some("java/rt.jar"))
@@ -78,8 +79,8 @@ object APIBook extends LazyLogging {
       opt[Int]('b', "begin") action {
         (begin, c) => c.copy(begin=begin)
       }
-      opt[String]('o', "out") action {
-        (outFile, c) => c.copy(outFile=outFile)
+      opt[String]('o', "output") action {
+        (output, c) => c.copy(outputPath=Some(output))
       }
       opt[String]('d', "directory") action {
         (directory, c) => c.copy(directory=Some(directory))
@@ -89,6 +90,15 @@ object APIBook extends LazyLogging {
       }
       opt[String]('r', "repository") action {
         (repository, c) => c.copy(repository=Some(repository))
+      }
+      opt[Boolean]("overwrite") action {
+        (overwrite, c) => c.copy(overwrite=Some(overwrite))
+      }
+      opt[String]("dbName") action {
+        (dbName, c) => c.copy(dbName=dbName)
+      }
+      opt[String]("dbHost") action {
+        (dbHost, c) => c.copy(dbHost=dbHost)
       }
       cmd("fetch")  action {
         (_, c) => c.copy(mode="fetch")
@@ -126,6 +136,9 @@ object APIBook extends LazyLogging {
       cmd("search") action {
         (_, c) => c.copy(mode="search")
       }
+      cmd("download") action {
+        (_, c) => c.copy(mode="download")
+      }
       arg[String]("<arg>...") optional() unbounded() action {
         (arg, c) => c.copy(args=c.args :+ arg)
       }
@@ -134,7 +147,7 @@ object APIBook extends LazyLogging {
       case Some(config) => {
         logger.info("Hi")
         config.mode match {
-          case "fetch" => fetch(config.n)
+          case "fetch" => fetch(config)
           case "build" => buildIndex()
           case "test" => test()
           case "stackoverflow" => stackoverflow(config)
@@ -146,6 +159,8 @@ object APIBook extends LazyLogging {
           case "index" => buildMethodIndex(config)
           case "search" => search(config)
           case "review" => review(config)
+          case "artifact" => buildArtifacts(config)
+          case "download" => download(config)
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -174,6 +189,74 @@ object APIBook extends LazyLogging {
 
   }
 
+  def download(config: Config) = {
+    val outputPath = config.outputPath.getOrElse("thirdparty")
+    val projectNum = config.n.getOrElse(100)
+    val overwrite = config.overwrite.getOrElse(false)
+    val projects = MavenRepository.getTopProjects(projectNum)
+    var count = 1
+    var missingArtifacts = Seq[String]()
+    projects.foreach(project => {
+      val artifact = MavenRepository.collectArtifactsOf(project).takeLatestVersion
+      artifact.foreach(artifact => {
+        val sourceDestination = new File(s"${outputPath}/src/${artifact.simpleSourcePackageName}")
+        val libraryDestination = new File(s"${outputPath}/lib/${artifact.simpleLibraryPackageName}")
+        val docDestination = new File(s"${outputPath}/doc/${artifact.simpleDocPackageName}")
+
+        Seq(
+          (artifact.sourcePackageUrl, sourceDestination),
+          (artifact.libraryPackageUrl, libraryDestination),
+          (artifact.docPackageUrl, docDestination)
+        ).foreach {case (url, destination) => {
+          if (overwrite || !destination.exists()) {
+            println(s"Downloading[${count}/${projectNum}] ${destination}...")
+            try {
+              FileUtils.copyURLToFile(new URL(url), destination)
+            } catch {
+              case _: FileNotFoundException => {
+                logger.warn(s"${url} Not Found")
+                missingArtifacts :+= url
+              }
+            }
+          } else {
+            println(s"${destination.getAbsolutePath} exists.")
+          }
+        }}
+        count += 1
+      })
+    })
+    if (!missingArtifacts.isEmpty) {
+      println("## Missing Artifacts:")
+      missingArtifacts.foreach(url => {
+        println(url)
+      })
+    }
+  }
+
+  def recursiveActOn(path: String, extension: String, fn: String => Unit) = {
+    val f = new File(path)
+    if (f.isDirectory) {
+      val files = FileUtils.listFiles(f, Array(extension), true)
+      files.asScala.foreach(file => {
+        fn(file.getAbsolutePath)
+      })
+    } else {
+      fn(f.getAbsolutePath)
+    }
+  }
+
+  def buildArtifacts(config: Config) = {
+    val db = new CodeMongoDb("localhost","apibook")
+    config.args.foreach(path => {
+      recursiveActOn(path, "jar", jarPath => {
+        if (jarPath.contains("javadoc")) {
+
+        } else if (jarPath.contains("source")) {
+
+        }
+      })
+    })
+  }
   def review(config: Config) = {
     val stackoverflowDb = new StackOverflowMongoDb("localhost","apibook")
     val questionReviews = stackoverflowDb.getQuestionReviews()
@@ -235,7 +318,7 @@ object APIBook extends LazyLogging {
       val args = Seq("-doclet", "com.cppdo.apibook.doc.StoreDoc") ++ fileNames
       JavaDocMain.execute(args: _*)
     })
-    config.file.foreach(file => {
+    config.file.foreach(file => { 
       val args = Seq("-doclet", "com.cppdo.apibook.doc.StoreDoc", file)
       JavaDocMain.execute(args: _*)
     })
@@ -353,12 +436,16 @@ object APIBook extends LazyLogging {
     })
   }
 
-  def stackoverflow(config: Config) = {
-    val overviews = StackOverflowCrawler.fetchQuestionOverviews(config.n)
+  def stackoverflow(config: Config): Unit = {
+    val overviews = StackOverflowCrawler.fetchQuestionOverviews(config.n.getOrElse(20))
     val mongoClient = new StackOverflowMongoDb("localhost", "apibook")
     val waitTime = 1 * 100
-
-    val writer = CSVWriter.open(config.outFile)
+    if (config.args.length < 1) {
+      logger.error("ERROR: should specify output path.")
+      return
+    }
+    val outputPath = config.args(0)
+    val writer = CSVWriter.open(outputPath)
     writer.writeRow(List("Question ID", "Votes", "Title", "Ask API", "Answer With One API", "Link"))
     var i = 0
     overviews.foreach(overview => {
@@ -372,7 +459,7 @@ object APIBook extends LazyLogging {
         mongoClient.upsertQuestion(question)
       }
     })
-    logger.info(s"Write to ${config.outFile}")
+    logger.info(s"Write to ${outputPath}")
     writer.close()
   }
 
@@ -381,7 +468,8 @@ object APIBook extends LazyLogging {
     val db = mongoClient("apibook")
   }
 
-  def fetch(n: Int) = {
+  def fetch(config: Config) = {
+    val n = config.n.getOrElse(20)
     val projects = ActorMaster.collectProjects(n)
     projects.foreach(project => {
       ActorMaster.analyzeProject(project)

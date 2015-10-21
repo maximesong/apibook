@@ -34,6 +34,9 @@ case class Field(name: String, typeName: String)
 
 case class ClassInfo(fullName: String, fields:Seq[Field], commentText: String)
 
+case class ClassArtifacts(fullName: String, sourceCodeFilePath: Option[String],
+                         byteCodeJarPath: Option[String], sourceCodeJarPath: Option[String], docJarPath: Option[String])
+
 object Imports {
   implicit class RichCodeClass(codeClass: CodeClass) {
     def name: String = codeClass.fullName.split("[.]").last

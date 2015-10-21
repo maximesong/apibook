@@ -3,6 +3,7 @@
 /data
 target
 /repository
+/repository-sources
 /client-repository
 /db
 *.sqlite
@@ -13,3 +14,4 @@ out.csv
 java
 data_backup
 dict
+/thirdparty

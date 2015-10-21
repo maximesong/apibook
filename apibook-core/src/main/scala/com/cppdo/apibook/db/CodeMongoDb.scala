@@ -27,6 +27,8 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
   val methodInfoCollection = db("method_info")
   val classInfoCollection = db("class_info")
 
+  val classArtifactsCollection = db("class_artifacts")
+
   classUsageCollection.createIndex(MongoDBObject(
     "typeFullName" -> 1,
     "usedByTypeFullName" -> 1
@@ -56,6 +58,10 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
   ))
 
   classInfoCollection.createIndex(MongoDBObject(
+    "fullName" -> 1
+  ))
+
+  classArtifactsCollection.createIndex(MongoDBObject(
     "fullName" -> 1
   ))
 
@@ -119,6 +125,25 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
     methodInfoCollection.find(query).toSeq.headOption.map(obj => {
       grater[MethodInfo].asObject(obj)
     })
+  }
+
+  def getClassArtifacts(fullName: String): Option[ClassArtifacts] = {
+    val query = MongoDBObject(
+      "fullName" -> fullName
+    )
+    classArtifactsCollection.find(query).toSeq.headOption.map(obj => {
+      grater[ClassArtifacts].asObject(obj)
+    })
+  }
+
+  def upsertClassArtifact(fullName: String, artifactType: String, path: String) = {
+    val query = MongoDBObject(
+      "fullName" -> fullName
+    )
+    val update = MongoDBObject(
+      artifactType -> path
+    )
+    classArtifactsCollection.update(query, update, upsert = true)
   }
 
   def findMethodsAccept(fullTypeName: String): Seq[CodeMethod] = {

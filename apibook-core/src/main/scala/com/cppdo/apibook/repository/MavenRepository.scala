@@ -140,7 +140,9 @@ object MavenRepository extends LazyLogging {
   def collectArtifactsOf(project: Project) : Seq[Artifact] = {
     val projectUrl = detailUrlOf(project)
     val artifacts = fetchFrom(projectUrl, MavenWebPageParser.parseProjectDetailPage)
-    artifacts
+    artifacts.map(artifact => { // in case the group/name info is missing by the parser
+      Artifact(project.name, project.group, artifact.version)
+    })
   }
 
   def takeLatestVersion(artifacts: Seq[Artifact]): Option[Artifact] = {
@@ -166,6 +168,15 @@ object MavenRepository extends LazyLogging {
     def docPackageUrl: String = MavenRepository.docPackageUrlOf(artifact)
 
     def artifactPath: String = s"${artifact.group}/${artifact.name}/${artifact.version}"
+
+    def simpleSourcePackageName = s"${artifact.name}-sources.jar"
+
+    def simpleDocPackageName = s"${artifact.name}-javadoc.jar"
+
+    def simpleLibraryPackageName = s"${artifact.name}.jar"
+
+
+    def sourcePackageName = s"${artifact.group}-${artifact.name}-${artifact.version}-sources.jar"
 
     def relativeLibraryPackagePath = s"${artifact.artifactPath}/${artifact.name}-${artifact.version}.jar"
 
