@@ -142,6 +142,9 @@ object APIBook extends LazyLogging {
       cmd("extract") action {
         (_, c) => c.copy(mode="extract")
       }
+      cmd("location") action {
+        (_, c) => c.copy(mode="location")
+      }
       arg[String]("<arg>...") optional() unbounded() action {
         (arg, c) => c.copy(args=c.args :+ arg)
       }
@@ -165,6 +168,7 @@ object APIBook extends LazyLogging {
           case "artifact" => buildArtifacts(config)
           case "download" => download(config)
           case "extract" => extract(config)
+          case "location" => buildLocation(config)
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -193,6 +197,35 @@ object APIBook extends LazyLogging {
 
   }
 
+  def buildSourceLocation(db: CodeMongoDb, sourcePath: String) = {
+    val cu = AstTreeManager.getCompilationUnit(sourcePath)
+    val packageDeclaration = AstTreeManager.packageDeclarationOf(cu)
+    val typeDeclarations = AstTreeManager.typeDeclarationsOf(cu)
+    val packageName = packageDeclaration.getName.toString
+    typeDeclarations.foreach(typeDeclaration => {
+      val typeFullName = s"${packageName}.${typeDeclaration.getName}"
+      println(typeFullName)
+      db.upsertClassArtifact(typeFullName, ClassArtifacts.sourceCodeFilePath, sourcePath)
+    })
+  }
+
+  def buildLocation(config: Config) = {
+    val db = new CodeMongoDb(config.dbHost, config.dbName)
+    config.args.foreach(path => {
+      recursiveActOn(path, "java", buildSourceLocation(db, _))
+      recursiveActOn(path, "jar", buildJarLocation(db, _))
+    })
+  }
+
+  def buildJarLocation(db: CodeMongoDb, jarPath: String) = {
+    val classNodes = JarManager.getClassNodes(jarPath)
+    classNodes.foreach(classNode => {
+      val codeClass = AstTreeManager.buildCodeClass(classNode)
+      println(codeClass.fullName)
+      db.upsertClassArtifact(codeClass.fullName, ClassArtifacts.byteCodeJarPath, jarPath)
+    })
+  }
+
   def extract(config: Config) = {
     val outputPath = config.outputPath.getOrElse("repository-sources")
     config.args.foreach(path => {
@@ -200,6 +233,7 @@ object APIBook extends LazyLogging {
       recursiveActOn(path, "jar", jarPath => {
         logger.info(s"Extracting ${jarPath}...")
         JarManager.extractJar(jarPath, outputPath, ".java")
+        JarManager.extractJar(jarPath, outputPath, ".class")
       })
     })
   }

@@ -1,10 +1,16 @@
 package com.cppdo.apibook.ast
 
 
+import java.io.File
+import java.util.jar.JarFile
+
 import com.cppdo.apibook.APIBook._
+import com.cppdo.apibook.ast.JarManager._
 import com.cppdo.apibook.db._
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.commons.io.{FileUtils, IOUtils}
 import org.eclipse.jdt.core.dom._
+import org.eclipse.jdt.core.dom.{PackageDeclaration=>Package}
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree._
 import org.objectweb.asm.util.Textifier
@@ -16,6 +22,22 @@ import com.cppdo.apibook.db.Imports
  * Created by song on 3/11/15.
  */
 object AstTreeManager extends LazyLogging {
+
+  def getCompilationUnit(sourcePath: String): CompilationUnit = {
+    val parser = ASTParser.newParser(AST.JLS8)
+    val text  = FileUtils.readFileToString(new File(sourcePath))
+    parser.setSource(text.toCharArray)
+    val cu = parser.createAST(null).asInstanceOf[CompilationUnit]
+    if (cu == null) {
+      logger.warn(s"No CompilationUnit: ${sourcePath}")
+    }
+    cu
+  }
+
+  def packageDeclarationOf(cu: CompilationUnit): Package = {
+    cu.getPackage
+  }
+
   def typeDeclarationsOf(cu:  CompilationUnit): Seq[TypeDeclaration] = {
     val classVisitor = new ClassVisitor
     cu.accept(classVisitor)

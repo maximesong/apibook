@@ -140,9 +140,12 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
     val query = MongoDBObject(
       "fullName" -> fullName
     )
-    val update = MongoDBObject(
+    val update = $set(artifactType -> path)
+     /*
+      MongoDBObject(
+      "fullName" -> fullName,
       artifactType -> path
-    )
+    )*/
     classArtifactsCollection.update(query, update, upsert = true)
   }
 

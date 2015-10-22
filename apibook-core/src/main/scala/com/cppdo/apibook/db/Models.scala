@@ -37,6 +37,10 @@ case class ClassInfo(fullName: String, fields:Seq[Field], commentText: String)
 case class ClassArtifacts(fullName: String, sourceCodeFilePath: Option[String],
                          byteCodeJarPath: Option[String], sourceCodeJarPath: Option[String], docJarPath: Option[String])
 
+object ClassArtifacts {
+  def byteCodeJarPath = "byteCodeJarPath"
+  def sourceCodeFilePath = "sourceCodeFilePath"
+}
 object Imports {
   implicit class RichCodeClass(codeClass: CodeClass) {
     def name: String = codeClass.fullName.split("[.]").last
