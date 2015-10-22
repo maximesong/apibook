@@ -3,6 +3,7 @@ package com.cppdo.apibook.ast
 import java.io.{File, FileWriter, InputStream}
 import java.nio.file.Paths
 import java.util.jar.{JarEntry, JarFile}
+import javax.print.attribute.standard.Destination
 
 import com.cppdo.apibook.db.{Class, Method}
 import com.typesafe.scalalogging.LazyLogging
@@ -48,6 +49,17 @@ object JarManager extends LazyLogging {
     } else {
       None
     }
+  }
+
+  def extractJar(jarPath: String, toDirectory: String, suffix: String = "") = {
+    val path = new File(jarPath)
+    val jarFile = new JarFile(jarPath)
+    val entries = jarFile.entries().asScala.filter(_.getName endsWith suffix)
+    entries.foreach(entry => {
+      val inputStream = jarFile.getInputStream(entry)
+      val file = new File(s"${toDirectory}/${entry.getName}")
+      FileUtils.copyInputStreamToFile(inputStream, file)
+    })
   }
 
   def getDocEntry(jarPath: String, klass: Class): Option[JarEntry] = {

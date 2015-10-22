@@ -139,6 +139,9 @@ object APIBook extends LazyLogging {
       cmd("download") action {
         (_, c) => c.copy(mode="download")
       }
+      cmd("extract") action {
+        (_, c) => c.copy(mode="extract")
+      }
       arg[String]("<arg>...") optional() unbounded() action {
         (arg, c) => c.copy(args=c.args :+ arg)
       }
@@ -161,6 +164,7 @@ object APIBook extends LazyLogging {
           case "review" => review(config)
           case "artifact" => buildArtifacts(config)
           case "download" => download(config)
+          case "extract" => extract(config)
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -187,6 +191,17 @@ object APIBook extends LazyLogging {
     //testGithub()
     //test()
 
+  }
+
+  def extract(config: Config) = {
+    val outputPath = config.outputPath.getOrElse("repository-sources")
+    config.args.foreach(path => {
+      logger.info(path)
+      recursiveActOn(path, "jar", jarPath => {
+        logger.info(s"Extracting ${jarPath}...")
+        JarManager.extractJar(jarPath, outputPath, ".java")
+      })
+    })
   }
 
   def download(config: Config) = {
@@ -236,11 +251,13 @@ object APIBook extends LazyLogging {
   def recursiveActOn(path: String, extension: String, fn: String => Unit) = {
     val f = new File(path)
     if (f.isDirectory) {
+      logger.info("is directory")
       val files = FileUtils.listFiles(f, Array(extension), true)
       files.asScala.foreach(file => {
         fn(file.getAbsolutePath)
       })
     } else {
+      logger.info("is file")
       fn(f.getAbsolutePath)
     }
   }
