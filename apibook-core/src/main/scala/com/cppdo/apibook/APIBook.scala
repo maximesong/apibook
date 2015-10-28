@@ -34,6 +34,7 @@ import edu.stanford.nlp.trees.TreeCoreAnnotations.TreeAnnotation
 import edu.stanford.nlp.util.CoreMap
 import org.apache.commons.io.FileUtils
 import org.apache.lucene.document.Document
+import org.apache.lucene.search.SearcherManager
 import org.objectweb.asm.Type
 import org.jsoup.Jsoup
 import org.objectweb.asm.tree.ClassNode
@@ -145,6 +146,9 @@ object APIBook extends LazyLogging {
       cmd("location") action {
         (_, c) => c.copy(mode="location")
       }
+      cmd("snippet") action {
+        (_, c) => c.copy(mode="snippet")
+      }
       arg[String]("<arg>...") optional() unbounded() action {
         (arg, c) => c.copy(args=c.args :+ arg)
       }
@@ -169,6 +173,7 @@ object APIBook extends LazyLogging {
           case "download" => download(config)
           case "extract" => extract(config)
           case "location" => buildLocation(config)
+          case "snippet" => calculateSnippets(config)
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -195,6 +200,13 @@ object APIBook extends LazyLogging {
     //testGithub()
     //test()
 
+  }
+
+  def calculateSnippets(config: Config) = {
+    val manager = new SearchManager(config.dbHost, config.dbName)
+    config.args.foreach(methodFullName => {
+      val snippets = manager.findUsageSnippets(methodFullName)
+    })
   }
 
   def buildSourceLocation(db: CodeMongoDb, sourcePath: String) = {
@@ -430,12 +442,9 @@ object APIBook extends LazyLogging {
     classNodes.foreach(classNode => {
       val classType = Type.getObjectType(classNode.name)
       logger.info(s"${classType.getClassName}...")
-      val (typeSet, methodSet) = AstTreeManager.calculateUsage(classNode)
-      methodSet.foreach(method => {
-        db.upsertMethodUsage(method, classType.getClassName)
-      })
-      typeSet.foreach(t => {
-        db.upsertClassUsage(t, classType.getClassName)
+      val invocations = AstTreeManager.calculateUsage(classNode)
+      invocations.foreach(invocation => {
+        db.upsertMethodInvocation(invocation)
       })
     })
   }
@@ -609,7 +618,7 @@ object APIBook extends LazyLogging {
   }
   def search(config: Config) = {
     val searchText = config.args.mkString(" ")
-    val manager = new SearchManager("localhost", "apibook")
+    val manager = new SearchManager(config.dbHost, config.dbName)
     val methodNames = manager.searchMethod(searchText)
     //println(methodNames.mkString("\n"))
   }

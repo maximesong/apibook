@@ -16,6 +16,7 @@ import org.objectweb.asm.tree._
 import org.objectweb.asm.util.Textifier
 import scala.collection.JavaConverters._
 import org.objectweb.asm.{Type=>AsmType}
+import com.cppdo.apibook.db.{MethodInvocation=>Invocation}
 import com.cppdo.apibook.db.Imports
 
 /**
@@ -63,24 +64,27 @@ object AstTreeManager extends LazyLogging {
    * @param classNode
    * @return type usage set and method usage set
    */
-  def calculateUsage(classNode: ClassNode): (Set[String], Set[String]) = {
-    val classType = AsmType.getObjectType(classNode.name)
-    var methodUsageSet = Set[String]()
-    var typeUsageSet = Set[String]()
+  def calculateUsage(classNode: ClassNode): Seq[Invocation] = {
+    val invokedByClassType = AsmType.getObjectType(classNode.name)
+
     val superClassType = Option(classNode.superName).map(name => AsmType.getObjectType(name))
-    methodNodesOf(classNode).foreach(methodNode => {
+    methodNodesOf(classNode).flatMap(methodNode => {
+      val invokedByClassType = AsmType.getObjectType(classNode.name)
+      val invokedByMethodType = AsmType.getMethodType(methodNode.desc)
+      val invokedByMethodFullName = CodeMethod.buildFullName(invokedByClassType, methodNode.name)
+      val invokedByCanonicalName = CodeMethod.buildCanonicalName(invokedByMethodFullName, invokedByMethodType)
       methodNode.instructions.iterator().asScala.filter({
         case _: MethodInsnNode => true
         case _ => false
-      }).foreach({case methodInsNode: MethodInsnNode => {
-        methodInsNode.name
+      }).map({case methodInsNode: MethodInsnNode => {
+        val methodType = AsmType.getMethodType(methodInsNode.desc)
         val ownerType = AsmType.getObjectType(methodInsNode.owner)
-        val methodFullName = s"${ownerType.getClassName}.${methodInsNode.name}"
-        typeUsageSet += ownerType.getClassName
-        methodUsageSet += methodFullName
+        val methodFullName = CodeMethod.buildFullName(ownerType, methodInsNode.name)
+        val canonicalName = CodeMethod.buildCanonicalName(methodFullName, methodType)
+        Invocation(canonicalName, methodFullName, ownerType.getClassName,
+          invokedByCanonicalName, invokedByMethodFullName, invokedByClassType.getClassName)
       }})
     })
-    (typeUsageSet, methodUsageSet)
   }
 
   def calculateConstantParameter(classNode: ClassNode) = {

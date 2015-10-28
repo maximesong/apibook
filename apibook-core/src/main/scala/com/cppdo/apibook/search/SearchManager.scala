@@ -1,10 +1,12 @@
 package com.cppdo.apibook.search
 
+import com.cppdo.apibook.ast.{AstTreeManager, JarManager}
 import com.cppdo.apibook.db.{CodeClass, CodeMethod, CodeMongoDb}
 import com.cppdo.apibook.index.IndexManager
 import com.cppdo.apibook.index.IndexManager.FieldName
 import com.cppdo.apibook.nlp.CoreNLP
 import com.typesafe.scalalogging.LazyLogging
+import scala.collection.JavaConverters._
 import play.api.libs.json.{JsArray, Json, JsValue}
 
 /**
@@ -23,6 +25,26 @@ class SearchManager(mongoHost: String, mongoDatabase: String, classLoader: Optio
       ""
     })
     Seq[JsValue]()
+  }
+
+  def findUsageSnippets(methodFullName: String) = {
+    val typeFullNames = db.getMethodUsage(methodFullName)
+    typeFullNames.foreach(typeFullName => {
+      val optionalArtifacts = db.getClassArtifacts(typeFullName)
+      optionalArtifacts.foreach(artifacts => {
+        println(typeFullName)
+        if (artifacts.byteCodeJarPath.nonEmpty && artifacts.sourceCodeFilePath.nonEmpty) {
+          val classNodes = JarManager.getClassNodes(artifacts.byteCodeJarPath.get)
+          classNodes.foreach(classNode => {
+
+
+          })
+          artifacts.sourceCodeFilePath.get
+        }
+        println(artifacts.byteCodeJarPath)
+        println(artifacts.sourceCodeFilePath)
+      })
+    })
   }
 
   def searchMethodAndReturnJson(searchText: String, n:Int = 1000): Seq[JsValue] = {

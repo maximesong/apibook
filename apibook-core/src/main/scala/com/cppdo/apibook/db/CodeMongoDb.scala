@@ -1,7 +1,7 @@
 package com.cppdo.apibook.db
 
 import com.cppdo.apibook.search.MethodScore
-import com.mongodb.casbah.MongoClient
+import com.mongodb.casbah.{commons, MongoDB, MongoClient}
 import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.commons.MongoDBObject
 import com.typesafe.scalalogging.LazyLogging
@@ -22,21 +22,28 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
   val db = mongoClient(dbName)
   val classCollection = db("classes")
   val methodCollection = db("methods")
-  val methodUsageCollection = db("method_usage")
-  val classUsageCollection = db("class_usage")
+  val methodInvocationCollection = db("method_invocations")
   val methodInfoCollection = db("method_info")
   val classInfoCollection = db("class_info")
 
   val classArtifactsCollection = db("class_artifacts")
 
-  classUsageCollection.createIndex(MongoDBObject(
+
+  methodInvocationCollection.createIndex(MongoDBObject(
+    "canonicalName" -> 1,
+    "invokedByCanonicalName" -> 1
+  ))
+
+  methodInvocationCollection.createIndex(MongoDBObject(
     "typeFullName" -> 1,
-    "usedByTypeFullName" -> 1
+    "invokedByType" -> 1
   ))
-  methodUsageCollection.createIndex(MongoDBObject(
-    "methodFullName" -> 1,
-    "usedByTypeFullName" -> 1
+
+  methodInvocationCollection.createIndex(MongoDBObject(
+    "canonicalName" -> 1,
+    "invokedByType" -> 1
   ))
+
   classCollection.createIndex(MongoDBObject(
     "fullName" -> 1
   ))
@@ -218,46 +225,41 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
     results
   }
 
-  def upsertMethodUsage(methodFullName: String, usedByTypeFullName: String) = {
+  def upsertMethodInvocation(methodInvocation: MethodInvocation) = {
     val query = MongoDBObject(
-      "methodFullName" -> methodFullName,
-      "usedByTypeFullName" -> usedByTypeFullName
+      "canonicalName" -> methodInvocation.canonicalName,
+      "invokedByCanonicalName" -> methodInvocation.invokedByCanonicalName
     )
-    val update = MongoDBObject(
-      "methodFullName" -> methodFullName,
-      "usedByTypeFullName" -> usedByTypeFullName
-    )
-    methodUsageCollection.update(query, update, upsert=true)
+    methodInvocationCollection.update(query, grater[MethodInvocation].asDBObject(methodInvocation), upsert=true)
   }
 
   def getMethodUsage(methodFullName: String): Seq[String] = {
-    methodUsageCollection.find(MongoDBObject(
-      "methodFullName" -> methodFullName
-    )).toSeq.map(obj => {
-      obj.as[String]("usedByTypeFullName")
-    })
+    Seq[String]()
   }
 
   def getClassUsage(typeFullName: String): Seq[String] = {
-    classUsageCollection.find(MongoDBObject(
-      "typeFullName" -> typeFullName
-    )).toSeq.map(obj => {
-      obj.as[String]("usedByTypeFullName")
-    })
+    methodInvocationCollection.aggregate(
+      List(
+        MongoDBObject("$match" ->
+          MongoDBObject("typeFullName" -> typeFullName)
+        ),
+        MongoDBObject("$group" ->
+          MongoDBObject(
+            "_id" -> MongoDBObject(
+              "typeFullName" -> "$typeFullName",
+              "invokedByType" -> "$invokedByType"
+            )
+          )
+        ),
+        MongoDBObject("$project" ->
+          MongoDBObject(
+            "typeFullName" -> "$_id.typeFullName",
+            "invokedByType" -> "$_id.invokedByType"
+          )
+        )
+      )
+    ).results.map(obj => obj.as[String]("invokedByType")).toSeq
   }
-
-  def upsertClassUsage(typeFullName: String, usedByTypeFullName: String) = {
-    val query = MongoDBObject(
-      "typeFullName" -> typeFullName,
-      "usedByTypeFullName" -> usedByTypeFullName
-    )
-    val update = MongoDBObject(
-      "typeFullName" -> typeFullName,
-      "usedByTypeFullName" -> usedByTypeFullName
-    )
-    classUsageCollection.update(query, update, upsert=true)
-  }
-
 
   def upsertMethodInfo(methodInfo: MethodInfo) = {
     val query = MongoDBObject(
