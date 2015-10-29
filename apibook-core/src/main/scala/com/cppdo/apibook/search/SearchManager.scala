@@ -29,25 +29,24 @@ class SearchManager(mongoHost: String, mongoDatabase: String, classLoader: Optio
 
   def getCodeOf(codeMethod: CodeMethod): Option[String] = {
     val classArtifacts = db.getClassArtifacts(codeMethod.typeFullName)
-    classArtifacts.map(artifacts => {
-      artifacts.sourceCodeFilePath.foreach(sourceCodeFilePath => {
+    classArtifacts.flatMap(artifacts => {
+      artifacts.sourceCodeFilePath.flatMap(sourceCodeFilePath => {
         println(sourceCodeFilePath)
         val cu = AstTreeManager.getCompilationUnit(sourceCodeFilePath)
         val packageDeclaration = AstTreeManager.packageDeclarationOf(cu)
         val packageName = packageDeclaration.getName.toString
         val typeDeclarations = AstTreeManager.typeDeclarationsOf(cu)
-        typeDeclarations.foreach(typeDeclaration => {
-          val className = typeDeclaration.getName
-          println(typeDeclaration.getName)
-          typeDeclaration.getMethods.foreach(methodDeclaration=> {
-            val methodName = methodDeclaration.getName.toString
-            if (s"${packageName}.${className}.${methodName}" == codeMethod.fullName) {
-              println(methodDeclaration.toString)
-            }
+        val codeSnippet = typeDeclarations.find(typeDeclaration => {
+          s"${packageName}.${typeDeclaration.getName.toString}" == codeMethod.typeFullName
+        }).flatMap(typeDeclaration => {
+          typeDeclaration.getMethods.find(methodDeclaration => {
+            s"${packageName}.${typeDeclaration.getName.toString}.${methodDeclaration.getName.toString}" == codeMethod.fullName
+          }).map(methodDeclaration => {
+            methodDeclaration.toString
           })
         })
+        codeSnippet
       })
-      ""
     })
   }
 
@@ -64,12 +63,12 @@ class SearchManager(mongoHost: String, mongoDatabase: String, classLoader: Optio
     })
   }
 
-  def findUsageSnippetsOfCanonicalName(canonicalName: String): Seq[String] = {
+  def findUsageSnippetsOfCanonicalName(canonicalName: String, n: Int = 10): Seq[String] = {
     val codeMethod = db.getCodeMethod(canonicalName)
     codeMethod.map(codeMethod => {
       val invocations = db.findMethodInvocations(codeMethod.canonicalName)
       val invokedByMethods = db.getCodeMethods(invocations.map(_.invokedByCanonicalName))
-      invokedByMethods.flatMap(method => {
+      invokedByMethods.take(n).flatMap(method => {
         getCodeOf(method)
       })
     }).getOrElse(Seq[String]())

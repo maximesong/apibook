@@ -11,13 +11,23 @@
                 <div class="btn btn-primary" ng-click="search()">Search</div>
             </div>
         </div>
+
         <ul class="list-unstyled list-group">
             <div ng-repeat="item in items" class="row">
                 <div class="api-row">
                     <span>{{$index+1}}.&nbsp;&nbsp; </span>
                     <a uib-tooltip="{{item.codeMethod.returnType}}">{{item.codeMethod.returnType | simpleName}}</a>
                     <span  uib-tooltip="{{item.codeMethod.fullName}}"><span class="text-muted">{{item.codeMethod.typeFullName | simpleName}}</span>.<strong class="">{{item.codeMethod.fullName | simpleName}}</strong></span>(<a ng-repeat="parameter in item.codeMethod.parameterTypes track by $index" uib-tooltip="{{parameter}}"><span ng-if="!$first">, </span>{{parameter|simpleName}}</a>)
+                    <span><button class="btn btn-default" ng-click="findCodeSnippets(item.codeMethod.canonicalName, item)">Examples</button></span>
                     <span class="pull-right">{{item.value}}</span>
+                </div>
+                <div>
+                    <div ng-repeat="snippet in item.codeSnippets">
+                        <pre><code>{{snippet}}</code></pre>
+                    </div>
+                    <div ng-if="item.codeSnippets.length == 0">
+                        <pre>No code snippet</pre>
+                    </div>
                 </div>
             </div>
         </ul>

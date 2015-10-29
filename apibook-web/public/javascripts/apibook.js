@@ -8,7 +8,7 @@ angular.module('apibookApp', ["ui.bootstrap"])
             return fields[fields.length -1];
         }
     })
-    .controller('APIBookController', ['$scope', '$http','$location', function($scope, $http, $location) {
+    .controller('APIBookController', ['$scope', '$http','$location', '$timeout', function($scope, $http, $location, $timeout) {
         console.log("HI");
         var postJson = function (url, data, success, error) {
             $.ajax({
@@ -40,6 +40,23 @@ angular.module('apibookApp', ["ui.bootstrap"])
             });
             */
         };
+
+        $scope.findCodeSnippets = function(canonicalName, item) {
+            $http.post("/api/search/snippets", {
+                "canonicalName": canonicalName
+            }).then(function (resp) {
+                if (resp.status == 200) {
+                    item.codeSnippets = resp.data.result
+                    $timeout(function() {
+                        $('pre code').each(function(i, block) {
+                           hljs.highlightBlock(block);
+                        });
+                    }, 0);
+                    console.log(item)
+                }
+                console.log(resp.data)
+            });
+        }
         $scope.keypress = function(event) {
             if (event.keyCode === 13) {
                 $scope.search();
