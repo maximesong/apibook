@@ -27,9 +27,43 @@ class SearchManager(mongoHost: String, mongoDatabase: String, classLoader: Optio
     Seq[JsValue]()
   }
 
+  def getCodeOf(codeMethod: CodeMethod): Option[String] = {
+    val classArtifacts = db.getClassArtifacts(codeMethod.typeFullName)
+    classArtifacts.map(artifacts => {
+      artifacts.sourceCodeFilePath.foreach(sourceCodeFilePath => {
+        println(sourceCodeFilePath)
+        val cu = AstTreeManager.getCompilationUnit(sourceCodeFilePath)
+        val packageDeclaration = AstTreeManager.packageDeclarationOf(cu)
+        val packageName = packageDeclaration.getName.toString
+        val typeDeclarations = AstTreeManager.typeDeclarationsOf(cu)
+        typeDeclarations.foreach(typeDeclaration => {
+          val className = typeDeclaration.getName
+          println(typeDeclaration.getName)
+          typeDeclaration.getMethods.foreach(methodDeclaration=> {
+            val methodName = methodDeclaration.getName.toString
+            if (s"${packageName}.${className}.${methodName}" == codeMethod.fullName) {
+              println(methodDeclaration.toString)
+            }
+          })
+        })
+      })
+      ""
+    })
+  }
+
   def findUsageSnippets(methodFullName: String) = {
-    val typeFullNames = db.getMethodUsage(methodFullName)
-    typeFullNames.foreach(typeFullName => {
+    val codeMethods = db.findMethodWithFullName(methodFullName)
+    codeMethods.foreach(codeMethod => {
+      logger.info(s"Usage for: ${codeMethod.canonicalName}")
+      val invocations = db.findMethodInvocations(codeMethod.canonicalName)
+      val invokedByMethods = db.getCodeMethods(invocations.map(_.invokedByCanonicalName))
+      invokedByMethods.foreach(method => {
+        logger.info(method.fullName)
+        getCodeOf(method)
+      })
+    })
+
+      /*
       val optionalArtifacts = db.getClassArtifacts(typeFullName)
       optionalArtifacts.foreach(artifacts => {
         println(typeFullName)
@@ -44,7 +78,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String, classLoader: Optio
         println(artifacts.byteCodeJarPath)
         println(artifacts.sourceCodeFilePath)
       })
-    })
+      */
   }
 
   def searchMethodAndReturnJson(searchText: String, n:Int = 1000): Seq[JsValue] = {

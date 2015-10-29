@@ -15,7 +15,7 @@ case class CodeMethod(canonicalName: String, fullName: String, typeFullName: Str
 object CodeMethod {
   def buildCanonicalName(methodFullName: String, paramterTypes: Seq[String], returnType: String): String = {
     val canonicalName = s"${returnType} ${methodFullName}(${paramterTypes.mkString(", ")})"
-    if (canonicalName.length > 1000) { // e.g. org.codehaus.groovy.runtime.ArrayUtil.createArray()
+    if (canonicalName.length > 500) { // e.g. org.codehaus.groovy.runtime.ArrayUtil.createArray()
       s"${returnType} ${methodFullName}()"
     } else {
       canonicalName

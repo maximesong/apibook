@@ -61,7 +61,7 @@ import com.mongodb.casbah.Imports._
 object APIBook extends LazyLogging {
 
   case class Config(mode: String = "", n: Option[Int] = None, outputPath: Option[String] = None, begin: Int = 0,
-                   overwrite: Option[Boolean] = None,
+                   overwrite: Option[Boolean] = None, rebuild: Boolean=false,
                     directory: Option[String] = None, file: Option[String] = None, repository: Option[String] = None,
                      args: Seq[String] = Seq(), dbHost: String = "localhost", dbName: String = "apibook")
   def main(args: Array[String]): Unit = {
@@ -94,6 +94,9 @@ object APIBook extends LazyLogging {
       }
       opt[Boolean]("overwrite") action {
         (overwrite, c) => c.copy(overwrite=Some(overwrite))
+      }
+      opt[Unit]("rebuild") action {
+        (_, c) => c.copy(rebuild=true)
       }
       opt[String]("dbName") action {
         (dbName, c) => c.copy(dbName=dbName)
@@ -415,13 +418,16 @@ object APIBook extends LazyLogging {
   }
   def buildClasses(config: Config): Unit = {
     val db = new CodeMongoDb("localhost","apibook")
+    if (config.rebuild) {
+      logger.info("Removing classes and methods...")
+      db.removeAllClassesAndMethods()
+    }
     config.args.foreach(path => {
       val file = new File(path)
       if (file.isDirectory) {
         val files = FileUtils.listFiles(file, Array("jar"), true)
         files.asScala.foreach(jarFile => {
           buildClasses(db, jarFile.getAbsolutePath)
-
         })
       } else if (file.isFile) {
         buildClasses(db, file.getAbsolutePath)

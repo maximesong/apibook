@@ -51,6 +51,9 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
     "canonicalName" -> 1
   ))
   methodCollection.createIndex(MongoDBObject(
+    "fullName" -> 1
+  ))
+  methodCollection.createIndex(MongoDBObject(
     "parameterTypes" -> 1
   ))
   methodCollection.createIndex(MongoDBObject(
@@ -71,6 +74,11 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
   classArtifactsCollection.createIndex(MongoDBObject(
     "fullName" -> 1
   ))
+
+  def removeAllClassesAndMethods() = {
+    classCollection.remove(MongoDBObject())
+    methodCollection.remove(MongoDBObject())
+  }
 
   def upsertClass(codeClass: CodeClass): Unit = {
     val query = MongoDBObject(
@@ -156,6 +164,14 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
     classArtifactsCollection.update(query, update, upsert = true)
   }
 
+  def findMethodWithFullName(fullName: String) = {
+    methodCollection.find(MongoDBObject(
+      "fullName" -> fullName
+    )).toSeq.map(obj => {
+      grater[CodeMethod].asObject(obj)
+    })
+  }
+
   def findMethodsAccept(fullTypeName: String): Seq[CodeMethod] = {
     methodCollection.find(MongoDBObject(
       "parameterTypes" -> fullTypeName
@@ -233,8 +249,55 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
     methodInvocationCollection.update(query, grater[MethodInvocation].asDBObject(methodInvocation), upsert=true)
   }
 
-  def getMethodUsage(methodFullName: String): Seq[String] = {
-    Seq[String]()
+  def findMethodInvocations(canonicalName: String): Seq[MethodInvocation] = {
+    methodInvocationCollection.find(MongoDBObject(
+      "canonicalName" -> canonicalName
+    )).toSeq.map(obj => {
+      grater[MethodInvocation].asObject(obj)
+    })
+  }
+
+  def getMethodUsage(canonicalName: String): Seq[String] = {
+    val s1 = methodInvocationCollection.aggregate(
+      List(
+        MongoDBObject("$match" ->
+          MongoDBObject("canonicalName" -> canonicalName)
+        )
+      /*
+        MongoDBObject("$group" ->
+          MongoDBObject(
+            "_id" -> MongoDBObject(
+              "canonicalName" -> "$canonicalName",
+              "invokedByType" -> "$invokedByType"
+            )
+          )
+        )
+        */
+      )
+    ).results.size
+    println(canonicalName)
+    println("s1:", s1)
+    methodInvocationCollection.aggregate(
+      List(
+        MongoDBObject("$match" ->
+          MongoDBObject("canonicalName" -> canonicalName)
+        ),
+        MongoDBObject("$group" ->
+          MongoDBObject(
+            "_id" -> MongoDBObject(
+              "canonicalName" -> "$canonicalName",
+              "invokedByType" -> "$invokedByType"
+            )
+          )
+        ),
+        MongoDBObject("$project" ->
+          MongoDBObject(
+            "canonicalName" -> "$_id.canonicalName",
+            "invokedByType" -> "$_id.invokedByType"
+          )
+        )
+      )
+    ).results.map(obj => obj.as[String]("invokedByType")).toSeq
   }
 
   def getClassUsage(typeFullName: String): Seq[String] = {
