@@ -108,6 +108,7 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
     })
   }
 
+
   def toJson(methodScore: MethodScore): String = {
     grater[MethodScore].toPrettyJSON(methodScore)
   }
@@ -129,6 +130,13 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
       grater[CodeClass].asObject(obj)
     })
     codeClasses.toSeq
+  }
+
+
+  def getCodeMethod(canonicalName: String): Option[CodeMethod] = {
+    methodCollection.find(MongoDBObject(
+      "canonicalName" -> canonicalName
+    )).toSeq.map(grater[CodeMethod].asObject(_)).headOption
   }
 
   def getCodeMethods(canonicalNames: Seq[String]): Seq[CodeMethod] = {

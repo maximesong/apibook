@@ -62,23 +62,17 @@ class SearchManager(mongoHost: String, mongoDatabase: String, classLoader: Optio
         getCodeOf(method)
       })
     })
+  }
 
-      /*
-      val optionalArtifacts = db.getClassArtifacts(typeFullName)
-      optionalArtifacts.foreach(artifacts => {
-        println(typeFullName)
-        if (artifacts.byteCodeJarPath.nonEmpty && artifacts.sourceCodeFilePath.nonEmpty) {
-          val classNodes = JarManager.getClassNodes(artifacts.byteCodeJarPath.get)
-          classNodes.foreach(classNode => {
-
-
-          })
-          artifacts.sourceCodeFilePath.get
-        }
-        println(artifacts.byteCodeJarPath)
-        println(artifacts.sourceCodeFilePath)
+  def findUsageSnippetsOfCanonicalName(canonicalName: String): Seq[String] = {
+    val codeMethod = db.getCodeMethod(canonicalName)
+    codeMethod.map(codeMethod => {
+      val invocations = db.findMethodInvocations(codeMethod.canonicalName)
+      val invokedByMethods = db.getCodeMethods(invocations.map(_.invokedByCanonicalName))
+      invokedByMethods.flatMap(method => {
+        getCodeOf(method)
       })
-      */
+    }).getOrElse(Seq[String]())
   }
 
   def searchMethodAndReturnJson(searchText: String, n:Int = 1000): Seq[JsValue] = {

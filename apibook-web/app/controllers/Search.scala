@@ -29,6 +29,9 @@ import play.api.Play.current
  */
 object Search extends Controller with LazyLogging {
 
+  val dbHost = "localhost"
+  val dbName = "apibook"
+
   def post = Action(parse.json) { implicit request =>
     val searchText = (request.body \ "searchText").as[String]
     val resultEntries = IndexManager.trivial_search(searchText).map(document => {
@@ -99,11 +102,21 @@ object Search extends Controller with LazyLogging {
 
   def searchMethod = Action(parse.json) { implicit request =>
     val searchText = (request.body \ "searchText").as[String]
-    val searchManager = new SearchManager("localhost", "apibook", classLoader=Some(Play.classloader))
+    val searchManager = new SearchManager(dbHost, dbName, classLoader=Some(Play.classloader))
     val resultEntries = searchManager.searchMethodAndReturnJson(searchText, 50).toList
     searchManager.close()
     Ok(Json.obj(
       "result" -> resultEntries
+    ))
+  }
+
+  def searchSnippets = Action(parse.json) { implicit request =>
+    val canonicalName = (request.body \ "canonicalName").as[String]
+    val searchManager = new SearchManager(dbHost, dbName, classLoader=Some(Play.classloader))
+
+    val codeSnippets = searchManager.findUsageSnippetsOfCanonicalName(canonicalName)
+    Ok(Json.obj(
+      "result" -> codeSnippets
     ))
   }
 }
