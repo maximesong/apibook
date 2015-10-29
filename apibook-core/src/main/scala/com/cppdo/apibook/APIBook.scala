@@ -33,6 +33,7 @@ import edu.stanford.nlp.semgraph.SemanticGraphCoreAnnotations.CollapsedCCProcess
 import edu.stanford.nlp.trees.TreeCoreAnnotations.TreeAnnotation
 import edu.stanford.nlp.util.CoreMap
 import org.apache.commons.io.FileUtils
+import org.apache.commons.io.filefilter.{DirectoryFileFilter, TrueFileFilter, FalseFileFilter}
 import org.apache.lucene.document.Document
 import org.apache.lucene.search.SearcherManager
 import org.objectweb.asm.Type
@@ -312,7 +313,7 @@ object APIBook extends LazyLogging {
   }
 
   def buildArtifacts(config: Config) = {
-    val db = new CodeMongoDb("localhost","apibook")
+    val db = new CodeMongoDb(config.dbHost, config.dbName)
     config.args.foreach(path => {
       recursiveActOn(path, "jar", jarPath => {
         if (jarPath.contains("javadoc")) {
@@ -355,7 +356,7 @@ object APIBook extends LazyLogging {
   }
 
   def buildMethodIndex(config: Config) = {
-    val db = new CodeMongoDb("localhost","apibook")
+    val db = new CodeMongoDb(config.dbHost, config.dbName)
     val cachedSize = 10000
     val codeClasses = db.getCodeClasses()
     var documentsToAdd = Seq[Document]()
@@ -377,6 +378,22 @@ object APIBook extends LazyLogging {
   }
 
   def buildFromDoc(config: Config) = {
+    val db = new CodeMongoDb(config.dbHost, config.dbName)
+    if (config.rebuild) {
+      logger.info("Removing info...")
+      db.removeAllMethodInfo()
+    }
+    config.args.foreach(path => {
+      val root = new File(path)
+      val directories = root.list(DirectoryFileFilter.DIRECTORY).map(subDirectory => s"${root.getAbsolutePath}/${subDirectory}")
+      directories.foreach(directory => {
+        println(directory)
+        val files = FileUtils.listFiles(new File(directory), Array("java"), true)
+        val fileNames = files.asScala.map(_.getAbsolutePath)
+        val args = Seq("-doclet", "com.cppdo.apibook.doc.StoreDoc") ++ fileNames
+        JavaDocMain.execute(args: _*)
+      })
+    })
     config.directory.foreach(directory => {
       val files = FileUtils.listFiles(new File(directory), Array("java"), true)
       val fileNames = files.asScala.map(_.getAbsolutePath)
@@ -417,7 +434,7 @@ object APIBook extends LazyLogging {
     })
   }
   def buildClasses(config: Config): Unit = {
-    val db = new CodeMongoDb("localhost","apibook")
+    val db = new CodeMongoDb(config.dbHost, config.dbName)
     if (config.rebuild) {
       logger.info("Removing classes and methods...")
       db.removeAllClassesAndMethods()
@@ -459,7 +476,7 @@ object APIBook extends LazyLogging {
     //val classNodes = JarManager.getClassNodes("/Users/song/Projects/apibook/repository/junit/junit/4.12/junit-4.12.jar")
     //val runtimeJarPath = "/Users/song/Projects/apibook/java/rt.jar"
     //val classNodes = JarManager.getClassNodes(runtimeJarPath)
-    val db = new CodeMongoDb("localhost","apibook")
+    val db = new CodeMongoDb(config.dbHost, config.dbName)
 
     config.args.foreach(path => {
       val file = new File(path)

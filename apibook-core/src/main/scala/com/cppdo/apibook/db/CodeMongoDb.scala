@@ -80,6 +80,10 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
     methodCollection.remove(MongoDBObject())
   }
 
+  def removeAllMethodInfo() = {
+    methodInfoCollection.remove(MongoDBObject())
+  }
+
   def upsertClass(codeClass: CodeClass): Unit = {
     val query = MongoDBObject(
       "fullName" -> codeClass.fullName
