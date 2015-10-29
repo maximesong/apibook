@@ -1,8 +1,14 @@
-angular.module('apibookApp', [])
+angular.module('apibookApp', ["ui.bootstrap"])
     .config(function($locationProvider) {
         $locationProvider.html5Mode(true);
     })
-    .controller('APIBookController', ['$scope', '$http', function($scope, $http, $location) {
+    .filter('simpleName', function() {
+        return function(input) {
+            var fields = input.split(".");
+            return fields[fields.length -1];
+        }
+    })
+    .controller('APIBookController', ['$scope', '$http','$location', function($scope, $http, $location) {
         console.log("HI");
         var postJson = function (url, data, success, error) {
             $.ajax({

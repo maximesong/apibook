@@ -32,3 +32,7 @@ pre {
 
 .fixed-table .td {
 }
+
+.tooltip-inner {
+    max-width: 500px;
+}
