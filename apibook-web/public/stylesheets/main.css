@@ -36,3 +36,8 @@ pre {
 .tooltip-inner {
     max-width: 500px;
 }
+
+.api-row {
+    margin: 10px;
+    padding: 10px;
+}

@@ -13,10 +13,11 @@
         </div>
         <ul class="list-unstyled list-group">
             <div ng-repeat="item in items" class="row">
-                <div>
+                <div class="api-row">
+                    <span>{{$index+1}}.&nbsp;&nbsp; </span>
                     <a uib-tooltip="{{item.codeMethod.returnType}}">{{item.codeMethod.returnType | simpleName}}</a>
                     <span  uib-tooltip="{{item.codeMethod.fullName}}"><span class="text-muted">{{item.codeMethod.typeFullName | simpleName}}</span>.<strong class="">{{item.codeMethod.fullName | simpleName}}</strong></span>(<a ng-repeat="parameter in item.codeMethod.parameterTypes track by $index" uib-tooltip="{{parameter}}"><span ng-if="!$first">, </span>{{parameter|simpleName}}</a>)
-                    <span>{{item.value}}</span>
+                    <span class="pull-right">{{item.value}}</span>
                 </div>
             </div>
         </ul>
