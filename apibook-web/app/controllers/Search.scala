@@ -114,7 +114,8 @@ object Search extends Controller with LazyLogging {
     val canonicalName = (request.body \ "canonicalName").as[String]
     val searchManager = new SearchManager(dbHost, dbName, classLoader=Some(Play.classloader))
 
-    val codeSnippets = searchManager.findUsageSnippetsOfCanonicalName(canonicalName)
+    val codeSnippets = searchManager.findUsageSnippetsOfCanonicalName(canonicalName).toList
+    searchManager.close()
     Ok(Json.obj(
       "result" -> codeSnippets
     ))
