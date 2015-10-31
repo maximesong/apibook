@@ -2,6 +2,7 @@ package com.cppdo.apibook.index
 
 import java.io.File
 import java.nio.file.Paths
+import com.cppdo.apibook.index.IndexManager.{DocumentType, FieldName}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.en.KStemmer
@@ -26,16 +27,14 @@ import com.typesafe.config.ConfigFactory
 /**
  * Created by song on 3/4/15.
  */
-object IndexManager extends LazyLogging{
-  val indexDirectory = "data"
-  val fieldName = "Name"
 
+object IndexManager {
   object FieldName extends Enumeration {
     type FieldName = Value
 
     val Name, DbId, EnclosingClassDbId, FieldNames, Signature, Parameters, // field names in this line is deprecated
-      Type, MethodName, ClassName, ClassFullName, MethodFullName, CanonicalName, ParameterTypes, ParameterNames,
-      CommentText, ReturnType, ParameterTags, ReturnTags = Value
+    Type, MethodName, ClassName, ClassFullName, MethodFullName, CanonicalName, ParameterTypes, ParameterNames,
+    CommentText, ReturnType, ParameterTags, ReturnTags = Value
   }
 
   object DocumentType extends Enumeration {
@@ -43,6 +42,9 @@ object IndexManager extends LazyLogging{
 
     val Class, Method = Value
   }
+}
+class IndexManager(indexDirectory: String) extends LazyLogging{
+  val fieldName = "Name"
 
   private def openIndexDirectory(path: String) = {
     // for lucene 5.x
@@ -102,6 +104,30 @@ object IndexManager extends LazyLogging{
     println("Total hits: " + topDocs.totalHits)
     topDocs.scoreDocs.map(scoreDoc => {
       searcher.doc(scoreDoc.doc)
+    })
+  }
+
+  def buildTypesQuery(types: Seq[String]) = {
+    val booleanQuery = new BooleanQuery()
+
+    types.foreach(term => {
+      Array(FieldName.ClassName, FieldName.ParameterTypes, FieldName.ReturnType).foreach(name => {
+        val query = new TermQuery(new Term(name.toString, term))
+        booleanQuery.add(query, BooleanClause.Occur.SHOULD)
+      })
+    })
+    booleanQuery
+
+  }
+  def scoreTypes(types: Seq[String], maxCount: Int = 3000): Unit = {
+    val directory = openIndexDirectory(indexDirectory)
+    val reader = DirectoryReader.open(directory)
+    val searcher = new IndexSearcher(reader)
+    val analyzer = new SourceCodeAnalyzer()
+    val booleanQuery = buildBooleanQuery(types)
+    val topDocs = searcher.search(booleanQuery, maxCount)
+    topDocs.scoreDocs.map(scoreDoc => {
+      ScoredDocument(searcher.doc(scoreDoc.doc), scoreDoc.score)
     })
   }
 

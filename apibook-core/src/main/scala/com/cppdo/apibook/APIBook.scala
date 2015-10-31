@@ -9,8 +9,6 @@ import akka.actor.{PoisonPill, Props, ActorSystem}
 import akka.pattern._
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
-import com.cppdo.apibook.actor.ActorProtocols._
-import com.cppdo.apibook.actor._
 import com.cppdo.apibook.ast.{AstTreeManager, ClassVisitor, JarManager}
 import com.cppdo.apibook.db._
 import com.cppdo.apibook.forum.{StackOverflowMongoDb, StackOverflowCrawler}
@@ -105,12 +103,6 @@ object APIBook extends LazyLogging {
       opt[String]("dbHost") action {
         (dbHost, c) => c.copy(dbHost=dbHost)
       }
-      cmd("fetch")  action {
-        (_, c) => c.copy(mode="fetch")
-      }
-      cmd("build") action {
-        (_, c) => c.copy(mode="build")
-      }
       cmd("test") action {
         (_, c) => c.copy(mode="test")
       }
@@ -161,8 +153,6 @@ object APIBook extends LazyLogging {
       case Some(config) => {
         logger.info("Hi")
         config.mode match {
-          case "fetch" => fetch(config)
-          case "build" => buildIndex()
           case "test" => test()
           case "stackoverflow" => stackoverflow(config)
           case "class" => buildClasses(config)
@@ -356,6 +346,7 @@ object APIBook extends LazyLogging {
   }
 
   def buildMethodIndex(config: Config) = {
+    val indexManager = new IndexManager("data")
     val db = new CodeMongoDb(config.dbHost, config.dbName)
     val cachedSize = 10000
     val codeClasses = db.getCodeClasses()
@@ -364,16 +355,16 @@ object APIBook extends LazyLogging {
       println(codeClass.fullName)
       val documents = codeClass.methods.map(method => {
         val methodInfo = db.getMethodInfo(method.canonicalName)
-        IndexManager.buildDocument(codeClass, method, methodInfo)
+        indexManager.buildDocument(codeClass, method, methodInfo)
       })
       documentsToAdd ++= documents
       if (documentsToAdd.size > cachedSize) {
         logger.info("Add documents...")
-        IndexManager.addDocuments(documentsToAdd)
+        indexManager.addDocuments(documentsToAdd)
         documentsToAdd = Seq[Document]()
       }
     })
-    IndexManager.addDocuments(documentsToAdd)
+    indexManager.addDocuments(documentsToAdd)
     db.close()
   }
 
@@ -512,7 +503,8 @@ object APIBook extends LazyLogging {
   }
 
   def test() = {
-    val docs = IndexManager.searchMethod("iterate HashMap")
+    val indexManager = new IndexManager("data")
+    val docs = indexManager.searchMethod("iterate HashMap")
     println(docs.size)
     docs.foreach(scoredDoc => {
         println(scoredDoc.document.get(FieldName.CanonicalName.toString), scoredDoc.score)
@@ -551,71 +543,6 @@ object APIBook extends LazyLogging {
     val db = mongoClient("apibook")
   }
 
-  def fetch(config: Config) = {
-    val n = config.n.getOrElse(20)
-    val projects = ActorMaster.collectProjects(n)
-    projects.foreach(project => {
-      ActorMaster.analyzeProject(project)
-    })
-    logger.info(projects.toString())
-    ActorMaster.shutdown()
-  }
-
-  def buildIndex() = {
-    val indexWriter = IndexManager.createIndexWriter()
-    DatabaseManager.getClasses().foreach(klass => {
-      val document = IndexManager.buildDocument(klass)
-      indexWriter.addDocument(document)
-    })
-
-    DatabaseManager.getMethods().foreach(method => {
-      val document = IndexManager.buildDocument(method)
-      indexWriter.addDocument(document)
-    })
-    indexWriter.close()
-  }
-
-  def testGithub() = {
-    val system = ActorSystem()
-    val github = system.actorOf(Props(new GitHubRepositoryActor()))
-    github ! CollectProjects(10)
-  }
-
-  def buildIndexActor() = {
-    val system = ActorSystem()
-    val indexer = system.actorOf(Props(new BuildIndexActor()))
-    DatabaseManager.getClasses().foreach(klass => {
-      indexer ! BuildIndexForClass(klass)
-    })
-    DatabaseManager.getMethods().foreach(method => {
-      indexer ! BuildIndexForMethod(method)
-    })
-    indexer ! PoisonPill
-  }
-
-  def downloadPackages() = {
-    val system = ActorSystem()
-    val storageActor = system.actorOf(Props(new DbWriteActor()), "db")
-    val fetchActor = system.actorOf(Props(new PackageFetchActor(storageActor)))
-    fetchActor ! FetchLatestPackages()
-  }
-
-  def tryAnalyze() = {
-    val system = ActorSystem()
-    val storageActor = system.actorOf(Props(new DbWriteActor()), "db")
-    val analyzer = system.actorOf(Props(new ArtifactAnalyzer(storageActor)))
-    val project = DatabaseManager.getProjects().head
-    DatabaseManager.getArtifacts(project).takeLatestVersion.foreach(artifact => {
-      analyzer ! artifact
-    })
-  }
-
-  def analyze() = {
-    val system = ActorSystem()
-    val storageActor = system.actorOf(Props(new DbWriteActor()), "db")
-    val analyzer = system.actorOf(Props(new ArtifactAnalyzer(storageActor)))
-    analyzer ! AnalyzeAndSave()
-  }
 
   def testActor() = {
 
@@ -646,13 +573,6 @@ object APIBook extends LazyLogging {
     //println(methodNames.mkString("\n"))
   }
 
-  def search(query: String) = {
-    val results = IndexManager.trivial_search(query)
-    logger.info("HERE?" + results.size)
-    results.foreach(document => println(document.get("Name")))
-  }
-
-
   def testVersions(): Unit = {
     val v = MavenRepository.Version(0)
     //println(v.matchQualifierToVersion("M-1"))
@@ -672,12 +592,6 @@ object APIBook extends LazyLogging {
       })
     }).toSet.toList.sortBy(v.matchQualifierToVersion).foreach(println)
 
-  }
-
-  def testJar() = {
-    val nodes = JarManager.getClassNodes("/home/song/Downloads/asm-5.0.3.jar")
-    nodes.foreach(node => println(node.name))
-    IndexManager.buildIndex(nodes)
   }
 
   def fetchAll() = {

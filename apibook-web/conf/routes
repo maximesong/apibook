@@ -9,9 +9,6 @@ GET        /apibook                     controllers.Application.index
 GET        /stackoverflow                     controllers.Application.stackoverflow
 
 
-
-POST    /api/search     controllers.Search.post
-
 POST    /api/search/method controllers.Search.searchMethod
 
 POST    /api/search/snippets     controllers.Search.searchSnippets

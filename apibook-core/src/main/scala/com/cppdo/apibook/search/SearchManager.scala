@@ -17,6 +17,8 @@ case class MethodScore(codeMethod: CodeMethod, value: Float)
 class SearchManager(mongoHost: String, mongoDatabase: String, classLoader: Option[ClassLoader] = None) extends LazyLogging{
 
   val db = new CodeMongoDb(mongoHost, mongoDatabase, classLoader = classLoader)
+  val indexDirectory = "data"
+  val indexManager = new IndexManager(indexDirectory)
 
   def toJson(methodScores: Seq[MethodScore]): Seq[JsValue] = {
     methodScores.map(methodScore => {
@@ -80,6 +82,10 @@ class SearchManager(mongoHost: String, mongoDatabase: String, classLoader: Optio
       Json.parse(db.toJson(score))
     })
   }
+
+  def getLuceneScore(queryText: String, n: Int = 1000) = {
+    val matchingScores = indexManager.searchMethod(queryText, n)
+  }
   def searchMethod(searchText: String, n: Int = 1000): Seq[MethodScore] = {
     case class ClassScore(codeClass: CodeClass, value: Float)
     case class ScorePair(key: String, value: Float)
@@ -107,7 +113,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String, classLoader: Optio
     })
     val filteredQueryText = filteredTokens.mkString(" ")
     logger.info(s"Filtered QueryText: ${filteredQueryText}")
-    val matchingScores = IndexManager.searchMethod(filteredQueryText).map(scoredDoc => {
+    val matchingScores = indexManager.searchMethod(filteredQueryText).map(scoredDoc => {
       if (scoredDoc.document.get(FieldName.CanonicalName.toString).startsWith("java.util.HashMap")) {
         //println(scoredDoc.document.get(FieldName.CanonicalName.toString), scoredDoc.score)
       }
