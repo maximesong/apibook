@@ -46,14 +46,14 @@ object IndexManager {
 class IndexManager(indexDirectory: String) extends LazyLogging{
   val fieldName = "Name"
 
-  private def openIndexDirectory(path: String) = {
+  protected def openIndexDirectory(path: String) = {
     // for lucene 5.x
     FSDirectory.open(Paths.get(indexDirectory))
     // for lucene 4.x
     //FSDirectory.open(new File(path))
   }
 
-  private def createIndexWriterConfig(analyzer: Analyzer) = {
+  protected def createIndexWriterConfig(analyzer: Analyzer) = {
     // for lucene 5.x
     val indexWriterConfig = new IndexWriterConfig(analyzer)
     // for lucene 4.x
@@ -70,90 +70,11 @@ class IndexManager(indexDirectory: String) extends LazyLogging{
     indexWriter
   }
 
-  def buildIndex(classNodes: Seq[ClassNode]) = {
-    val directory = openIndexDirectory(indexDirectory)
-    val analyzer = new SourceCodeAnalyzer()
-    val indexWriterConfig = createIndexWriterConfig(analyzer)
-    val indexWriter = new IndexWriter(directory, indexWriterConfig)
-    val documents = classNodes.map(buildDocument(_))
-    indexWriter.addDocuments(documents.asJava)
-    indexWriter.close()
-  }
-
   def addDocuments(documents: Seq[Document]) = {
     val directory = openIndexDirectory(indexDirectory)
-    val analyzer = new SourceCodeAnalyzer()
-    val indexWriterConfig = createIndexWriterConfig(analyzer)
-    val indexWriter = new IndexWriter(directory, indexWriterConfig)
+    val indexWriter = createIndexWriter()
     indexWriter.addDocuments(documents.asJava)
     indexWriter.close()
-  }
-
-  def search(queryText: String, count: Int = 10): Seq[Document] = {
-    val directory = openIndexDirectory(indexDirectory)
-    val reader = DirectoryReader.open(directory)
-    val searcher = new IndexSearcher(reader)
-    val analyzer = new SourceCodeAnalyzer()
-    val parser = new QueryParser(fieldName, analyzer)
-    val booleanQuery = new BooleanQuery()
-    //val q = new MatchAllDocsQuery()
-    val query = parser.parse(queryText)
-    val topDocs = searcher.search(query, count)
-
-    //val topDocs = searcher.search(q, null, 100)
-    println("Total hits: " + topDocs.totalHits)
-    topDocs.scoreDocs.map(scoreDoc => {
-      searcher.doc(scoreDoc.doc)
-    })
-  }
-
-  def buildTypesQuery(types: Seq[String]) = {
-    val booleanQuery = new BooleanQuery()
-
-    types.foreach(term => {
-      Array(FieldName.ClassName, FieldName.ParameterTypes, FieldName.ReturnType).foreach(name => {
-        val query = new TermQuery(new Term(name.toString, term))
-        booleanQuery.add(query, BooleanClause.Occur.SHOULD)
-      })
-    })
-    booleanQuery
-
-  }
-  def scoreTypes(types: Seq[String], maxCount: Int = 3000): Unit = {
-    val directory = openIndexDirectory(indexDirectory)
-    val reader = DirectoryReader.open(directory)
-    val searcher = new IndexSearcher(reader)
-    val analyzer = new SourceCodeAnalyzer()
-    val booleanQuery = buildBooleanQuery(types)
-    val topDocs = searcher.search(booleanQuery, maxCount)
-    topDocs.scoreDocs.map(scoreDoc => {
-      ScoredDocument(searcher.doc(scoreDoc.doc), scoreDoc.score)
-    })
-  }
-
-  def trivial_search(queryText: String): Seq[Document] = {
-    val directory = openIndexDirectory(indexDirectory)
-    val reader = DirectoryReader.open(directory)
-    val searcher = new IndexSearcher(reader)
-
-    val terms = queryText.split(" ")
-
-    val booleanQuery = new BooleanQuery()
-
-    terms.foreach(term => {
-      Array(FieldName.Name, FieldName.Type, FieldName.FieldNames).foreach(name => {
-        val query = new TermQuery(new Term(name.toString, term))
-        booleanQuery.add(query, BooleanClause.Occur.SHOULD)
-      })
-    })
-    //val q = new MatchAllDocsQuery()
-    val topDocs = searcher.search(booleanQuery, 100)
-
-    //val topDocs = searcher.search(q, null, 100)
-    println("Total hits: " + topDocs.totalHits)
-    topDocs.scoreDocs.map(scoreDoc => {
-      searcher.doc(scoreDoc.doc)
-    })
   }
 
   def buildBooleanQuery(terms: Seq[String]) = {
@@ -208,42 +129,6 @@ class IndexManager(indexDirectory: String) extends LazyLogging{
     })
   }
 
-  private def buildDocument(classNode: ClassNode): Document = {
-    val document = new Document
-    val nameField = new TextField(fieldName, classNode.name, Field.Store.YES)
-    document.add(nameField)
-    document
-  }
-
-  def buildDocument(klass: Class): Document = {
-    val document = new Document
-    val nameField = new TextField(FieldName.Name.toString, klass.fullName, Field.Store.YES)
-    val typeField = new StringField(FieldName.Type.toString, DocumentType.Class.toString, Field.Store.YES)
-    val dbIdField = new StoredField(FieldName.DbId.toString, klass.id.get)
-    val fieldNamesField = new TextField(FieldName.FieldNames.toString, klass.fieldNames, Field.Store.NO)
-    document.add(nameField)
-    document.add(typeField)
-    document.add(dbIdField)
-    document.add(fieldNamesField)
-    document
-  }
-
-  def buildDocument(method: Method): Document = {
-    val document = new Document
-    val nameField = new TextField(FieldName.Name.toString, method.name, Field.Store.YES)
-    val typeField = new StringField(FieldName.Type.toString, DocumentType.Method.toString, Field.Store.YES)
-    val dbIdField = new StoredField(FieldName.DbId.toString, method.id.get)
-    val signatureField = new TextField(FieldName.Signature.toString, method.signature, Field.Store.YES)
-    val parameterField = new TextField(FieldName.Parameters.toString, method.parameters, Field.Store.YES)
-    val enclosingClassDbIdField = new StoredField(FieldName.EnclosingClassDbId.toString, method.enclosingClassId)
-    document.add(nameField)
-    document.add(typeField)
-    document.add(dbIdField)
-    document.add(enclosingClassDbIdField)
-    document.add(signatureField)
-    document.add(parameterField)
-    document
-  }
 
   def buildDocument(codeClass: CodeClass, codeMethod: CodeMethod, methodInfo: Option[MethodInfo]): Document = {
     val document = new Document

@@ -2,7 +2,7 @@ package com.cppdo.apibook.search
 
 import com.cppdo.apibook.ast.{AstTreeManager, JarManager}
 import com.cppdo.apibook.db.{CodeClass, CodeMethod, CodeMongoDb}
-import com.cppdo.apibook.index.IndexManager
+import com.cppdo.apibook.index.{MethodTypesIndexManager, IndexManager}
 import com.cppdo.apibook.index.IndexManager.FieldName
 import com.cppdo.apibook.nlp.CoreNLP
 import com.typesafe.scalalogging.LazyLogging
@@ -14,11 +14,14 @@ import play.api.libs.json.{JsArray, Json, JsValue}
  */
 case class MethodScore(codeMethod: CodeMethod, value: Float)
 
-class SearchManager(mongoHost: String, mongoDatabase: String, classLoader: Option[ClassLoader] = None) extends LazyLogging{
+class SearchManager(mongoHost: String, mongoDatabase: String,
+                    methodIndexDirectory: String = "methodIndex", methodTypesIndexDirectory: String = "methodTypeIndex",
+                    classLoader: Option[ClassLoader] = None) extends LazyLogging{
 
   val db = new CodeMongoDb(mongoHost, mongoDatabase, classLoader = classLoader)
   val indexDirectory = "data"
   val indexManager = new IndexManager(indexDirectory)
+  val methodTypesIndexManager = new MethodTypesIndexManager(methodTypesIndexDirectory)
 
   def toJson(methodScores: Seq[MethodScore]): Seq[JsValue] = {
     methodScores.map(methodScore => {
@@ -86,6 +89,17 @@ class SearchManager(mongoHost: String, mongoDatabase: String, classLoader: Optio
   def getLuceneScore(queryText: String, n: Int = 1000) = {
     val matchingScores = indexManager.searchMethod(queryText, n)
   }
+
+  def searchMethodTypes(typeFullNames: Seq[String], maxCount: Int = 3000, explain: Boolean = false): Seq[MethodScore] = {
+    val scoredDocuments = methodTypesIndexManager.searchMethodTypes(typeFullNames, maxCount, explain)
+    val canonicalNames = scoredDocuments.map(_.document.get(FieldName.CanonicalName.toString))
+    val codeMethods = db.getCodeMethods(canonicalNames)
+    val scores = scoredDocuments.map(_.score)
+    codeMethods.zip(scores).map(pair => {
+      MethodScore(pair._1, pair._2)
+    })
+  }
+
   def searchMethod(searchText: String, n: Int = 1000): Seq[MethodScore] = {
     case class ClassScore(codeClass: CodeClass, value: Float)
     case class ScorePair(key: String, value: Float)

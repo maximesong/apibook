@@ -140,9 +140,13 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
   }
 
   def getCodeMethods(canonicalNames: Seq[String]): Seq[CodeMethod] = {
-    methodCollection.find("canonicalName" $in canonicalNames).toSeq.map(obj => {
+    val codeMethods = methodCollection.find("canonicalName" $in canonicalNames).toSeq.map(obj => {
       grater[CodeMethod].asObject(obj)
     })
+    val nameMapping = codeMethods.map(codeMethod => {
+      codeMethod.canonicalName -> codeMethod
+    }).toMap
+    canonicalNames.map(nameMapping(_))
   }
 
   def getMethodInfo(fullName: String): Option[MethodInfo] = {

@@ -10,3 +10,6 @@ index:
 
 web:
 	sbt "~web/run"
+
+typeExplain:
+	sbt "core/run searchMethodTypes -n 30 --explain java.io.InputStream"

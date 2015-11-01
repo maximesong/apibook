@@ -12,7 +12,7 @@ import akka.util.Timeout
 import com.cppdo.apibook.ast.{AstTreeManager, ClassVisitor, JarManager}
 import com.cppdo.apibook.db._
 import com.cppdo.apibook.forum.{StackOverflowMongoDb, StackOverflowCrawler}
-import com.cppdo.apibook.index.IndexManager
+import com.cppdo.apibook.index.{MethodTypesIndexManager, IndexManager}
 import com.cppdo.apibook.index.IndexManager.FieldName
 import com.cppdo.apibook.repository.{GitHubRepositoryManager, ArtifactsManager, MavenRepository}
 import com.cppdo.apibook.repository.ArtifactsManager.RichArtifact
@@ -62,6 +62,7 @@ object APIBook extends LazyLogging {
   case class Config(mode: String = "", n: Option[Int] = None, outputPath: Option[String] = None, begin: Int = 0,
                    overwrite: Option[Boolean] = None, rebuild: Boolean=false,
                     directory: Option[String] = None, file: Option[String] = None, repository: Option[String] = None,
+                    explain: Boolean = false,
                      args: Seq[String] = Seq(), dbHost: String = "localhost", dbName: String = "apibook")
   def main(args: Array[String]): Unit = {
     val parser = new scopt.OptionParser[Config]("apibook") {
@@ -97,6 +98,9 @@ object APIBook extends LazyLogging {
       opt[Unit]("rebuild") action {
         (_, c) => c.copy(rebuild=true)
       }
+      opt[Unit]("explain") action {
+        (_, c) => c.copy(explain=true)
+      }
       opt[String]("dbName") action {
         (dbName, c) => c.copy(dbName=dbName)
       }
@@ -127,11 +131,17 @@ object APIBook extends LazyLogging {
       cmd("index") action {
         (_, c) => c.copy(mode="index")
       }
+      cmd("typeIndex") action {
+        (_, c) => c.copy(mode="typeIndex")
+      }
       cmd("review") action {
         (_, c) => c.copy(mode="review")
       }
       cmd("search") action {
         (_, c) => c.copy(mode="search")
+      }
+      cmd("searchMethodTypes") action {
+        (_, c) => c.copy(mode="searchMethodTypes")
       }
       cmd("download") action {
         (_, c) => c.copy(mode="download")
@@ -161,7 +171,9 @@ object APIBook extends LazyLogging {
           case "const" => buildConstant(config)
           case "info" => buildFromDoc(config)
           case "index" => buildMethodIndex(config)
+          case "typeIndex" => buildMethodTypeIndex(config)
           case "search" => search(config)
+          case "searchMethodTypes" => searchMethodTypes(config)
           case "review" => review(config)
           case "artifact" => buildArtifacts(config)
           case "download" => download(config)
@@ -347,6 +359,30 @@ object APIBook extends LazyLogging {
 
   def buildMethodIndex(config: Config) = {
     val indexManager = new IndexManager("data")
+    val db = new CodeMongoDb(config.dbHost, config.dbName)
+    val cachedSize = 10000
+    val codeClasses = db.getCodeClasses()
+    var documentsToAdd = Seq[Document]()
+    codeClasses.foreach(codeClass => {
+      println(codeClass.fullName)
+      val documents = codeClass.methods.map(method => {
+        val methodInfo = db.getMethodInfo(method.canonicalName)
+        indexManager.buildDocument(codeClass, method, methodInfo)
+      })
+      documentsToAdd ++= documents
+      if (documentsToAdd.size > cachedSize) {
+        logger.info("Add documents...")
+        indexManager.addDocuments(documentsToAdd)
+        documentsToAdd = Seq[Document]()
+      }
+    })
+    indexManager.addDocuments(documentsToAdd)
+    db.close()
+  }
+
+  def buildMethodTypeIndex(config: Config) = {
+    val indexDirectory = config.outputPath.getOrElse("methodTypeIndex")
+    val indexManager = new MethodTypesIndexManager(indexDirectory)
     val db = new CodeMongoDb(config.dbHost, config.dbName)
     val cachedSize = 10000
     val codeClasses = db.getCodeClasses()
@@ -571,6 +607,15 @@ object APIBook extends LazyLogging {
     val manager = new SearchManager(config.dbHost, config.dbName)
     val methodNames = manager.searchMethod(searchText)
     //println(methodNames.mkString("\n"))
+  }
+
+  def searchMethodTypes(config: Config) = {
+    val maxCount = config.n.getOrElse(50)
+    val manager = new SearchManager(config.dbHost, config.dbName)
+    val methodScores = manager.searchMethodTypes(config.args, maxCount, config.explain)
+    methodScores.foreach(methodScore => {
+      println(s"${methodScore.codeMethod.canonicalName}: ${methodScore.value}")
+    })
   }
 
   def testVersions(): Unit = {
