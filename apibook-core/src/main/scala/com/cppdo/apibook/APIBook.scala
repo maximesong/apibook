@@ -6,9 +6,6 @@ import java.nio.file.{Path, Paths, Files}
 import java.util.Properties
 
 import akka.actor.{PoisonPill, Props, ActorSystem}
-import akka.pattern._
-import akka.routing.RoundRobinPool
-import akka.util.Timeout
 import com.cppdo.apibook.ast.{AstTreeManager, ClassVisitor, JarManager}
 import com.cppdo.apibook.db._
 import com.cppdo.apibook.forum.{StackOverflowMongoDb, StackOverflowCrawler}
@@ -35,16 +32,7 @@ import org.apache.commons.io.filefilter.{DirectoryFileFilter, TrueFileFilter, Fa
 import org.apache.lucene.document.Document
 import org.apache.lucene.search.SearcherManager
 import org.objectweb.asm.Type
-import org.jsoup.Jsoup
-import org.objectweb.asm.tree.ClassNode
-import play.libs.Json
-import slick.driver.JdbcDriver
-import slick.jdbc.meta.MTable
-import slick.model.ForeignKeyAction.NoAction
 
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-import scala.concurrent.duration._
 import scala.io.Source
 
 import scala.collection.JavaConverters._
@@ -125,6 +113,9 @@ object APIBook extends LazyLogging {
       cmd("usage") action {
         (_, c) => c.copy(mode="usage")
       }
+      cmd("viewUsage") action {
+        (_, c) => c.copy(mode="viewUsage")
+      }
       cmd("const") action {
         (_, c) => c.copy(mode="const")
       }
@@ -170,6 +161,7 @@ object APIBook extends LazyLogging {
           case "stackoverflow" => stackoverflow(config)
           case "class" => buildClasses(config)
           case "usage" => updateUsage(config)
+          case "viewUsage" => viewUsage(config)
           case "find" => find(config)
           case "const" => buildConstant(config)
           case "info" => buildFromDoc(config)
@@ -209,6 +201,17 @@ object APIBook extends LazyLogging {
     //testGithub()
     //test()
 
+  }
+
+  def viewUsage(config: Config) = {
+    val db = new CodeMongoDb(config.dbHost, config.dbName)
+    val methods = config.args.flatMap(methodFullName => {
+      db.findMethodsWithFullName(methodFullName)
+    })
+    val usageCounts = db.getUsageCounts(methods.map(_.canonicalName))
+    usageCounts.foreach{ case (canonicalName, count) => {
+      println(s"${canonicalName}: ${count}")
+    }}
   }
 
   def calculateSnippets(config: Config) = {

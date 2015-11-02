@@ -56,7 +56,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
   }
 
   def findUsageSnippets(methodFullName: String) = {
-    val codeMethods = db.findMethodWithFullName(methodFullName)
+    val codeMethods = db.findMethodsWithFullName(methodFullName)
     codeMethods.foreach(codeMethod => {
       logger.info(s"Usage for: ${codeMethod.canonicalName}")
       val invocations = db.findMethodInvocations(codeMethod.canonicalName)
@@ -100,30 +100,74 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     })
   }
 
+  def searchMethodV2(searchText: String, n: Int = 1000): Seq[MethodScore] = {
+    println("############## Search Method V2 ----------------")
+    val posMap = CoreNLP.getPOSMap(searchText)
+    val tokens = searchText.split(" ")
+    val groupedTokens = groupTokens(tokens, posMap)
+    val filteredTokens = searchText.split(" ").filter(token => {
+      groupedTokens.nouns.contains(token) || groupedTokens.verbs.contains(token) || groupedTokens.adjs.contains(token)
+    })
+    val filteredQueryText = filteredTokens.mkString(" ")
+    logger.info(posMap.toString)
+    logger.info(s"Filtered QueryText: ${filteredQueryText}")
+    val nounTypes = groupedTokens.nouns.flatMap(noun => db.findClassesWithName(noun))
+    val methodTypesScores = methodTypesIndexManager.searchMethodTypes(nounTypes.map(_.fullName))
+    val methodScores = indexManager.searchMethod(filteredQueryText)
+    var scores = Map[String, Score]()
+    methodTypesScores.foreach(scoredMethod => {
+      val canonicalName = scoredMethod.document.get(FieldName.CanonicalName.toString)
+      if (scores.contains(canonicalName)) {
+        scores += canonicalName -> scores(canonicalName).copy(methodTypesScore = scoredMethod.score)
+      } else {
+        scores += canonicalName -> Score(methodTypesScore = scoredMethod.score)
+      }
+    })
+    methodScores.foreach(scoredMethod => {
+      val canonicalName = scoredMethod.document.get(FieldName.CanonicalName.toString)
+      if (scores.contains(canonicalName)) {
+        scores + canonicalName -> scores(canonicalName).copy(methodScore = scoredMethod.score)
+      } else {
+        scores += canonicalName -> Score(methodScore = scoredMethod.score)
+      }
+    })
+    val usageScores = scores.keys.toSeq
+
+    Seq[MethodScore]()
+  }
+
+  case class Score(methodScore: Float = 0, methodTypesScore: Float = 0, usageScore: Float = 0) {
+    val baseScore = 0.1F
+    def score = (baseScore + methodScore) * (baseScore + methodTypesScore) *  (baseScore + usageScore)
+  }
+
+  case class GroupedTokens(verbs: Seq[String], nouns: Seq[String], adjs: Seq[String], others: Seq[String])
+
+  def groupTokens(tokens: Seq[String], posMap: Map[String, String]): GroupedTokens = {
+    val verbs = tokens.filter(token => {
+      posMap.get(token).exists(pos => pos.startsWith("VB"))
+    })
+    val nouns = tokens.filter(token => {
+      posMap.get(token).exists(pos => pos.startsWith("NN"))
+    })
+    val adjs = tokens.filter(token => {
+      posMap.get(token).exists(pos => pos.startsWith("JJ"))
+    })
+    val others = tokens.filter(token => {
+      (!verbs.contains(token)) && (!nouns.contains(token)) && (!adjs.contains(token))
+    })
+    GroupedTokens(verbs, nouns, adjs, others)
+  }
+
   def searchMethod(searchText: String, n: Int = 1000): Seq[MethodScore] = {
     case class ClassScore(codeClass: CodeClass, value: Float)
     case class ScorePair(key: String, value: Float)
     val posMap = CoreNLP.getPOSMap(searchText)
+    val tokens = searchText.split(" ")
     logger.info(posMap.toString)
-    var verbs = Seq[String]()
-    var nouns = Seq[String]()
-    var adjs = Seq[String]()
+    val groupedTokens = groupTokens(tokens, posMap)
     val filteredTokens = searchText.split(" ").filter(token => {
-      posMap.get(token).exists(tag => {
-        if (tag.startsWith("VB")) {
-          verbs :+= token
-          true
-        }
-        else if (tag.startsWith("NN")) {
-          nouns :+= token
-          true
-        }
-        else if (tag.startsWith("JJ")) {
-          adjs :+= token
-          true
-        }
-        else false
-      })
+      groupedTokens.nouns.contains(token) || groupedTokens.verbs.contains(token) || groupedTokens.adjs.contains(token)
     })
     val filteredQueryText = filteredTokens.mkString(" ")
     logger.info(s"Filtered QueryText: ${filteredQueryText}")
@@ -133,7 +177,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
       }
       ScorePair(scoredDoc.document.get(FieldName.CanonicalName.toString), scoredDoc.score)
     })
-    val mentionedNounTypes = nouns.map(noun => (noun, db.findClassOfName(noun))).filter(_._2.nonEmpty)
+    val mentionedNounTypes = groupedTokens.nouns.map(noun => (noun, db.findClassesWithName(noun))).filter(_._2.nonEmpty)
     val usingScores = mentionedNounTypes.flatMap(pair => {
       val (noun, codeTypes) = pair
       codeTypes.flatMap(codeClass => {

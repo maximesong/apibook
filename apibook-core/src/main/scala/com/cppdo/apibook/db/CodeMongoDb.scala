@@ -113,7 +113,7 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
     grater[MethodScore].toPrettyJSON(methodScore)
   }
 
-  def findClassOfName(name: String): Seq[CodeClass] = {
+  def findClassesWithName(name: String): Seq[CodeClass] = {
     var regex = if (name.contains(".")) s"${name}$$" else s"[.]${name}$$"
     classCollection.find(MongoDBObject(
       "fullName" -> MongoDBObject(
@@ -180,7 +180,7 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
     classArtifactsCollection.update(query, update, upsert = true)
   }
 
-  def findMethodWithFullName(fullName: String) = {
+  def findMethodsWithFullName(fullName: String): Seq[CodeMethod] = {
     methodCollection.find(MongoDBObject(
       "fullName" -> fullName
     )).toSeq.map(obj => {
@@ -271,6 +271,39 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
     )).toSeq.map(obj => {
       grater[MethodInvocation].asObject(obj)
     })
+  }
+
+  def getUsageCounts(canonicalNames: Seq[String]): Map[String, Int] = {
+    val aggregation = methodInvocationCollection.aggregate(
+      List(
+        MongoDBObject("$match" ->
+          MongoDBObject(
+            "canonicalName" -> MongoDBObject(
+              "$in" -> canonicalNames
+            )
+          )
+        ),
+        MongoDBObject("$group" ->
+          MongoDBObject(
+            "_id" -> MongoDBObject(
+              "canonicalName" -> "$canonicalName",
+              "invokedByType" -> "$invokedByType"
+            )
+          )
+        ),
+        MongoDBObject("$group" ->
+          MongoDBObject(
+            "_id" -> "$_id.canonicalName",
+            "count" -> MongoDBObject(
+              "$sum" -> 1
+            )
+          )
+        )
+      )
+    )
+    aggregation.results.toSeq.map(obj => {
+      obj.as[String]("_id") -> obj.as[Int]("count")
+    }).toMap
   }
 
   def getMethodUsage(canonicalName: String): Seq[String] = {
