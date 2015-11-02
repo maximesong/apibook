@@ -2,7 +2,7 @@ package com.cppdo.apibook.search
 
 import com.cppdo.apibook.ast.{AstTreeManager, JarManager}
 import com.cppdo.apibook.db.{CodeClass, CodeMethod, CodeMongoDb}
-import com.cppdo.apibook.index.{MethodTypesIndexManager, IndexManager}
+import com.cppdo.apibook.index.{MethodIndexManager, MethodTypesIndexManager, IndexManager}
 import com.cppdo.apibook.index.IndexManager.FieldName
 import com.cppdo.apibook.nlp.CoreNLP
 import com.typesafe.scalalogging.LazyLogging
@@ -30,6 +30,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
   val db = new CodeMongoDb(mongoHost, mongoDatabase, classLoader = classLoader)
   val indexDirectory = "data"
   val indexManager = new IndexManager(indexDirectory)
+  val methodIndexManager = new MethodIndexManager(methodIndexDirectory)
   val methodTypesIndexManager = new MethodTypesIndexManager(methodTypesIndexDirectory)
 
   def toJson(methodScores: Seq[MethodScore]): Seq[JsValue] = {
@@ -109,8 +110,27 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     })
   }
 
-  def searchMethodV2(searchText: String, n: Int = 1000, fetchFactor: Int = 10): Seq[MethodDetailScore] = {
-    println("############## Search Method V2 ----------------")
+  def searchMethod(searchText: String, n: Int = 1000, explain: Boolean = false): Seq[MethodScore] = {
+    val posMap = CoreNLP.getPOSMap(searchText)
+    val tokens = searchText.split(" ")
+    val groupedTokens = groupTokens(tokens, posMap)
+    val filteredTokens = searchText.split(" ").filter(token => {
+      groupedTokens.nouns.contains(token) || groupedTokens.verbs.contains(token) || groupedTokens.adjs.contains(token)
+    })
+    val filteredQueryText = filteredTokens.mkString(" ")
+    logger.info(posMap.toString)
+    logger.info(s"Filtered QueryText: ${filteredQueryText}")
+    val scoredDocuments = methodIndexManager.searchMethodV2(filteredQueryText, n, explain=explain)
+    val canonicalNames = scoredDocuments.map(_.document.get(FieldName.CanonicalName.toString))
+    val codeMethods = db.getCodeMethods(canonicalNames)
+    val scores = scoredDocuments.map(_.score)
+    codeMethods.zip(scores).map(pair => {
+      MethodScore(pair._1, pair._2)
+    })
+  }
+
+  def searchV2(searchText: String, n: Int = 1000, fetchFactor: Int = 10, explain: Boolean = false): Seq[MethodDetailScore] = {
+    println("############## Search V2 ----------------")
     val fetchCount = n * fetchFactor
     val posMap = CoreNLP.getPOSMap(searchText)
     val tokens = searchText.split(" ")
@@ -123,7 +143,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     logger.info(s"Filtered QueryText: ${filteredQueryText}")
     val nounTypes = groupedTokens.nouns.flatMap(noun => db.findClassesWithName(noun))
     val methodTypesScores = methodTypesIndexManager.searchMethodTypes(nounTypes.map(_.fullName), fetchCount)
-    val methodScores = indexManager.searchMethod(filteredQueryText, fetchCount)
+    val methodScores = methodIndexManager.searchMethodV2(filteredQueryText, fetchCount, explain=explain)
     var scores = Map[String, Score]()
     methodTypesScores.foreach(scoredMethod => {
       val canonicalName = scoredMethod.document.get(FieldName.CanonicalName.toString)
@@ -172,7 +192,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     GroupedTokens(verbs, nouns, adjs, others)
   }
 
-  def searchMethod(searchText: String, n: Int = 1000): Seq[MethodScore] = {
+  def search(searchText: String, n: Int = 1000): Seq[MethodScore] = {
     case class ClassScore(codeClass: CodeClass, value: Float)
     case class ScorePair(key: String, value: Float)
     val posMap = CoreNLP.getPOSMap(searchText)

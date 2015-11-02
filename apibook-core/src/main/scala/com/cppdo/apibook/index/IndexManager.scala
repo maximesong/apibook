@@ -89,16 +89,8 @@ class IndexManager(indexDirectory: String) extends LazyLogging{
     })
     booleanQuery
   }
-  def searchMethod(queryText: String, n: Int = 10000, canonicalName: Option[String] = None, typeFullName: Option[String] = None): Seq[ScoredDocument] = {
-    val directory = openIndexDirectory(indexDirectory)
-    val reader = DirectoryReader.open(directory)
-    val searcher = new IndexSearcher(reader)
-    val analyzer = new SourceCodeAnalyzer()
-    /*
-    val queryParser = new QueryParser(null, analyzer)
-    val q = queryParser.createBooleanQuery("a", "iterate a file running runs HashMap iteration")
-    println(q.toString)
-    */
+
+  def tokenizeQueryText(queryText: String, analyzer: Analyzer): Seq[String] = {
     val stream = analyzer.tokenStream(null, queryText)
     val cattr = stream.addAttribute(classOf[CharTermAttribute])
     stream.reset()
@@ -108,6 +100,19 @@ class IndexManager(indexDirectory: String) extends LazyLogging{
     }
     stream.end()
     stream.close()
+    analyzedTerms
+  }
+
+  def searchMethod(queryText: String, n: Int = 10000, canonicalName: Option[String] = None, typeFullName: Option[String] = None): Seq[ScoredDocument] = {
+    val directory = openIndexDirectory(indexDirectory)
+    val reader = DirectoryReader.open(directory)
+    val searcher = new IndexSearcher(reader)
+    /*
+    val queryParser = new QueryParser(null, analyzer)
+    val q = queryParser.createBooleanQuery("a", "iterate a file running runs HashMap iteration")
+    println(q.toString)
+    */
+    val analyzedTerms = tokenizeQueryText(queryText, new SourceCodeAnalyzer())
     logger.info(s"analyzed terms:${analyzedTerms.mkString(" ")}")
     val booleanQuery = buildBooleanQuery(analyzedTerms)
     typeFullName.foreach(fullName => {

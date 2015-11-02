@@ -137,6 +137,9 @@ object APIBook extends LazyLogging {
       cmd("searchV2") action {
         (_, c) => c.copy(mode="searchV2")
       }
+      cmd("searchMethod") action {
+        (_, c) => c.copy(mode="searchMethod")
+      }
       cmd("searchMethodTypes") action {
         (_, c) => c.copy(mode="searchMethodTypes")
       }
@@ -168,11 +171,13 @@ object APIBook extends LazyLogging {
           case "find" => find(config)
           case "const" => buildConstant(config)
           case "info" => buildFromDoc(config)
-          case "index" => buildMethodIndex(config)
+          case "index" => buildIndex(config)
+          case "typeIndex" => buildMethodTypesIndex(config)
           case "typeIndex" => buildMethodTypesIndex(config)
           case "search" => search(config)
           case "searchV2" => searchV2(config)
           case "searchMethodTypes" => searchMethodTypes(config)
+          case "searchMethod" => searchMethod(config)
           case "review" => review(config)
           case "artifact" => buildArtifacts(config)
           case "download" => download(config)
@@ -627,11 +632,20 @@ object APIBook extends LazyLogging {
     val maxCount = config.n.getOrElse(50)
     val searchText = config.args.mkString(" ")
     val manager = new SearchManager(config.dbHost, config.dbName)
-    val methodDetailScores = manager.searchMethodV2(searchText, maxCount)
+    val methodDetailScores = manager.searchV2(searchText, maxCount, explain = config.explain)
     methodDetailScores.foreach(detailScore => {
       println(s"${detailScore.codeMethod.canonicalName}: ${detailScore.score.score}")
       println(s"\t${detailScore.score.explain}")
 
+    })
+  }
+
+  def searchMethod(config: Config) = {
+    val maxCount = config.n.getOrElse(50)
+    val manager = new SearchManager(config.dbHost, config.dbName)
+    val methodScores = manager.search(config.args.mkString(" "), maxCount)
+    methodScores.foreach(methodScore => {
+      println(s"${methodScore.codeMethod.canonicalName}: ${methodScore.value}")
     })
   }
 
