@@ -6,7 +6,7 @@ import org.apache.lucene.analysis.core.WhitespaceAnalyzer
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.document.{TextField, Field, StringField, Document}
 import org.apache.lucene.index.{IndexWriter, Term, DirectoryReader}
-import org.apache.lucene.search.{BooleanQuery, BooleanClause, TermQuery, IndexSearcher}
+import org.apache.lucene.search._
 
 /**
  * Created by song on 10/31/15.
@@ -45,11 +45,13 @@ class MethodTypesIndexManager(indexDirectory: String) extends IndexManager(index
     val booleanQuery = new BooleanQuery()
 
     terms.foreach(term => {
+      val typeQuery = new DisjunctionMaxQuery(0)
       Array(FieldName.ClassFullName, FieldName.ParameterTypes,
         FieldName.ReturnType).foreach(name => {
         val query = new TermQuery(new Term(name.toString, term))
-        booleanQuery.add(query, BooleanClause.Occur.SHOULD)
+        typeQuery.add(query)
       })
+      booleanQuery.add(typeQuery, BooleanClause.Occur.SHOULD)
     })
     booleanQuery
   }
