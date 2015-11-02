@@ -62,7 +62,7 @@ object APIBook extends LazyLogging {
   case class Config(mode: String = "", n: Option[Int] = None, outputPath: Option[String] = None, begin: Int = 0,
                    overwrite: Option[Boolean] = None, rebuild: Boolean=false,
                     directory: Option[String] = None, file: Option[String] = None, repository: Option[String] = None,
-                    explain: Boolean = false,
+                    explain: Boolean = false, append: Boolean = false,
                      args: Seq[String] = Seq(), dbHost: String = "localhost", dbName: String = "apibook")
   def main(args: Array[String]): Unit = {
     val parser = new scopt.OptionParser[Config]("apibook") {
@@ -106,6 +106,9 @@ object APIBook extends LazyLogging {
       }
       opt[String]("dbHost") action {
         (dbHost, c) => c.copy(dbHost=dbHost)
+      }
+      opt[Unit]('a', "append") action {
+        (_, c) => c.copy(append=true)
       }
       cmd("test") action {
         (_, c) => c.copy(mode="test")
@@ -171,7 +174,7 @@ object APIBook extends LazyLogging {
           case "const" => buildConstant(config)
           case "info" => buildFromDoc(config)
           case "index" => buildMethodIndex(config)
-          case "typeIndex" => buildMethodTypeIndex(config)
+          case "typeIndex" => buildMethodTypesIndex(config)
           case "search" => search(config)
           case "searchMethodTypes" => searchMethodTypes(config)
           case "review" => review(config)
@@ -380,8 +383,12 @@ object APIBook extends LazyLogging {
     db.close()
   }
 
-  def buildMethodTypeIndex(config: Config) = {
+  def buildMethodTypesIndex(config: Config) = {
     val indexDirectory = config.outputPath.getOrElse("methodTypeIndex")
+    if (!config.append) {
+      logger.info("removing old index...")
+      FileUtils.deleteDirectory(new File(indexDirectory))
+    }
     val indexManager = new MethodTypesIndexManager(indexDirectory)
     val db = new CodeMongoDb(config.dbHost, config.dbName)
     val cachedSize = 10000

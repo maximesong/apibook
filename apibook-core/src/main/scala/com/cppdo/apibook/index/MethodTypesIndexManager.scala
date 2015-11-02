@@ -36,6 +36,7 @@ class MethodTypesIndexManager(indexDirectory: String) extends IndexManager(index
     val directory = openIndexDirectory(indexDirectory)
     val analyzer = new WhitespaceAnalyzer()
     val indexWriterConfig = createIndexWriterConfig(analyzer)
+    indexWriterConfig.setSimilarity(new MethodTypesSimilarity)
     val indexWriter = new IndexWriter(directory, indexWriterConfig)
     indexWriter
   }
@@ -57,6 +58,7 @@ class MethodTypesIndexManager(indexDirectory: String) extends IndexManager(index
     val directory = openIndexDirectory(indexDirectory)
     val reader = DirectoryReader.open(directory)
     val searcher = new IndexSearcher(reader)
+    searcher.setSimilarity(new MethodTypesSimilarity)
 
     val booleanQuery = buildBooleanQuery(typeFullNames)
 
