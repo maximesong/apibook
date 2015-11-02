@@ -16,3 +16,6 @@ typeExplain:
 
 viewUsage:
 	sbt "core/run viewUsage java.lang.Object.Object java.util.Iterator.next"
+
+searchV2:
+	sbt "core/run searchV2 convert InputStream to String"

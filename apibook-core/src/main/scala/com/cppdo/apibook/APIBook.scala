@@ -134,6 +134,9 @@ object APIBook extends LazyLogging {
       cmd("search") action {
         (_, c) => c.copy(mode="search")
       }
+      cmd("searchV2") action {
+        (_, c) => c.copy(mode="searchV2")
+      }
       cmd("searchMethodTypes") action {
         (_, c) => c.copy(mode="searchMethodTypes")
       }
@@ -168,6 +171,7 @@ object APIBook extends LazyLogging {
           case "index" => buildMethodIndex(config)
           case "typeIndex" => buildMethodTypesIndex(config)
           case "search" => search(config)
+          case "searchV2" => searchV2(config)
           case "searchMethodTypes" => searchMethodTypes(config)
           case "review" => review(config)
           case "artifact" => buildArtifacts(config)
@@ -617,6 +621,18 @@ object APIBook extends LazyLogging {
     val manager = new SearchManager(config.dbHost, config.dbName)
     val methodNames = manager.searchMethod(searchText)
     //println(methodNames.mkString("\n"))
+  }
+
+  def searchV2(config: Config) = {
+    val maxCount = config.n.getOrElse(50)
+    val searchText = config.args.mkString(" ")
+    val manager = new SearchManager(config.dbHost, config.dbName)
+    val methodDetailScores = manager.searchMethodV2(searchText, maxCount)
+    methodDetailScores.foreach(detailScore => {
+      println(s"${detailScore.codeMethod.canonicalName}: ${detailScore.score.score}")
+      println(s"\t${detailScore.score.explain}")
+
+    })
   }
 
   def searchMethodTypes(config: Config) = {

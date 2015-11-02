@@ -12,6 +12,15 @@ import play.api.libs.json.{JsArray, Json, JsValue}
 /**
  * Created by song on 10/13/15.
  */
+
+case class Score(methodScore: Float = 0, methodTypesScore: Float = 0, usageScore: Float = 0) {
+  val baseScore = 0.1F
+  def score = (baseScore + methodScore) * (baseScore + methodTypesScore) *  (baseScore + usageScore)
+  def explain = s"score(${score}) = methodScore(${baseScore + methodScore}) * methodTypesScore(${baseScore + methodTypesScore}) *  usageScore(${baseScore + usageScore})"
+}
+
+case class MethodDetailScore(codeMethod: CodeMethod, score: Score)
+
 case class MethodScore(codeMethod: CodeMethod, value: Float)
 
 class SearchManager(mongoHost: String, mongoDatabase: String,
@@ -100,8 +109,9 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     })
   }
 
-  def searchMethodV2(searchText: String, n: Int = 1000): Seq[MethodScore] = {
+  def searchMethodV2(searchText: String, n: Int = 1000, fetchFactor: Int = 10): Seq[MethodDetailScore] = {
     println("############## Search Method V2 ----------------")
+    val fetchCount = n * fetchFactor
     val posMap = CoreNLP.getPOSMap(searchText)
     val tokens = searchText.split(" ")
     val groupedTokens = groupTokens(tokens, posMap)
@@ -112,8 +122,8 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     logger.info(posMap.toString)
     logger.info(s"Filtered QueryText: ${filteredQueryText}")
     val nounTypes = groupedTokens.nouns.flatMap(noun => db.findClassesWithName(noun))
-    val methodTypesScores = methodTypesIndexManager.searchMethodTypes(nounTypes.map(_.fullName))
-    val methodScores = indexManager.searchMethod(filteredQueryText)
+    val methodTypesScores = methodTypesIndexManager.searchMethodTypes(nounTypes.map(_.fullName), fetchCount)
+    val methodScores = indexManager.searchMethod(filteredQueryText, fetchCount)
     var scores = Map[String, Score]()
     methodTypesScores.foreach(scoredMethod => {
       val canonicalName = scoredMethod.document.get(FieldName.CanonicalName.toString)
@@ -126,20 +136,23 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     methodScores.foreach(scoredMethod => {
       val canonicalName = scoredMethod.document.get(FieldName.CanonicalName.toString)
       if (scores.contains(canonicalName)) {
-        scores + canonicalName -> scores(canonicalName).copy(methodScore = scoredMethod.score)
+        scores += canonicalName -> scores(canonicalName).copy(methodScore = scoredMethod.score)
       } else {
         scores += canonicalName -> Score(methodScore = scoredMethod.score)
       }
     })
-    val usageScores = scores.keys.toSeq
-
-    Seq[MethodScore]()
+    db.getUsageCounts(scores.keys.toSeq).foreach { case (canonicalName, count) =>{
+      scores += canonicalName -> scores(canonicalName).copy(usageScore = Math.log10((count + 1).toDouble).toFloat)
+    }}
+    val sortedScores = scores.toSeq.sortBy(-_._2.score)
+    val codeMethods = db.getCodeMethods(sortedScores.map(_._1))
+    codeMethods.zip(sortedScores.map(_._2)).map { case (codeMethod, score) => {
+        MethodDetailScore(codeMethod, score)
+      }
+    }.take(n)
   }
 
-  case class Score(methodScore: Float = 0, methodTypesScore: Float = 0, usageScore: Float = 0) {
-    val baseScore = 0.1F
-    def score = (baseScore + methodScore) * (baseScore + methodTypesScore) *  (baseScore + usageScore)
-  }
+
 
   case class GroupedTokens(verbs: Seq[String], nouns: Seq[String], adjs: Seq[String], others: Seq[String])
 

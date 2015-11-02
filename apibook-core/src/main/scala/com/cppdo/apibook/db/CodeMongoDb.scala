@@ -301,9 +301,15 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
         )
       )
     )
-    aggregation.results.toSeq.map(obj => {
+    var usageMap = aggregation.results.toSeq.map(obj => {
       obj.as[String]("_id") -> obj.as[Int]("count")
     }).toMap
+    canonicalNames.foreach(canonicalName => {
+      if (!usageMap.contains(canonicalName)) {
+        usageMap += canonicalName -> 0
+      }
+    })
+    usageMap
   }
 
   def getMethodUsage(canonicalName: String): Seq[String] = {
