@@ -91,4 +91,5 @@ case class QuestionMethodReview(questionId: Int, canonicalName: String, methodFu
                                 relevance: Option[String], reviewer: String)
 
 case class ExperimentReview(canonicalName: String, relevance: String)
-case class  ExperimentQuestion(question: String, stackOverflowQuestionId: Int, reviews: Seq[ExperimentReview] = Seq(), tags: Seq[String] = Seq())
+//case class  ExperimentQuestion(question: String, stackOverflowQuestionId: Int, reviews: Seq[ExperimentReview] = Seq[ExperimentReview](), tags: Seq[String] = Seq[String]())
+case class  ExperimentQuestion(question: String, stackOverflowQuestionId: Int, reviews: Seq[ExperimentReview], tags: Seq[String])

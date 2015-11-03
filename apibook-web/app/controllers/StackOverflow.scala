@@ -75,7 +75,7 @@ object StackOverflow extends Controller {
 
   def upsertExperimentQuestion() = Action(parse.json) { request =>
     val client = new StackOverflowMongoDb(dbHost, dbName)
-    client.upsertExperimentQuestion(request.body.toString())
+    client.upsertExperimentQuestion(request.body)
     client.close()
     Ok(Json.obj(
       "result" -> 200

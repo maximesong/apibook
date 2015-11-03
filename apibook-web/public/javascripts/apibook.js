@@ -73,7 +73,7 @@ angular.module('apibookApp', ["ui.bootstrap"])
                 var newQuestion = {
                    question: question.question,
                    stackOverflowQuestionId: question.stackOverflowQuestionId,
-                   reviews: {},
+                   reviews: [],
                    tags: []
                }
                $http.post("/api/stackoverflow/experiment/question", newQuestion);

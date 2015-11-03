@@ -3,6 +3,7 @@ package com.cppdo.apibook.forum
 import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.MongoClient
 import com.typesafe.scalalogging.LazyLogging
+import play.api.libs.json.JsValue
 import scala.collection.JavaConverters._
 
 import com.novus.salat._
@@ -13,7 +14,7 @@ import com.novus.salat.global._
  */
 class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
   ctx.clearAllGraters()
-  ctx.registerClassLoader(classOf[QuestionMethodReview].getClassLoader)
+  ctx.registerClassLoader(classOf[ExperimentQuestion].getClassLoader)
 
   val mongoClient = MongoClient(host)
   val db = mongoClient(dbName)
@@ -169,8 +170,8 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
     questionMethodReviewCollection.update(query, update, upsert=true)
   }
 
-  def upsertExperimentQuestion(json: String) = {
-    val experimentQuestion = grater[ExperimentQuestion].fromJSON(json)
+  def upsertExperimentQuestion(json: JsValue) = {
+    val experimentQuestion = grater[ExperimentQuestion].fromJSON(json.toString())
     val query = MongoDBObject(
       "question" -> experimentQuestion.question
     )

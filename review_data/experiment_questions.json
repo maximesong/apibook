@@ -1,0 +1,42 @@
+{"_id":{"$oid":"5638982694eaa0fe4791f245"},"question":"convert an InputStream to a String","reviews":[{"canonicalName":"java.lang.String org.apache.commons.io.IOUtils.toString(java.io.InputStream, java.nio.charset.Charset)","relevance":"strong"}],"stackOverflowQuestionId":NumberInt(309424),"tags":[]}
+{"_id":{"$oid":"5638994094eaa0fe4791f246"},"question":"Iterate through a HashMap","reviews":[],"stackOverflowQuestionId":NumberInt(1066589),"tags":[]}
+{"_id":{"$oid":"5638997e94eaa0fe4791f247"},"question":"Create ArrayList from array","reviews":[{"canonicalName":"void java.util.ArrayList.ArrayList(java.util.Collection)","relevance":"strong"},{"canonicalName":"java.util.ArrayList com.google.common.collect.Lists.newArrayList(java.lang.Iterable)","relevance":"strong"},{"canonicalName":"java.util.ArrayList com.google.common.collect.Lists.newArrayList(java.util.Iterator)","relevance":"strong"}],"stackOverflowQuestionId":NumberInt(157944),"tags":[]}
+{"_id":{"$oid":"563899fa94eaa0fe4791f248"},"question":"Generating random integers in a range with Java","reviews":[{"canonicalName":"double java.lang.Math.random()","relevance":"weak"},{"canonicalName":"int java.util.Random.nextInt(int)","relevance":"weak"}],"stackOverflowQuestionId":NumberInt(363681),"tags":[]}
+{"_id":{"$oid":"56389a9494eaa0fe4791f249"},"question":"Converting String to Int in Java","reviews":[],"stackOverflowQuestionId":NumberInt(5585779),"tags":[]}
+{"_id":{"$oid":"56389b5894eaa0fe4791f24a"},"question":"Using java.net.URLConnection to fire HTTP requests","reviews":[],"stackOverflowQuestionId":NumberInt(2793150),"tags":[]}
+{"_id":{"$oid":"56389b8294eaa0fe4791f24b"},"question":"Iterate over each Entry in a Map","reviews":[{"canonicalName":"java.util.Set java.util.Map.entrySet()","relevance":"strong"}],"stackOverflowQuestionId":NumberInt(46898),"tags":[]}
+{"_id":{"$oid":"56389bc894eaa0fe4791f24c"},"question":"How can I test if an array contains a certain value?","reviews":[],"stackOverflowQuestionId":NumberInt(1128723),"tags":[]}
+{"_id":{"$oid":"56389bfe94eaa0fe4791f24d"},"question":"Initialization of an ArrayList in one line","reviews":[],"stackOverflowQuestionId":NumberInt(1005073),"tags":[]}
+{"_id":{"$oid":"56389c1994eaa0fe4791f24e"},"question":"Convert a String to an enum in Java","reviews":[],"stackOverflowQuestionId":NumberInt(604424),"tags":[]}
+{"_id":{"$oid":"56389c4b94eaa0fe4791f24f"},"question":"How to generate a random alpha-numeric string?","reviews":[{"canonicalName":"java.util.UUID java.util.UUID.randomUUID()","relevance":"strong"}],"stackOverflowQuestionId":NumberInt(41107),"tags":[]}
+{"_id":{"$oid":"56389c9694eaa0fe4791f250"},"question":"What's the simplest way to print a Java array?","reviews":[],"stackOverflowQuestionId":NumberInt(409784),"tags":[]}
+{"_id":{"$oid":"56389ccd94eaa0fe4791f251"},"question":"How can I concatenate two arrays in Java?","reviews":[],"stackOverflowQuestionId":NumberInt(80476),"tags":[]}
+{"_id":{"$oid":"56389cff94eaa0fe4791f252"},"question":"How to create a Java String from the contents of a file?","reviews":[],"stackOverflowQuestionId":NumberInt(326390),"tags":[]}
+{"_id":{"$oid":"56389d3d94eaa0fe4791f253"},"question":"How can I convert a stack trace to a string?","reviews":[{"canonicalName":"java.lang.String com.mysql.jdbc.Util.stackTraceToString(java.lang.Throwable)","relevance":"strong"}],"stackOverflowQuestionId":NumberInt(1149703),"tags":[]}
+{"_id":{"$oid":"56389d6894eaa0fe4791f254"},"question":"Get current stack trace in Java","reviews":[],"stackOverflowQuestionId":NumberInt(1069066),"tags":[]}
+{"_id":{"$oid":"56389db194eaa0fe4791f255"},"question":"How do I discover memory usage of my application in Android?","reviews":[],"stackOverflowQuestionId":NumberInt(2298208),"tags":[]}
+{"_id":{"$oid":"56389ddb94eaa0fe4791f256"},"question":"How can I generate an MD5 hash?","reviews":[{"canonicalName":"byte[] org.apache.commons.codec.digest.DigestUtils.md2(byte[])","relevance":"no"},{"canonicalName":"byte[] org.apache.commons.codec.digest.DigestUtils.md5(java.lang.String)","relevance":"strong"}],"stackOverflowQuestionId":NumberInt(415953),"tags":[]}
+{"_id":{"$oid":"56389e9b94eaa0fe4791f257"},"question":"Sort ArrayList of custom Objects by property","reviews":[],"stackOverflowQuestionId":NumberInt(2784514),"tags":[]}
+{"_id":{"$oid":"56389f1c94eaa0fe4791f258"},"question":"How to round a number to n decimal places in Java","reviews":[],"stackOverflowQuestionId":NumberInt(153724),"tags":[]}
+{"_id":{"$oid":"56389f4894eaa0fe4791f259"},"question":"How can I pad an integers with zeros on the left?","reviews":[],"stackOverflowQuestionId":NumberInt(473282),"tags":[]}
+{"_id":{"$oid":"5638a93894eaa0fe4791f25a"},"question":"How to split a string in Java","reviews":[],"stackOverflowQuestionId":NumberInt(3481828),"tags":[]}
+{"_id":{"$oid":"5638a98294eaa0fe4791f25b"},"question":"How to create a file and write to a file in Java?","reviews":[],"stackOverflowQuestionId":NumberInt(2885173),"tags":[]}
+{"_id":{"$oid":"5638a9d094eaa0fe4791f25c"},"question":"Convert ArrayList\u003cString\u003e to String[]","reviews":[],"stackOverflowQuestionId":NumberInt(5374311),"tags":[]}
+{"_id":{"$oid":"5638aa0e94eaa0fe4791f25d"},"question":"Best way to read a text file in Java?","reviews":[],"stackOverflowQuestionId":NumberInt(4716503),"tags":[]}
+{"_id":{"$oid":"5638aa2794eaa0fe4791f25e"},"question":"java.util.Date to XMLGregorianCalendar","reviews":[],"stackOverflowQuestionId":NumberInt(835889),"tags":[]}
+{"_id":{"$oid":"5638aa6494eaa0fe4791f25f"},"question":"How to convert from int to String?","reviews":[],"stackOverflowQuestionId":NumberInt(4105331),"tags":[]}
+{"_id":{"$oid":"5638aa9394eaa0fe4791f260"},"question":"How to convert a char to a string in Java?","reviews":[],"stackOverflowQuestionId":NumberInt(8172420),"tags":[]}
+{"_id":{"$oid":"5638aacb94eaa0fe4791f261"},"question":"How to check if a String is a numeric type","reviews":[],"stackOverflowQuestionId":NumberInt(1102891),"tags":[]}
+{"_id":{"$oid":"5638ab1c94eaa0fe4791f262"},"question":"Convert InputStream to byte array in Java","reviews":[],"stackOverflowQuestionId":NumberInt(1264709),"tags":[]}
+{"_id":{"$oid":"5638ab4594eaa0fe4791f263"},"question":"How do I copy an object in Java?","reviews":[],"stackOverflowQuestionId":NumberInt(869033),"tags":[]}
+{"_id":{"$oid":"5638ab5f94eaa0fe4791f264"},"question":"How do I check if a file exists in Java?","reviews":[],"stackOverflowQuestionId":NumberInt(1816673),"tags":[]}
+{"_id":{"$oid":"5638ab8b94eaa0fe4791f265"},"question":"How to make a new List in Java","reviews":[],"stackOverflowQuestionId":NumberInt(858572),"tags":[]}
+{"_id":{"$oid":"5638abba94eaa0fe4791f266"},"question":"Java string to date conversion","reviews":[],"stackOverflowQuestionId":NumberInt(4216745),"tags":[]}
+{"_id":{"$oid":"5638abe194eaa0fe4791f267"},"question":"What is the best way to filter a Java Collection?","reviews":[],"stackOverflowQuestionId":NumberInt(122105),"tags":[]}
+{"_id":{"$oid":"5638ac1894eaa0fe4791f268"},"question":"Standard concise way to copy a file in Java?","reviews":[],"stackOverflowQuestionId":NumberInt(106770),"tags":[]}
+{"_id":{"$oid":"5638ac3f94eaa0fe4791f269"},"question":"How do I get a platform-dependent new line character?","reviews":[],"stackOverflowQuestionId":NumberInt(207947),"tags":[]}
+{"_id":{"$oid":"5638ac7494eaa0fe4791f26a"},"question":"How to append text to an existing file in Java","reviews":[],"stackOverflowQuestionId":NumberInt(1625234),"tags":[]}
+{"_id":{"$oid":"5638acea94eaa0fe4791f26b"},"question":"Get an OutputStream into a String","reviews":[],"stackOverflowQuestionId":NumberInt(216894),"tags":[]}
+{"_id":{"$oid":"5638ad4b94eaa0fe4791f26c"},"question":"How do I convert a String to an InputStream in Java?","reviews":[],"stackOverflowQuestionId":NumberInt(782178),"tags":[]}
+{"_id":{"$oid":"5638ad6f94eaa0fe4791f26d"},"question":"Converting ISO 8601-compliant String to java.util.Date","reviews":[],"stackOverflowQuestionId":NumberInt(2201925),"tags":[]}
+{"_id":{"$oid":"5638ae5894eaa0fe4791f26e"},"question":"How to read a large text file line by line using Java?","reviews":[],"stackOverflowQuestionId":NumberInt(5868369),"tags":[]}
