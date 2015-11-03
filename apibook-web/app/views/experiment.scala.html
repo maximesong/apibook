@@ -1,0 +1,50 @@
+@main("APIBook -- Experiment") {
+<div ng-controller="experimentController">
+    <div class="col-md-4">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <span>Questions</span>
+                <span class="btn btn-small" ng-click="openNewQuestionModal()"><span class="glyphicon glyphicon-plus-sign"></span></span>
+            </div>
+            <div class="panel-body">
+                <div ng-repeat="question in questions">
+                    <div>
+                        <a href="">#{{question.stackOverflowQuestionId}}</a> <a href="" ng-click="experimentOnQuestion(question)">{{question.question}}</a>
+                        &nbsp;&nbsp;<a href="" ng-click="removeQuestion(question)"><span class="glyphicon glyphicon-trash"></span></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <div class="col-md-8">
+        <h2>{{question.question}}</h2>
+        <div ng-repeat="item in methodScores" class="experiment-line">
+            <div>
+                <span>{{$index+1}}.&nbsp;&nbsp; </span>
+                <a uib-tooltip="{{item.codeMethod.returnType}}">{{item.codeMethod.returnType | simpleName}}</a>
+                <span uib-tooltip="{{item.codeMethod.fullName}}"><strong class="text-warning">{{item.codeMethod.typeFullName | simpleName}}</strong>.<strong class="text-success">{{item.codeMethod.fullName | simpleName}}</strong></span>(<a ng-repeat="parameter in item.codeMethod.parameterTypes track by $index" uib-tooltip="{{parameter}}"><span ng-if="!$first">, </span>{{parameter|simpleName}}</a>)
+                <div class="pull-right">
+                    <span ng-switch="getRelevance(question, item.codeMethod.canonicalName)">
+                        <span ng-switch-when="strong" class="label label-success">Strong</span>
+                        <span ng-switch-when="weak" class="label label-warning">Weak</span>
+                    </span>
+                    <span class="badge" uib-tooltip="methodScore({{item.score.methodScore}}), methodTypesScore({{item.score.methodTypesScore}}), usageScore({{item.score.usageScore}})">score</span>
+                </div>
+                <div class="clearfix"></div>
+            </div>
+            <div>
+                <button class="btn btn-success btn-sm"
+                        ng-click="updateReview(question, item.codeMethod.canonicalName, 'strong')">Strong</button>&nbsp;&nbsp;
+                <button class="btn btn-warning btn-sm"
+                        ng-click="updateReview(question, item.codeMethod.canonicalName, 'weak')"
+                        >Weak</button>&nbsp;&nbsp;
+                <button class="btn btn-default btn-sm"
+                        ng-click="updateReview(question, item.codeMethod.canonicalName, 'no')"
+                        >No</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+}

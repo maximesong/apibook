@@ -1,6 +1,6 @@
 package com.cppdo.apibook.db
 
-import com.cppdo.apibook.search.MethodScore
+import com.cppdo.apibook.search.{MethodDetailScore, MethodScore}
 import com.mongodb.casbah.{commons, MongoDB, MongoClient}
 import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.commons.MongoDBObject
@@ -23,6 +23,7 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
   val classCollection = db("classes")
   val methodCollection = db("methods")
   val methodInvocationCollection = db("method_invocations")
+  val methodUsageCollection = db("method_usages")
   val methodInfoCollection = db("method_info")
   val classInfoCollection = db("class_info")
 
@@ -40,6 +41,11 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
   ))
 
   methodInvocationCollection.createIndex(MongoDBObject(
+    "canonicalName" -> 1,
+    "invokedByType" -> 1
+  ))
+
+  methodUsageCollection.createIndex(MongoDBObject(
     "canonicalName" -> 1,
     "invokedByType" -> 1
   ))
@@ -111,6 +117,10 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
 
   def toJson(methodScore: MethodScore): String = {
     grater[MethodScore].toPrettyJSON(methodScore)
+  }
+
+  def toJson(methodDetailScore: MethodDetailScore): String = {
+    grater[MethodDetailScore].toPrettyJSON(methodDetailScore)
   }
 
   def findClassesWithName(name: String): Seq[CodeClass] = {

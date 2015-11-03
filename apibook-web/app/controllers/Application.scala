@@ -14,4 +14,8 @@ object Application extends Controller {
     Ok(views.html.stackoverflow())
   }
 
+  def experiment = Action {
+    Ok(views.html.experiment())
+  }
+
 }

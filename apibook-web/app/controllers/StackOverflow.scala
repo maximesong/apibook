@@ -10,6 +10,8 @@ import com.cppdo.apibook.forum._
  * Created by song on 9/24/15.
  */
 object StackOverflow extends Controller {
+  val dbHost = "localhost"
+  val dbName = "apibook"
   def overviews = Action {
     val client = new StackOverflowMongoDb("localhost", "apibook")
     val overviews = client.getQuestionOverviews()
@@ -69,5 +71,31 @@ object StackOverflow extends Controller {
     Ok(Json.obj(
       "result" -> 200
     ))
+  }
+
+  def upsertExperimentQuestion() = Action(parse.json) { request =>
+    val client = new StackOverflowMongoDb(dbHost, dbName)
+    client.upsertExperimentQuestion(request.body.toString())
+    client.close()
+    Ok(Json.obj(
+      "result" -> 200
+    ))
+  }
+
+  def removeExperimentQuestion() = Action(parse.json) { request =>
+    val question = (request.body \ "question").as[String]
+    val client = new StackOverflowMongoDb(dbHost, dbName)
+    client.removeExperimentQuestion(question)
+    client.close()
+    Ok(Json.obj(
+      "result" -> 200
+    ))
+  }
+
+  def experimentQuestions() = Action {
+    val client = new StackOverflowMongoDb(dbHost, dbName)
+    val questionsJson = client.getExperimentQuestionsInJson()
+    client.close()
+    Ok(questionsJson).as(ContentTypes.JSON)
   }
 }

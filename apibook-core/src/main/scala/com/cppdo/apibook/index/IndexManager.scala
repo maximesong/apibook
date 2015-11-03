@@ -78,16 +78,16 @@ class IndexManager(indexDirectory: String) extends LazyLogging{
   }
 
   def buildBooleanQuery(terms: Seq[String]) = {
-    val booleanQuery = new BooleanQuery()
+    val booleanQueryBuilder = new BooleanQuery.Builder()
 
     terms.foreach(term => {
       Array(FieldName.MethodName, FieldName.ClassName, FieldName.ParameterTypes,
         FieldName.ReturnType, FieldName.ParameterNames, FieldName.CommentText).foreach(name => {
         val query = new TermQuery(new Term(name.toString, term))
-        booleanQuery.add(query, BooleanClause.Occur.SHOULD)
+        booleanQueryBuilder.add(query, BooleanClause.Occur.SHOULD)
       })
     })
-    booleanQuery
+    booleanQueryBuilder.build()
   }
 
   def tokenizeQueryText(queryText: String, analyzer: Analyzer): Seq[String] = {
@@ -102,38 +102,6 @@ class IndexManager(indexDirectory: String) extends LazyLogging{
     stream.close()
     analyzedTerms
   }
-
-  def searchMethod(queryText: String, n: Int = 10000, canonicalName: Option[String] = None, typeFullName: Option[String] = None): Seq[ScoredDocument] = {
-    val directory = openIndexDirectory(indexDirectory)
-    val reader = DirectoryReader.open(directory)
-    val searcher = new IndexSearcher(reader)
-    /*
-    val queryParser = new QueryParser(null, analyzer)
-    val q = queryParser.createBooleanQuery("a", "iterate a file running runs HashMap iteration")
-    println(q.toString)
-    */
-    val analyzedTerms = tokenizeQueryText(queryText, new SourceCodeAnalyzer())
-    logger.info(s"analyzed terms:${analyzedTerms.mkString(" ")}")
-    val booleanQuery = buildBooleanQuery(analyzedTerms)
-    typeFullName.foreach(fullName => {
-      val query = new TermQuery(new Term(FieldName.ClassName.toString, fullName))
-      booleanQuery.add(query, BooleanClause.Occur.MUST)
-    })
-    canonicalName.foreach(canonicalName => {
-      println(s"search: $canonicalName")
-      val query = new TermQuery(new Term(FieldName.CanonicalName.toString, canonicalName))
-      booleanQuery.add(query, BooleanClause.Occur.MUST)
-    })
-    //val q = new MatchAllDocsQuery()
-    val topDocs = searcher.search(booleanQuery, n)
-
-    //val topDocs = searcher.search(q, null, 100)
-    println("Total hits: " + topDocs.totalHits)
-    topDocs.scoreDocs.map(scoreDoc => {
-      ScoredDocument(searcher.doc(scoreDoc.doc), scoreDoc.score)
-    })
-  }
-
 
   def buildDocument(codeClass: CodeClass, codeMethod: CodeMethod, methodInfo: Option[MethodInfo]): Document = {
     val document = new Document

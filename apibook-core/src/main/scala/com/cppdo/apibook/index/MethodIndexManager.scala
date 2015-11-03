@@ -58,7 +58,7 @@ class MethodIndexManager(indexDirectory: String) extends IndexManager(indexDirec
     document
   }
 
-  def searchMethodV2(queryText: String, maxCount: Int, explain: Boolean = false) = {
+  def searchMethod(queryText: String, maxCount: Int = 1000, explain: Boolean = false) = {
     val directory = openIndexDirectory(indexDirectory)
     val reader = DirectoryReader.open(directory)
     val searcher = new IndexSearcher(reader)

@@ -42,7 +42,7 @@ class MethodTypesIndexManager(indexDirectory: String) extends IndexManager(index
   }
 
   override def buildBooleanQuery(terms: Seq[String]) = {
-    val booleanQuery = new BooleanQuery()
+    val booleanQueryBuilder = new BooleanQuery.Builder()
 
     terms.foreach(term => {
       val typeQuery = new DisjunctionMaxQuery(0)
@@ -51,9 +51,9 @@ class MethodTypesIndexManager(indexDirectory: String) extends IndexManager(index
         val query = new TermQuery(new Term(name.toString, term))
         typeQuery.add(query)
       })
-      booleanQuery.add(typeQuery, BooleanClause.Occur.SHOULD)
+      booleanQueryBuilder.add(typeQuery, BooleanClause.Occur.SHOULD)
     })
-    booleanQuery
+    booleanQueryBuilder.build()
   }
 
   def searchMethodTypes(typeFullNames: Seq[String], n: Int = 10000, explain: Boolean = false): Seq[ScoredDocument] = {

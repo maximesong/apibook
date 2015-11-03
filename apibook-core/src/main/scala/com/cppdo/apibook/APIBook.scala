@@ -122,11 +122,11 @@ object APIBook extends LazyLogging {
       cmd("info") action {
         (_, c) => c.copy(mode="info")
       }
-      cmd("index") action {
-        (_, c) => c.copy(mode="index")
+      cmd("methodIndex") action {
+        (_, c) => c.copy(mode="methodIndex")
       }
-      cmd("typeIndex") action {
-        (_, c) => c.copy(mode="typeIndex")
+      cmd("methodTypesIndex") action {
+        (_, c) => c.copy(mode="methodTypesIndex")
       }
       cmd("review") action {
         (_, c) => c.copy(mode="review")
@@ -171,9 +171,9 @@ object APIBook extends LazyLogging {
           case "find" => find(config)
           case "const" => buildConstant(config)
           case "info" => buildFromDoc(config)
-          case "index" => buildIndex(config)
-          case "typeIndex" => buildMethodTypesIndex(config)
-          case "typeIndex" => buildMethodTypesIndex(config)
+          //case "index" => buildIndex(config)
+          case "methodTypesIndex" => buildMethodTypesIndex(config)
+          case "methodIndex" => buildMethodIndex(config)
           case "search" => search(config)
           case "searchV2" => searchV2(config)
           case "searchMethodTypes" => searchMethodTypes(config)
@@ -373,7 +373,12 @@ object APIBook extends LazyLogging {
   }
 
   def buildMethodIndex(config: Config) = {
-    val indexManager = new IndexManager("data")
+    val indexDirectory = config.outputPath.getOrElse("methodIndex")
+    if (!config.append) {
+      logger.info("removing old index...")
+      FileUtils.deleteDirectory(new File(indexDirectory))
+    }
+    val indexManager = new IndexManager(indexDirectory)
     val db = new CodeMongoDb(config.dbHost, config.dbName)
     val cachedSize = 10000
     val codeClasses = db.getCodeClasses()
@@ -558,12 +563,6 @@ object APIBook extends LazyLogging {
   }
 
   def test() = {
-    val indexManager = new IndexManager("data")
-    val docs = indexManager.searchMethod("iterate HashMap")
-    println(docs.size)
-    docs.foreach(scoredDoc => {
-        println(scoredDoc.document.get(FieldName.CanonicalName.toString), scoredDoc.score)
-    })
   }
 
   def stackoverflow(config: Config): Unit = {
@@ -633,10 +632,11 @@ object APIBook extends LazyLogging {
     val searchText = config.args.mkString(" ")
     val manager = new SearchManager(config.dbHost, config.dbName)
     val methodDetailScores = manager.searchV2(searchText, maxCount, explain = config.explain)
+    var rank = 1
     methodDetailScores.foreach(detailScore => {
-      println(s"${detailScore.codeMethod.canonicalName}: ${detailScore.score.score}")
+      println(s"${rank}. ${detailScore.codeMethod.canonicalName}: ${detailScore.score.score}")
       println(s"\t${detailScore.score.explain}")
-
+      rank += 1
     })
   }
 

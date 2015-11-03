@@ -63,6 +63,87 @@ angular.module('apibookApp', ["ui.bootstrap"])
             }
         }
     }])
+    .controller('experimentController', ['$scope', '$http', '$uibModal', function($scope, $http, $uibModal) {
+        $scope.openNewQuestionModal = function() {
+            var modalInstance = $uibModal.open({
+                templateUrl: "assets/templates/newExperimentModal.html"
+            });
+            modalInstance.result.then(function(question) {
+                            console.log(question);
+                var newQuestion = {
+                   question: question.question,
+                   stackOverflowQuestionId: question.stackOverflowQuestionId,
+                   reviews: {},
+                   tags: []
+               }
+               $http.post("/api/stackoverflow/experiment/question", newQuestion);
+               $scope.questions.push(newQuestion);
+            })
+        }
+
+        $scope.experimentOnQuestion = function(question) {
+            $scope.question = question
+            $scope.methodScores = []
+            $http.post("/api/search/method", {
+                searchText: $scope.question.question
+            }).then(function(res) {
+                console.log(res)
+                $scope.methodScores = res.data.result;
+            })
+        }
+
+        $scope.removeQuestion = function(question) {
+            console.log("WHY?")
+            $http.post("/api/stackoverflow/experiment/question/remove", {
+                question: question.question,
+            }).then(function(res) {
+                if (res.status === 200) {
+                    $scope.questions = _($scope.questions).filter(function(q) {
+                        return q.question !== question.question
+                    })
+                }
+            })
+        }
+
+        $scope.updateReview = function(question, canonicalName, relevance) {
+            console.log($scope.question);
+            if (question.reviews == null) {
+                question.reviews = {}
+            }
+            var exists = false;
+            _(question.reviews).each(function(review) {
+                if (review.canonicalName === canonicalName) {
+                    review.relevance = relevance
+                    exists = true
+                }
+            })
+            if (!exists) {
+                question.reviews.push({
+                    canonicalName: canonicalName,
+                    relevance: relevance
+                })
+            }
+            $http.post("/api/stackoverflow/experiment/question", question)
+        }
+
+        $scope.getRelevance = function(question, canonicalName) {
+            for (var i = 0; i != question.reviews.length; ++i) {
+                review = question.reviews[i];
+                if (review.canonicalName === canonicalName) {
+                    return review.relevance;
+               }
+            }
+            return null;
+        }
+
+        $http.get("/api/stackoverflow/experiment/questions")
+            .then(function(res) {
+            console.log(res)
+            $scope.questions = res.data
+        });
+
+        console.log("Happy Experiment!")
+    }])
     .controller('stackoverflowController', ['$scope', '$http', '$location', '$anchorScroll', '$timeout',
         function($scope, $http, $location, $anchorScroll, $timeout) {
 

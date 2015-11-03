@@ -5,8 +5,11 @@ extract:
 	sbt "core/run extract java/jdk.jar thirdparty/src/"
 info:
 	sbt "core/run info repository-sources"
-index:
-	sbt "core/run index"
+methodIndex:
+	sbt "core/run methodIndex"
+
+methodTypesIndex:
+	sbt "core/run methodTypesIndex"
 
 web:
 	sbt "~web/run"
@@ -18,4 +21,4 @@ viewUsage:
 	sbt "core/run viewUsage java.lang.Object.Object java.util.Iterator.next"
 
 searchV2:
-	sbt "core/run searchV2 convert InputStream to String"
+	sbt "core/run searchV2 --explain convert InputStream to String"

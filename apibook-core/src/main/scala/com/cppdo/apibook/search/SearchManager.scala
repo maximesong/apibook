@@ -15,8 +15,9 @@ import play.api.libs.json.{JsArray, Json, JsValue}
 
 case class Score(methodScore: Float = 0, methodTypesScore: Float = 0, usageScore: Float = 0) {
   val baseScore = 0.1F
+  val baseUsageScore = 0.5F
   def score = (baseScore + methodScore) * (baseScore + methodTypesScore) *  (baseScore + usageScore)
-  def explain = s"score(${score}) = methodScore(${baseScore + methodScore}) * methodTypesScore(${baseScore + methodTypesScore}) *  usageScore(${baseScore + usageScore})"
+  def explain = s"score(${score}) = methodScore(${baseScore + methodScore}) * methodTypesScore(${baseScore + methodTypesScore}) *  usageScore(${baseUsageScore + usageScore})"
 }
 
 case class MethodDetailScore(codeMethod: CodeMethod, score: Score)
@@ -96,9 +97,13 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     })
   }
 
-  def getLuceneScore(queryText: String, n: Int = 1000) = {
-    val matchingScores = indexManager.searchMethod(queryText, n)
+  def searchAndReturnJson(queryText: String, n: Int = 1000, explain: Boolean = false): Seq[JsValue] = {
+    val methodScores = searchV2(queryText, n, explain = explain)
+    methodScores.map(score => {
+      Json.parse(db.toJson(score))
+    })
   }
+
 
   def searchMethodTypes(typeFullNames: Seq[String], maxCount: Int = 3000, explain: Boolean = false): Seq[MethodScore] = {
     val scoredDocuments = methodTypesIndexManager.searchMethodTypes(typeFullNames, maxCount, explain)
@@ -120,7 +125,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     val filteredQueryText = filteredTokens.mkString(" ")
     logger.info(posMap.toString)
     logger.info(s"Filtered QueryText: ${filteredQueryText}")
-    val scoredDocuments = methodIndexManager.searchMethodV2(filteredQueryText, n, explain=explain)
+    val scoredDocuments = methodIndexManager.searchMethod(filteredQueryText, n, explain=explain)
     val canonicalNames = scoredDocuments.map(_.document.get(FieldName.CanonicalName.toString))
     val codeMethods = db.getCodeMethods(canonicalNames)
     val scores = scoredDocuments.map(_.score)
@@ -131,19 +136,31 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
 
   def searchV2(searchText: String, n: Int = 1000, fetchFactor: Int = 10, explain: Boolean = false): Seq[MethodDetailScore] = {
     println("############## Search V2 ----------------")
+    val cleanedSearchText = searchText.replaceAll("[?]", "")
     val fetchCount = n * fetchFactor
-    val posMap = CoreNLP.getPOSMap(searchText)
-    val tokens = searchText.split(" ")
+    val posMap = CoreNLP.getPOSMap(cleanedSearchText)
+    val tokens = cleanedSearchText.split(" ")
     val groupedTokens = groupTokens(tokens, posMap)
-    val filteredTokens = searchText.split(" ").filter(token => {
+    val filteredTokens = cleanedSearchText.split(" ").filter(token => {
       groupedTokens.nouns.contains(token) || groupedTokens.verbs.contains(token) || groupedTokens.adjs.contains(token)
     })
     val filteredQueryText = filteredTokens.mkString(" ")
     logger.info(posMap.toString)
     logger.info(s"Filtered QueryText: ${filteredQueryText}")
-    val nounTypes = groupedTokens.nouns.flatMap(noun => db.findClassesWithName(noun))
-    val methodTypesScores = methodTypesIndexManager.searchMethodTypes(nounTypes.map(_.fullName), fetchCount)
-    val methodScores = methodIndexManager.searchMethodV2(filteredQueryText, fetchCount, explain=explain)
+    val primitiveTypes = Seq("int", "double", "float", "long", "short", "char")
+    val nounTypes = groupedTokens.nouns.flatMap(noun => {
+      if (primitiveTypes.contains(noun)) {
+        Seq(noun)
+      } else if (noun.equals("string")) { // this may not be reasonable, since query text should write "String"
+        Seq("java.lang.String")
+      } else {
+        db.findClassesWithName(noun).map(_.fullName)
+      }
+    })
+    logger.info("Searching method types....")
+    val methodTypesScores = methodTypesIndexManager.searchMethodTypes(nounTypes, fetchCount)
+    logger.info("Searching methods....")
+    val methodScores = methodIndexManager.searchMethod(filteredQueryText, fetchCount, explain=explain)
     var scores = Map[String, Score]()
     methodTypesScores.foreach(scoredMethod => {
       val canonicalName = scoredMethod.document.get(FieldName.CanonicalName.toString)
@@ -161,6 +178,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
         scores += canonicalName -> Score(methodScore = scoredMethod.score)
       }
     })
+    logger.info("Scoring usages....")
     db.getUsageCounts(scores.keys.toSeq).foreach { case (canonicalName, count) =>{
       scores += canonicalName -> scores(canonicalName).copy(usageScore = Math.log10((count + 1).toDouble).toFloat)
     }}
@@ -204,7 +222,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     })
     val filteredQueryText = filteredTokens.mkString(" ")
     logger.info(s"Filtered QueryText: ${filteredQueryText}")
-    val matchingScores = indexManager.searchMethod(filteredQueryText).map(scoredDoc => {
+    val matchingScores = methodIndexManager.searchMethod(filteredQueryText, n).map(scoredDoc => {
       if (scoredDoc.document.get(FieldName.CanonicalName.toString).startsWith("java.util.HashMap")) {
         //println(scoredDoc.document.get(FieldName.CanonicalName.toString), scoredDoc.score)
       }

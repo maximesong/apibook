@@ -89,3 +89,6 @@ object QuestionReview {
 
 case class QuestionMethodReview(questionId: Int, canonicalName: String, methodFullName: String,
                                 relevance: Option[String], reviewer: String)
+
+case class ExperimentReview(canonicalName: String, relevance: String)
+case class  ExperimentQuestion(question: String, stackOverflowQuestionId: Int, reviews: Seq[ExperimentReview] = Seq(), tags: Seq[String] = Seq())

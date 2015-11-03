@@ -21,6 +21,7 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
   val questionCollection = db("questions")
   val questionReviewCollection = db("question_reviews")
   val questionMethodReviewCollection = db("question_method_reviews")
+  val experimentQuestionCollection = db("experiment_questions")
 
   def upsertQuestionOverview(overview: QuestionOverview) = {
     val query = MongoDBObject("id" -> overview.id)
@@ -166,6 +167,31 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
     )
     val update = grater[QuestionMethodReview].asDBObject(questionMethodReview)
     questionMethodReviewCollection.update(query, update, upsert=true)
+  }
+
+  def upsertExperimentQuestion(json: String) = {
+    val experimentQuestion = grater[ExperimentQuestion].fromJSON(json)
+    val query = MongoDBObject(
+      "question" -> experimentQuestion.question
+    )
+    val update = grater[ExperimentQuestion].asDBObject(experimentQuestion)
+    experimentQuestionCollection.update(query, update, upsert=true)
+  }
+
+  def getExperimentQuestions(): Seq[ExperimentQuestion] = {
+    experimentQuestionCollection.find().toSeq.map(obj => {
+      grater[ExperimentQuestion].asObject(obj)
+    })
+  }
+  def getExperimentQuestionsInJson(): String = {
+    val questions = getExperimentQuestions()
+    grater[ExperimentQuestion].toPrettyJSONArray(questions)
+  }
+
+  def removeExperimentQuestion(question: String) = {
+    experimentQuestionCollection.remove(MongoDBObject(
+      "question" -> question
+    ))
   }
 
   def close() = {

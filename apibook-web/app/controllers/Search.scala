@@ -35,10 +35,10 @@ object Search extends Controller with LazyLogging {
   def searchMethod = Action(parse.json) { implicit request =>
     val searchText = (request.body \ "searchText").as[String]
     val searchManager = new SearchManager(dbHost, dbName, classLoader=Some(Play.classloader))
-    val resultEntries = searchManager.searchMethodAndReturnJson(searchText, 50).toList
+    val methodScoreDetails = searchManager.searchAndReturnJson(searchText, 100).toList
     searchManager.close()
     Ok(Json.obj(
-      "result" -> resultEntries
+      "result" -> methodScoreDetails
     ))
   }
 

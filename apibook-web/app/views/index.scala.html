@@ -19,7 +19,7 @@
                     <a uib-tooltip="{{item.codeMethod.returnType}}">{{item.codeMethod.returnType | simpleName}}</a>
                     <span  uib-tooltip="{{item.codeMethod.fullName}}"><span class="text-muted">{{item.codeMethod.typeFullName | simpleName}}</span>.<strong class="">{{item.codeMethod.fullName | simpleName}}</strong></span>(<a ng-repeat="parameter in item.codeMethod.parameterTypes track by $index" uib-tooltip="{{parameter}}"><span ng-if="!$first">, </span>{{parameter|simpleName}}</a>)
                     <span><button class="btn btn-default btn-sm" ng-click="findCodeSnippets(item.codeMethod.canonicalName, item)">find snippets</button></span>
-                    <span class="pull-right">{{item.value}}</span>
+                    <span class="pull-right">{{item.score}}</span>
                 </div>
                 <div>
                     <div ng-repeat="snippet in item.codeSnippets track by $index">

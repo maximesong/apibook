@@ -1,0 +1,20 @@
+<div class="modal-content">
+    <div class="modal-header">
+        <button type="button" class="close" ng-click="$dismiss()" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">New Question</h4>
+    </div>
+    <div class="modal-body">
+        <form name="newQuestionForm" ng-init="question={}">
+            <div class="form-group">
+                <input name="name" class="form-control" type="text" ng-model="question.question" placeholder="Your question here" ng-required="true">
+            </div>
+            <div class="form-group">
+                <input name="questionId" class="form-control" type="number" ng-model="question.stackOverflowQuestionId" placeholder="Question Id" ng-required="true">
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-default" ng-click="$dismiss()">Cancel</button>
+        <button ng-disabled="newQuestionForm.$invalid" type="button" class="btn btn-primary" ng-click="$close(question)">Create</button>
+    </div>
+</div><!-- /.modal-content -->

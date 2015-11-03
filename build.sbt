@@ -12,6 +12,9 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.11.7"
 )
 
+assemblyOption in assembly := (assemblyOption in assembly).value.copy(cacheUnzip = false)
+
+
 lazy val core = (project in file("./apibook-core"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= Seq(
@@ -49,6 +52,9 @@ lazy val core = (project in file("./apibook-core"))
   )
   .settings(
     unmanagedJars in Compile += file("java/tools.jar")
+  )
+  .settings(
+    assemblyOption in assembly := (assemblyOption in assembly).value.copy(cacheUnzip = false)
   )
 
 lazy val web = (project in file("./apibook-web")).enablePlugins(PlayScala).dependsOn(core)

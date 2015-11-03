@@ -3,10 +3,12 @@
 # ~~~~
 
 # Home page
-GET        /                     controllers.Application.stackoverflow
+GET        /                     controllers.Application.experiment
 
 GET        /apibook                     controllers.Application.index
 GET        /stackoverflow                     controllers.Application.stackoverflow
+GET        /stackoverflow                     controllers.Application.experiment
+
 
 
 POST    /api/search/method controllers.Search.searchMethod
@@ -27,6 +29,12 @@ POST   /api/stackoverflow/questions/:id/review controllers.StackOverflow.upsertQ
 POST   /api/stackoverflow/questions/:id/review/method/update controllers.StackOverflow.upsertQuestionMethodReview(id: Int)
 
 POST    /api/stackoverflow/questions/:id/review/update controllers.StackOverflow.upsertQuestionReviewField(id: Int)
+
+POST /api/stackoverflow/experiment/question controllers.StackOverflow.upsertExperimentQuestion
+
+POST /api/stackoverflow/experiment/question/remove controllers.StackOverflow.removeExperimentQuestion
+
+GET /api/stackoverflow/experiment/questions controllers.StackOverflow.experimentQuestions
 
 # Map static resources from the /public folder to the /assets URL path
 GET        /assets/*file         controllers.Assets.at(path="/public", file)
