@@ -148,9 +148,12 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     logger.info(posMap.toString)
     logger.info(s"Filtered QueryText: ${filteredQueryText}")
     val primitiveTypes = Seq("int", "double", "float", "long", "short", "char")
+    val boxedTypes = Seq("java.lang.Integer", "java.lang.Double", "java.lang.Float", "java.lang.Long", "java.lang.Short", "java.lang.Character")
+
     val nounTypes = groupedTokens.nouns.flatMap(noun => {
       if (primitiveTypes.contains(noun)) {
-        Seq(noun)
+        val i = primitiveTypes.indexOf(noun)
+        Seq(noun, boxedTypes(i))
       } else if (noun.equals("string")) { // this may not be reasonable, since query text should write "String"
         Seq("java.lang.String")
       } else {
@@ -199,7 +202,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
       posMap.get(token).exists(pos => pos.startsWith("VB"))
     })
     val nouns = tokens.filter(token => {
-      posMap.get(token).exists(pos => pos.startsWith("NN"))
+      posMap.get(token).exists(pos => pos.startsWith("NN")) || (Seq("long", "short").contains(token.toLowerCase) && posMap.get(token).exists(pos => !pos.startsWith("JJ")))
     })
     val adjs = tokens.filter(token => {
       posMap.get(token).exists(pos => pos.startsWith("JJ"))
