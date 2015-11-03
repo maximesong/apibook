@@ -40,3 +40,32 @@
 {"_id":{"$oid":"5638ad4b94eaa0fe4791f26c"},"question":"How do I convert a String to an InputStream in Java?","reviews":[],"stackOverflowQuestionId":NumberInt(782178),"tags":[]}
 {"_id":{"$oid":"5638ad6f94eaa0fe4791f26d"},"question":"Converting ISO 8601-compliant String to java.util.Date","reviews":[],"stackOverflowQuestionId":NumberInt(2201925),"tags":[]}
 {"_id":{"$oid":"5638ae5894eaa0fe4791f26e"},"question":"How to read a large text file line by line using Java?","reviews":[],"stackOverflowQuestionId":NumberInt(5868369),"tags":[]}
+{"_id":{"$oid":"5638b01d94eaa0fe4791f26f"},"question":"How to convert byte size into human readable format in java?","reviews":[],"stackOverflowQuestionId":NumberInt(3758606),"tags":[]}
+{"_id":{"$oid":"5638b09994eaa0fe4791f270"},"question":"File to byte[] in Java","reviews":[],"stackOverflowQuestionId":NumberInt(858980),"tags":[]}
+{"_id":{"$oid":"5638b0fe94eaa0fe4791f271"},"question":"Decode Base64 data in Java","reviews":[],"stackOverflowQuestionId":NumberInt(469695),"tags":[]}
+{"_id":{"$oid":"5638b19394eaa0fe4791f272"},"question":"How can I clear or empty a StringBuilder?","reviews":[],"stackOverflowQuestionId":NumberInt(5192512),"tags":[]}
+{"_id":{"$oid":"5638b1dd94eaa0fe4791f273"},"question":"Java URL encoding of query string parameters","reviews":[],"stackOverflowQuestionId":NumberInt(10786042),"tags":[]}
+{"_id":{"$oid":"5638b23294eaa0fe4791f274"},"question":"How to send HTTP request in java?","reviews":[],"stackOverflowQuestionId":NumberInt(1359689),"tags":[]}
+{"_id":{"$oid":"5638b2c894eaa0fe4791f275"},"question":"How can I increment a date by one day in Java?","reviews":[],"stackOverflowQuestionId":NumberInt(428918),"tags":[]}
+{"_id":{"$oid":"5638b30094eaa0fe4791f276"},"question":"How do I count the number of occurrences of a char in a String?","reviews":[],"stackOverflowQuestionId":NumberInt(275944),"tags":[]}
+{"_id":{"$oid":"5638b3f694eaa0fe4791f277"},"question":"Java, check whether a string is not null and not empty?","reviews":[],"stackOverflowQuestionId":NumberInt(3598770),"tags":[]}
+{"_id":{"$oid":"5638b42d94eaa0fe4791f278"},"question":"How to convert a byte array to a hex string in Java?","reviews":[],"stackOverflowQuestionId":NumberInt(9655181),"tags":[]}
+{"_id":{"$oid":"5638b48794eaa0fe4791f279"},"question":"How to get the current date/time in java","reviews":[],"stackOverflowQuestionId":NumberInt(5175728),"tags":[]}
+{"_id":{"$oid":"5638b4e394eaa0fe4791f27a"},"question":"How do I join two lists in Java?","reviews":[],"stackOverflowQuestionId":NumberInt(189559),"tags":[]}
+{"_id":{"$oid":"5638b55994eaa0fe4791f27b"},"question":"How to download and save a file from Internet using Java?","reviews":[],"stackOverflowQuestionId":NumberInt(921262),"tags":[]}
+{"_id":{"$oid":"5638b57294eaa0fe4791f27c"},"question":"Format date in java","reviews":[],"stackOverflowQuestionId":NumberInt(4772425),"tags":[]}
+{"_id":{"$oid":"5638b5e894eaa0fe4791f27d"},"question":"How do you kill a thread in Java?","reviews":[],"stackOverflowQuestionId":NumberInt(671049),"tags":[]}
+{"_id":{"$oid":"5638b65494eaa0fe4791f27e"},"question":"How to parse JSON in Java","reviews":[],"stackOverflowQuestionId":NumberInt(2591098),"tags":[]}
+{"_id":{"$oid":"5638b6ea94eaa0fe4791f27f"},"question":"Capitalize First Char of Each Word in a String Java","reviews":[],"stackOverflowQuestionId":NumberInt(1892765),"tags":[]}
+{"_id":{"$oid":"5638b6ff94eaa0fe4791f280"},"question":"Create a temporary directory in Java","reviews":[],"stackOverflowQuestionId":NumberInt(617414),"tags":[]}
+{"_id":{"$oid":"5638ba6894eaa0fe4791f281"},"question":"Easy way to write contents of a Java InputStream to an OutputStream","reviews":[],"stackOverflowQuestionId":NumberInt(43157),"tags":[]}
+{"_id":{"$oid":"5638bac794eaa0fe4791f282"},"question":"Ways to iterate over a List in java?","reviews":[],"stackOverflowQuestionId":NumberInt(18410035),"tags":[]}
+{"_id":{"$oid":"5638bb8d94eaa0fe4791f283"},"question":"Getting A File's Mime Type In Java","reviews":[],"stackOverflowQuestionId":NumberInt(51438),"tags":[]}
+{"_id":{"$oid":"5638bbe594eaa0fe4791f284"},"question":"Convert a string representation of a hex dump to a byte array using Java?","reviews":[],"stackOverflowQuestionId":NumberInt(140131),"tags":[]}
+{"_id":{"$oid":"5638bc6b94eaa0fe4791f285"},"question":"How to convert Java String into byte[]?","reviews":[],"stackOverflowQuestionId":NumberInt(18571223),"tags":[]}
+{"_id":{"$oid":"5638bcfb94eaa0fe4791f286"},"question":"How to update a value, given a key in a java hashmap?","reviews":[],"stackOverflowQuestionId":NumberInt(4157972),"tags":[]}
+{"_id":{"$oid":"5638bd7f94eaa0fe4791f287"},"question":"Calculating the difference between two Java date instances","reviews":[],"stackOverflowQuestionId":NumberInt(1555262),"tags":[]}
+{"_id":{"$oid":"5638bfff94eaa0fe4791f288"},"question":"How to convert String to long in Java?","reviews":[{"canonicalName":"long java.lang.Long.parseLong(java.lang.String)","relevance":"strong"}],"stackOverflowQuestionId":NumberInt(7693324),"tags":[]}
+{"_id":{"$oid":"5638c59594eaa0fe4791f289"},"question":"How to construct a relative path in Java from two absolute paths (or URLs)?","reviews":[{"canonicalName":"java.nio.file.Path java.nio.file.Path.relativize(java.nio.file.Path)","relevance":"strong"}],"stackOverflowQuestionId":NumberInt(204784),"tags":[]}
+{"_id":{"$oid":"5638c5e694eaa0fe4791f28a"},"question":"Convert java.util.Date to String","reviews":[],"stackOverflowQuestionId":NumberInt(5683728),"tags":[]}
+{"_id":{"$oid":"5638c6a694eaa0fe4791f28b"},"question":"Number of days between two dates in Joda-Time","reviews":[],"stackOverflowQuestionId":NumberInt(3802893),"tags":[]}
