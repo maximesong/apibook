@@ -25,3 +25,6 @@ searchV2:
 
 assembly:
 	sbt -mem 2048 "core/assembly"
+
+evaluate:
+	sbt "core/run evaluate V2"

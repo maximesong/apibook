@@ -222,9 +222,9 @@ object APIBook extends LazyLogging {
     val experimentDb = new StackOverflowMongoDb(config.dbHost, config.dbName)
     val questions = experimentDb.getExperimentQuestions()
     val searchCount = config.n.getOrElse(100)
-    config.args.foreach(searchEngine => {
+    val searchEngineWithEvaluations = config.args.map(searchEngine => {
 
-      val evaluations = questions.take(10).map(question => {
+      val evaluations = questions.map(question => {
         logger.info(s"Evaluating question '${question.question}'....")
         val strongCanonicalNames = question.reviews.filter(_.relevance == "strong").map(_.canonicalName)
         val weakCanonicalNames = question.reviews.filter(_.relevance == "weak").map(_.canonicalName)
@@ -248,17 +248,18 @@ object APIBook extends LazyLogging {
           rank += 1
         })
         evaluation
-      })
-      logger.info(s"########## ${searchEngine} ----------------")
+      }).toList
+
+      (searchEngine, evaluations)
+    }).toList
+
+    searchEngineWithEvaluations.foreach { case (searchEngine, evaluations) => {
+      println(s"\n########## ${searchEngine} ----------------")
       val noStrongRelevanceQuestions = evaluations.filter(_.strongRank.isEmpty).map(_.question)
       val noRelevanceQuestions = evaluations.filter(e => e.strongRank.isEmpty && e.weakRank.isEmpty).map(_.question)
       val notInTop20Evaluations = evaluations.filter(e => e.strongRank.exists(_ <= 20))
 
-      logger.info(s"########## ${searchEngine} ----------------")
-      noStrongRelevanceQuestions.foreach(question => {
-        println(question.question)
-      })
-      val topNs = Set(3, 5, 10, 20, searchCount)
+      val topNs = Set(3, 5, 10, 20, searchCount).toSeq.sorted
       topNs.foreach(topN => {
         val matchedEvaluations = evaluations.filter(_.strongRank.exists(_ <= topN))
         val averageRank = if (matchedEvaluations.nonEmpty) {
@@ -269,9 +270,9 @@ object APIBook extends LazyLogging {
         }
         println(s"Top ${topN} matches: ${matchedEvaluations.size.toDouble/evaluations.size}(${matchedEvaluations.size}/${evaluations.size}), average rank: ${averageRank}")
       })
-      logger.info(s"########## ${searchEngine} ----------------")
-    })
+      println("-------------------------------------------\n")
 
+    }}
   }
 
   def viewUsage(config: Config) = {
