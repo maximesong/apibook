@@ -8,13 +8,13 @@ import java.util.Properties
 import akka.actor.{PoisonPill, Props, ActorSystem}
 import com.cppdo.apibook.ast.{AstTreeManager, ClassVisitor, JarManager}
 import com.cppdo.apibook.db._
-import com.cppdo.apibook.forum.{StackOverflowMongoDb, StackOverflowCrawler}
+import com.cppdo.apibook.forum.{ExperimentQuestion, StackOverflowMongoDb, StackOverflowCrawler}
 import com.cppdo.apibook.index.{MethodTypesIndexManager, IndexManager}
 import com.cppdo.apibook.index.IndexManager.FieldName
 import com.cppdo.apibook.repository.{GitHubRepositoryManager, ArtifactsManager, MavenRepository}
 import com.cppdo.apibook.repository.ArtifactsManager.RichArtifact
 import com.cppdo.apibook.repository.MavenRepository.{MavenArtifact, MavenArtifactSeq, MavenProject}
-import com.cppdo.apibook.search.SearchManager
+import com.cppdo.apibook.search.{MethodDetailScore, MethodScore, SearchManager}
 import com.github.tototoshi.csv.CSVWriter
 import com.mongodb.casbah.MongoClient
 import com.sun.tools.javadoc.{Main=>JavaDocMain}
@@ -155,6 +155,9 @@ object APIBook extends LazyLogging {
       cmd("snippet") action {
         (_, c) => c.copy(mode="snippet")
       }
+      cmd("evaluate") action {
+        (_, c) => c.copy(mode="evaluate")
+      }
       arg[String]("<arg>...") optional() unbounded() action {
         (arg, c) => c.copy(args=c.args :+ arg)
       }
@@ -184,6 +187,7 @@ object APIBook extends LazyLogging {
           case "extract" => extract(config)
           case "location" => buildLocation(config)
           case "snippet" => calculateSnippets(config)
+          case "evaluate" => evaluate(config)
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -209,6 +213,64 @@ object APIBook extends LazyLogging {
     //buildIndexActor()
     //testGithub()
     //test()
+
+  }
+
+  def evaluate(config: Config): Unit = {
+    case class Evaluation(question: ExperimentQuestion, strongRank: Option[Int] = None, weakRank: Option[Int] = None)
+    val searchManager = new SearchManager(config.dbHost, config.dbName)
+    val experimentDb = new StackOverflowMongoDb(config.dbHost, config.dbName)
+    val questions = experimentDb.getExperimentQuestions()
+    val searchCount = config.n.getOrElse(100)
+    config.args.foreach(searchEngine => {
+
+      val evaluations = questions.take(10).map(question => {
+        logger.info(s"Evaluating question '${question.question}'....")
+        val strongCanonicalNames = question.reviews.filter(_.relevance == "strong").map(_.canonicalName)
+        val weakCanonicalNames = question.reviews.filter(_.relevance == "weak").map(_.canonicalName)
+        val methods = if (searchEngine == "V2") {
+          searchManager.searchV2(question.question, searchCount)
+        } else if (searchEngine == "V0") {
+          searchManager.searchV0(question.question, searchCount)
+        } else {
+          logger.warn(s"Search Engine: ${searchEngine} not found.")
+          return
+        }
+        var rank = 1
+        var evaluation = Evaluation(question)
+        methods.foreach(method => {
+          if (strongCanonicalNames.contains(method.codeMethod.canonicalName) && evaluation.strongRank.isEmpty) {
+            evaluation = evaluation.copy(strongRank =  Some(rank))
+          }
+          else if (weakCanonicalNames.contains(method.codeMethod.canonicalName) && evaluation.weakRank.isEmpty) {
+            evaluation = evaluation.copy(weakRank =  Some(rank))
+          }
+          rank += 1
+        })
+        evaluation
+      })
+      logger.info(s"########## ${searchEngine} ----------------")
+      val noStrongRelevanceQuestions = evaluations.filter(_.strongRank.isEmpty).map(_.question)
+      val noRelevanceQuestions = evaluations.filter(e => e.strongRank.isEmpty && e.weakRank.isEmpty).map(_.question)
+      val notInTop20Evaluations = evaluations.filter(e => e.strongRank.exists(_ <= 20))
+
+      logger.info(s"########## ${searchEngine} ----------------")
+      noStrongRelevanceQuestions.foreach(question => {
+        println(question.question)
+      })
+      val topNs = Set(3, 5, 10, 20, searchCount)
+      topNs.foreach(topN => {
+        val matchedEvaluations = evaluations.filter(_.strongRank.exists(_ <= topN))
+        val averageRank = if (matchedEvaluations.nonEmpty) {
+          matchedEvaluations.map(_.strongRank.get).sum.toDouble / matchedEvaluations.size
+        }
+        else {
+          Double.NaN
+        }
+        println(s"Top ${topN} matches: ${matchedEvaluations.size.toDouble/evaluations.size}(${matchedEvaluations.size}/${evaluations.size}), average rank: ${averageRank}")
+      })
+      logger.info(s"########## ${searchEngine} ----------------")
+    })
 
   }
 
