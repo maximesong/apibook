@@ -84,11 +84,25 @@ angular.module('apibookApp', ["ui.bootstrap"])
         $scope.experimentOnQuestion = function(question) {
             $scope.question = question
             $scope.methodScores = []
+            question.relevanceRank = null;
             $http.post("/api/search/method", {
                 searchText: $scope.question.question
             }).then(function(res) {
                 console.log(res)
                 $scope.methodScores = res.data.result;
+                var relevanceRank = {}
+                var rank = 1
+                _($scope.methodScores).each(function(methodScore) {
+                    _(question.reviews).each(function(review) {
+                        if (review.canonicalName ===  methodScore.codeMethod.canonicalName) {
+                            if (relevanceRank[review.relevance] == null) {
+                                relevanceRank[review.relevance] = rank
+                            }
+                        }
+                    });
+                    rank += 1;
+                })
+                question.relevanceRank = relevanceRank
             })
         }
 

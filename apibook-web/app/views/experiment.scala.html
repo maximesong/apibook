@@ -6,11 +6,16 @@
                 <span>Questions</span>
                 <span class="btn btn-small" ng-click="openNewQuestionModal()"><span class="glyphicon glyphicon-plus-sign"></span></span>
             </div>
-            <div class="panel-body">
-                <div ng-repeat="question in questions">
+            <div class="panel-body question-list">
+                <div class="question-row" ng-repeat="question in questions">
                     <div>
-                        <a href="">#{{question.stackOverflowQuestionId}}</a> <a href="" ng-click="experimentOnQuestion(question)">{{question.question}}</a>
-                        &nbsp;&nbsp;<a href="" ng-click="removeQuestion(question)"><span class="glyphicon glyphicon-trash"></span></a>
+                        <span>{{$index + 1}}.</span>&nbsp;&nbsp;<a href="">#{{question.stackOverflowQuestionId}}</a>
+                        <div class="pull-right">
+                            <a href="" ng-click="removeQuestion(question)"><span class="glyphicon glyphicon-trash"></span></a>
+                        </div>
+                    </div>
+                    <div>
+                        <a href="" ng-click="experimentOnQuestion(question)">{{question.question}}</a>
                     </div>
                 </div>
             </div>
@@ -19,6 +24,10 @@
     </div>
     <div class="col-md-8">
         <h2>{{question.question}}</h2>
+        <div>
+            <span ng-if="question.relevanceRank.strong" class="label label-success">Strong: {{question.relevanceRank.strong}}</span>&nbsp;&nbsp;
+            <span ng-if="question.relevanceRank.weak"  class="label label-warning">Weak: {{question.relevanceRank.weak}}</span>
+        </div>
         <div ng-repeat="item in methodScores" class="experiment-line">
             <div>
                 <span>{{$index+1}}.&nbsp;&nbsp; </span>

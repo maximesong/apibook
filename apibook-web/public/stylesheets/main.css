@@ -46,3 +46,13 @@ pre {
     margin: 10px;
     padding: 10px;
 }
+
+.question-row {
+    margin: 10px;
+    padding: 10px;
+}
+
+.question-list {
+    height: 600px;
+    overflow: scroll;
+}
