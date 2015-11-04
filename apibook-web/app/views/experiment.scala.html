@@ -5,6 +5,7 @@
             <div class="panel-heading">
                 <span>Questions</span>
                 <span class="btn btn-small" ng-click="openNewQuestionModal()"><span class="glyphicon glyphicon-plus-sign"></span></span>
+                <select ng-model="searchEngine" ng-options="engine for engine in searchEngines"></select>
             </div>
             <div class="panel-body question-list">
                 <div class="question-row" ng-repeat="question in questions">

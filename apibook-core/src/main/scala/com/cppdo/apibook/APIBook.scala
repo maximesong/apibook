@@ -9,7 +9,7 @@ import akka.actor.{PoisonPill, Props, ActorSystem}
 import com.cppdo.apibook.ast.{AstTreeManager, ClassVisitor, JarManager}
 import com.cppdo.apibook.db._
 import com.cppdo.apibook.forum.{ExperimentQuestion, StackOverflowMongoDb, StackOverflowCrawler}
-import com.cppdo.apibook.index.{MethodTypesIndexManager, IndexManager}
+import com.cppdo.apibook.index.{MethodNameIndexManager, MethodIndexManager, MethodTypesIndexManager, IndexManager}
 import com.cppdo.apibook.index.IndexManager.FieldName
 import com.cppdo.apibook.repository.{GitHubRepositoryManager, ArtifactsManager, MavenRepository}
 import com.cppdo.apibook.repository.ArtifactsManager.RichArtifact
@@ -122,6 +122,9 @@ object APIBook extends LazyLogging {
       cmd("info") action {
         (_, c) => c.copy(mode="info")
       }
+      cmd("methodNameIndex") action {
+        (_, c) => c.copy(mode="methodNameIndex")
+      }
       cmd("methodIndex") action {
         (_, c) => c.copy(mode="methodIndex")
       }
@@ -175,6 +178,7 @@ object APIBook extends LazyLogging {
           case "const" => buildConstant(config)
           case "info" => buildFromDoc(config)
           //case "index" => buildIndex(config)
+          case "methodNameIndex" => buildMethodNameIndex(config)
           case "methodTypesIndex" => buildMethodTypesIndex(config)
           case "methodIndex" => buildMethodIndex(config)
           case "search" => search(config)
@@ -232,6 +236,8 @@ object APIBook extends LazyLogging {
           searchManager.searchV2(question.question, searchCount)
         } else if (searchEngine == "V0") {
           searchManager.searchV0(question.question, searchCount)
+        } else if (searchEngine == "V1") {
+          searchManager.searchV1(question.question, searchCount)
         } else {
           logger.warn(s"Search Engine: ${searchEngine} not found.")
           return
@@ -435,13 +441,42 @@ object APIBook extends LazyLogging {
     })
   }
 
+
+  def buildMethodNameIndex(config: Config) = {
+    val indexDirectory = config.outputPath.getOrElse("methodNameIndex")
+    if (!config.append) {
+      logger.info("removing old index...")
+      FileUtils.deleteDirectory(new File(indexDirectory))
+    }
+    val indexManager = new MethodNameIndexManager(indexDirectory)
+    val db = new CodeMongoDb(config.dbHost, config.dbName)
+    val cachedSize = 10000
+    val codeClasses = db.getCodeClasses()
+    var documentsToAdd = Seq[Document]()
+    codeClasses.foreach(codeClass => {
+      println(codeClass.fullName)
+      val documents = codeClass.methods.map(method => {
+        val methodInfo = db.getMethodInfo(method.canonicalName)
+        indexManager.buildDocument(codeClass, method, methodInfo)
+      })
+      documentsToAdd ++= documents
+      if (documentsToAdd.size > cachedSize) {
+        logger.info("Add documents...")
+        indexManager.addDocuments(documentsToAdd)
+        documentsToAdd = Seq[Document]()
+      }
+    })
+    indexManager.addDocuments(documentsToAdd)
+    db.close()
+  }
+
   def buildMethodIndex(config: Config) = {
     val indexDirectory = config.outputPath.getOrElse("methodIndex")
     if (!config.append) {
       logger.info("removing old index...")
       FileUtils.deleteDirectory(new File(indexDirectory))
     }
-    val indexManager = new IndexManager(indexDirectory)
+    val indexManager = new MethodIndexManager(indexDirectory)
     val db = new CodeMongoDb(config.dbHost, config.dbName)
     val cachedSize = 10000
     val codeClasses = db.getCodeClasses()

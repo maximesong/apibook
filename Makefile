@@ -1,3 +1,6 @@
+web:
+	sbt "~web/run"
+
 build:
 	sbt "core/run classes java/rt.jar thirdparty/lib/"
 
@@ -5,14 +8,15 @@ extract:
 	sbt "core/run extract java/jdk.jar thirdparty/src/"
 info:
 	sbt "core/run info repository-sources"
+
+methodNameIndex:
+	sbt "core/run methodNameIndex"
+
 methodIndex:
 	sbt "core/run methodIndex"
 
 methodTypesIndex:
 	sbt "core/run methodTypesIndex"
-
-web:
-	sbt "~web/run"
 
 typeExplain:
 	sbt "core/run searchMethodTypes -n 30 --explain java.io.InputStream java.lang.String"
@@ -27,4 +31,6 @@ assembly:
 	sbt -mem 2048 "core/assembly"
 
 evaluate:
-	sbt "core/run evaluate V2"
+	sbt "core/run evaluate V0 V1 V2"
+
+.PHONY: methodIndex methodNameIndex

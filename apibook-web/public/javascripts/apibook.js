@@ -64,6 +64,9 @@ angular.module('apibookApp', ["ui.bootstrap"])
         }
     }])
     .controller('experimentController', ['$scope', '$http', '$uibModal', function($scope, $http, $uibModal) {
+        $scope.searchEngines = ["V0", "V1", "V2"]
+
+        $scope.searchEngine = "V2"
         $scope.openNewQuestionModal = function() {
             var modalInstance = $uibModal.open({
                 templateUrl: "assets/templates/newExperimentModal.html"
@@ -86,7 +89,8 @@ angular.module('apibookApp', ["ui.bootstrap"])
             $scope.methodScores = []
             question.relevanceRank = null;
             $http.post("/api/search/method", {
-                searchText: $scope.question.question
+                searchText: $scope.question.question,
+                searchEngine: $scope.searchEngine
             }).then(function(res) {
                 console.log(res)
                 $scope.methodScores = res.data.result;

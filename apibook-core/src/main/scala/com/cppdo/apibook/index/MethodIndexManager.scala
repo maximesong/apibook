@@ -25,7 +25,7 @@ class MethodIndexManager(indexDirectory: String) extends IndexManager(indexDirec
     // fields for scoring
 
     val methodNameField = new TextField(FieldName.MethodName.toString, codeMethod.name, Field.Store.YES)
-    methodNameField.setBoost(2.0F)
+    //methodNameField.setBoost(2.0F)
     val classFullNameField = new TextField(FieldName.ClassFullName.toString, codeMethod.typeFullName, Field.Store.YES)
 
     val parameterTypesField = new TextField(FieldName.ParameterTypes.toString, codeMethod.parameterTypes.mkString(" "),

@@ -2,7 +2,7 @@ package com.cppdo.apibook.search
 
 import com.cppdo.apibook.ast.{AstTreeManager, JarManager}
 import com.cppdo.apibook.db.{CodeClass, CodeMethod, CodeMongoDb}
-import com.cppdo.apibook.index.{MethodIndexManager, MethodTypesIndexManager, IndexManager}
+import com.cppdo.apibook.index.{MethodNameIndexManager, MethodIndexManager, MethodTypesIndexManager, IndexManager}
 import com.cppdo.apibook.index.IndexManager.FieldName
 import com.cppdo.apibook.nlp.CoreNLP
 import com.typesafe.scalalogging.LazyLogging
@@ -15,7 +15,7 @@ import play.api.libs.json.{JsArray, Json, JsValue}
 
 case class Score(methodScore: Float = 0, methodTypesScore: Float = 0, usageScore: Float = 0) {
   val baseScore = 0.1F
-  val baseUsageScore = 0.5F
+  val baseUsageScore = 1F
   def score = (baseScore + methodScore) * (baseScore + methodTypesScore) *  (baseScore + usageScore)
   def explain = s"score(${score}) = methodScore(${baseScore + methodScore}) * methodTypesScore(${baseScore + methodTypesScore}) *  usageScore(${baseUsageScore + usageScore})"
 }
@@ -25,12 +25,14 @@ case class MethodDetailScore(codeMethod: CodeMethod, score: Score)
 case class MethodScore(codeMethod: CodeMethod, value: Float)
 
 class SearchManager(mongoHost: String, mongoDatabase: String,
+                    methodNameIndexDirectory: String = "methodNameIndex",
                     methodIndexDirectory: String = "methodIndex", methodTypesIndexDirectory: String = "methodTypeIndex",
                     classLoader: Option[ClassLoader] = None) extends LazyLogging{
 
   val db = new CodeMongoDb(mongoHost, mongoDatabase, classLoader = classLoader)
   val indexDirectory = "data"
   val indexManager = new IndexManager(indexDirectory)
+  val methodNameIndexManager = new MethodNameIndexManager(methodNameIndexDirectory)
   val methodIndexManager = new MethodIndexManager(methodIndexDirectory)
   val methodTypesIndexManager = new MethodTypesIndexManager(methodTypesIndexDirectory)
 
@@ -102,6 +104,8 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
       searchV2(queryText, n, explain = explain)
     } else if (searchEngine.equals("V0")) {
       searchV0(queryText, n, explain = explain)
+    } else if (searchEngine == "V1") {
+      searchV1(queryText, n, explain = explain)
     } else {
       logger.warn(s"Engine: ${searchEngine} not known. Use default v2.")
       searchV2(queryText, n, explain = explain)
@@ -142,7 +146,35 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
   }
 
   def searchV0(searchText: String, n: Int = 1000, explain: Boolean = false): Seq[MethodDetailScore] = {
-    println("############## Search V2 ----------------")
+    println("############## Search V0 ----------------")
+    val cleanedSearchText = searchText.replaceAll("[?]", "")
+    val posMap = CoreNLP.getPOSMap(cleanedSearchText)
+    val tokens = cleanedSearchText.split(" ")
+    val groupedTokens = groupTokens(tokens, posMap)
+    val filteredTokens = cleanedSearchText.split(" ").filter(token => {
+      groupedTokens.nouns.contains(token) || groupedTokens.verbs.contains(token) || groupedTokens.adjs.contains(token)
+    })
+    val filteredQueryText = filteredTokens.mkString(" ")
+    val methodScores = methodNameIndexManager.searchMethod(filteredQueryText, n, explain=explain)
+    var scores = Map[String, Score]()
+    methodScores.foreach(scoredMethod => {
+      val canonicalName = scoredMethod.document.get(FieldName.CanonicalName.toString)
+      if (scores.contains(canonicalName)) {
+        scores += canonicalName -> scores(canonicalName).copy(methodScore = scoredMethod.score)
+      } else {
+        scores += canonicalName -> Score(methodScore = scoredMethod.score)
+      }
+    })
+    val sortedScores = scores.toSeq.sortBy(-_._2.score)
+    val codeMethods = db.getCodeMethods(sortedScores.map(_._1))
+    codeMethods.zip(sortedScores.map(_._2)).map { case (codeMethod, score) => {
+      MethodDetailScore(codeMethod, score)
+    }
+    }.take(n)
+  }
+
+  def searchV1(searchText: String, n: Int = 1000, explain: Boolean = false): Seq[MethodDetailScore] = {
+    println("############## Search V1 ----------------")
     val cleanedSearchText = searchText.replaceAll("[?]", "")
     val posMap = CoreNLP.getPOSMap(cleanedSearchText)
     val tokens = cleanedSearchText.split(" ")

@@ -6,6 +6,7 @@ target
 /repository-sources
 /client-repository
 /methodTypeIndex
+/methodNameIndex
 /methodIndex
 /db
 *.sqlite
