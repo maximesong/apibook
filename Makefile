@@ -22,3 +22,6 @@ viewUsage:
 
 searchV2:
 	sbt "core/run searchV2 --explain convert InputStream to String"
+
+assembly:
+	sbt -mem 2048 "core/assembly"

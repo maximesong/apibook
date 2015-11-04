@@ -14,6 +14,19 @@ lazy val commonSettings = Seq(
 
 assemblyOption in assembly := (assemblyOption in assembly).value.copy(cacheUnzip = false)
 
+assemblyMergeStrategy in assembly := {
+  //case PathList("javax", "servlet", xs @ _*)         => MergeStrategy.first
+  //case PathList(ps @ _*) if ps.last endsWith ".html" => MergeStrategy.first
+  case ".api_description"                            => MergeStrategy.first
+  case "eclipse.inf" => MergeStrategy.first
+  case "plugin.properties" => MergeStrategy.first
+  case "plugin.xml" => MergeStrategy.first
+  case ".options"                                => MergeStrategy.first
+  //case ".options"                                => MergeStrategy.discard
+  case x =>
+    val oldStrategy = (assemblyMergeStrategy in assembly).value
+    oldStrategy(x)
+}
 
 lazy val core = (project in file("./apibook-core"))
   .settings(commonSettings: _*)
@@ -55,6 +68,21 @@ lazy val core = (project in file("./apibook-core"))
   )
   .settings(
     assemblyOption in assembly := (assemblyOption in assembly).value.copy(cacheUnzip = false)
+  )
+  .settings(
+    assemblyMergeStrategy in assembly := {
+      //case PathList("javax", "servlet", xs @ _*)         => MergeStrategy.first
+      //case PathList(ps @ _*) if ps.last endsWith ".html" => MergeStrategy.first
+      case ".api_description"                            => MergeStrategy.first
+      case "META-INF/eclipse.inf" => MergeStrategy.first
+      case "plugin.properties" => MergeStrategy.first
+      case "plugin.xml" => MergeStrategy.first
+      case ".options"                                => MergeStrategy.first
+      //case ".options"                                => MergeStrategy.discard
+      case x =>
+        val oldStrategy = (assemblyMergeStrategy in assembly).value
+        oldStrategy(x)
+    }
   )
 
 lazy val web = (project in file("./apibook-web")).enablePlugins(PlayScala).dependsOn(core)
