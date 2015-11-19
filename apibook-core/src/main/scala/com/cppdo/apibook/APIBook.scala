@@ -31,6 +31,7 @@ import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.{DirectoryFileFilter, TrueFileFilter, FalseFileFilter}
 import org.apache.lucene.document.Document
 import org.apache.lucene.search.SearcherManager
+import org.joda.time.{Period, Duration, Instant}
 import org.objectweb.asm.Type
 
 import scala.io.Source
@@ -256,10 +257,10 @@ object APIBook extends LazyLogging {
     val nonsenseIds = Seq(
       216894 // Get an OutputStream into a String
     )
-    val questions = experimentDb.getExperimentQuestions()
+    val questions = experimentDb.getExperimentQuestions().filter(q => !nonsenseIds.contains(q.stackOverflowQuestionId))
     val searchCount = config.n.getOrElse(100)
     val searchEngineWithEvaluations = config.args.map(searchEngine => {
-
+      var start = Instant.now()
       val evaluations = questions.map(question => {
         logger.info(s"Evaluating question '${question.question}'....")
         val strongCanonicalNames = question.reviews.filter(_.relevance == "strong").map(_.canonicalName)
@@ -287,11 +288,11 @@ object APIBook extends LazyLogging {
         })
         evaluation
       }).toList
-
-      (searchEngine, evaluations)
+      val millis = Instant.now().getMillis - start.getMillis
+      (searchEngine, evaluations, millis)
     }).toList
 
-    searchEngineWithEvaluations.foreach { case (searchEngine, evaluations) => {
+    searchEngineWithEvaluations.foreach { case (searchEngine, evaluations, millis) => {
       println(s"\n########## ${searchEngine} ----------------")
       val noStrongRelevanceQuestions = evaluations.filter(_.strongRank.isEmpty).map(_.question)
       val noRelevanceQuestions = evaluations.filter(e => e.strongRank.isEmpty && e.weakRank.isEmpty).map(_.question)
@@ -311,9 +312,10 @@ object APIBook extends LazyLogging {
       println("------FOR GNUPLOT-----")
       Range(10, 110, 10).foreach(topN => {
         val matchedEvaluations = evaluations.filter(_.strongRank.exists(_ <= topN))
-        println(f"${topN} ${matchedEvaluations.size.toDouble/evaluations.size*100}%.0f")
+        println(f"${topN} ${matchedEvaluations.size.toDouble/evaluations.size*100}%.1f")
       })
       println("----------------------")
+      println(s"Time Millis: ${millis}, Average: ${millis / evaluations.size}")
       println("-------------------------------------------\n")
 
     }}
