@@ -34,3 +34,6 @@ evaluate:
 	sbt "core/run evaluate V0 V1 V2"
 
 .PHONY: methodIndex methodNameIndex
+
+countJDK:
+	sbt "core/run countJar java/rt.jar"

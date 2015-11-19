@@ -86,13 +86,20 @@ class MethodIndexManager(indexDirectory: String) extends IndexManager(indexDirec
     val booleanQueryBuilder = new BooleanQuery.Builder()
 
     terms.foreach(term => {
-      val blendedTermQueryBuilder = new BlendedTermQuery.Builder()
+      val blendedTermQueryBuilder = new DisjunctionMaxQuery(0.3F)
+      //val blendedTermQueryBuilder = new BlendedTermQuery.Builder()
       Array(FieldName.MethodName, FieldName.ClassFullName,
         FieldName.ParameterTypes, FieldName.ReturnType, FieldName.ParameterNames,
         FieldName.CommentText, FieldName.ParameterTags, FieldName.ReturnTags).foreach(name => {
-        blendedTermQueryBuilder.add(new Term(name.toString, term))
+        //blendedTermQueryBuilder.add(new Term(name.toString, term))
+        val query = new TermQuery(new Term(name.toString, term))
+        if (name.toString == FieldName.MethodName) {
+          query.setBoost(2F)
+        }
+        blendedTermQueryBuilder.add(query)
       })
-      booleanQueryBuilder.add(blendedTermQueryBuilder.build(), BooleanClause.Occur.SHOULD)
+      booleanQueryBuilder.add(blendedTermQueryBuilder, BooleanClause.Occur.SHOULD)
+      //booleanQueryBuilder.add(blendedTermQueryBuilder.build(), BooleanClause.Occur.SHOULD)
     })
     booleanQueryBuilder.build()
   }

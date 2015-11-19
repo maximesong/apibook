@@ -158,6 +158,9 @@ object APIBook extends LazyLogging {
       cmd("snippet") action {
         (_, c) => c.copy(mode="snippet")
       }
+      cmd("countJar") action {
+        (_, c) => c.copy(mode="countJar")
+      }
       cmd("evaluate") action {
         (_, c) => c.copy(mode="evaluate")
       }
@@ -192,6 +195,7 @@ object APIBook extends LazyLogging {
           case "location" => buildLocation(config)
           case "snippet" => calculateSnippets(config)
           case "evaluate" => evaluate(config)
+          case "countJar" => countJar(config)
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -224,6 +228,34 @@ object APIBook extends LazyLogging {
     case class Evaluation(question: ExperimentQuestion, strongRank: Option[Int] = None, weakRank: Option[Int] = None)
     val searchManager = new SearchManager(config.dbHost, config.dbName)
     val experimentDb = new StackOverflowMongoDb(config.dbHost, config.dbName)
+    val shouldQuestionIds = Seq(
+      4716503, //Best way to read a text file in Java?
+
+      617414, //Create a temporary directory in Java
+      1102891, //How to check if a String is a numeric type
+      869033 //How do I copy an object in Java?
+    )
+    val hardQuestionIds = Seq(
+      18571223, //How to convert Java String into byte[]?
+      80476, //How can I concatenate two arrays in Java?
+      1128723, //What's the simplest way to print a Java array?
+      3802893, //Number of days between two dates in Joda-Time
+      51438, // Getting A File's Mime Type In Java
+      921262, //How to download and save a file from Internet using Java?
+      189559, //How do I join two lists in Java?
+
+      858980, //File to byte[] in Java
+      3758606, //How to convert byte size into human readable format in java?
+      1625234, // How to append text to an existing file in Java//
+      363681, // Generating random integers in a range with Java
+      2298208, // How do I discover memory usage of my application in Android?
+      2885173, // How to create a file and write to a file in Java
+      5374311, // Convert ArrayList<String> to String[]
+      835889 // java.util.Date to XMLGregorianCalendar
+    )
+    val nonsenseIds = Seq(
+      216894 // Get an OutputStream into a String
+    )
     val questions = experimentDb.getExperimentQuestions()
     val searchCount = config.n.getOrElse(100)
     val searchEngineWithEvaluations = config.args.map(searchEngine => {
@@ -265,7 +297,7 @@ object APIBook extends LazyLogging {
       val noRelevanceQuestions = evaluations.filter(e => e.strongRank.isEmpty && e.weakRank.isEmpty).map(_.question)
       val notInTop20Evaluations = evaluations.filter(e => e.strongRank.exists(_ <= 20))
 
-      val topNs = Set(3, 5, 10, 20, searchCount).toSeq.sorted
+      val topNs = Set(3, 5, 10, 20, 50, searchCount).toSeq.sorted
       topNs.foreach(topN => {
         val matchedEvaluations = evaluations.filter(_.strongRank.exists(_ <= topN))
         val averageRank = if (matchedEvaluations.nonEmpty) {
@@ -276,6 +308,12 @@ object APIBook extends LazyLogging {
         }
         println(s"Top ${topN} matches: ${matchedEvaluations.size.toDouble/evaluations.size}(${matchedEvaluations.size}/${evaluations.size}), average rank: ${averageRank}")
       })
+      println("------FOR GNUPLOT-----")
+      Range(10, 110, 10).foreach(topN => {
+        val matchedEvaluations = evaluations.filter(_.strongRank.exists(_ <= topN))
+        println(f"${topN} ${matchedEvaluations.size.toDouble/evaluations.size*100}%.0f")
+      })
+      println("----------------------")
       println("-------------------------------------------\n")
 
     }}
@@ -598,6 +636,22 @@ object APIBook extends LazyLogging {
       } else if (file.isFile) {
         buildClasses(db, file.getAbsolutePath)
       }
+    })
+  }
+
+  def countJar(config: Config): Unit = {
+    config.args.foreach(path => {
+      val classNodes = JarManager.getClassNodes(path)
+      var classCount = 0
+      var methodCount = 0
+      classNodes.foreach(classNode => {
+        classCount += 1
+        val codeClass = AstTreeManager.buildCodeClass(classNode)
+        codeClass.methods.foreach(method => {
+          methodCount += 1
+        })
+      })
+      logger.info(s"${path}\tclass: ${classCount} method: ${methodCount}")
     })
   }
 
