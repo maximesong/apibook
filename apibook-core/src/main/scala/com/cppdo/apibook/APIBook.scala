@@ -165,6 +165,9 @@ object APIBook extends LazyLogging {
       cmd("evaluate") action {
         (_, c) => c.copy(mode="evaluate")
       }
+      cmd("questionList") action {
+        (_, c) => c.copy(mode="questionList")
+      }
       arg[String]("<arg>...") optional() unbounded() action {
         (arg, c) => c.copy(args=c.args :+ arg)
       }
@@ -197,6 +200,7 @@ object APIBook extends LazyLogging {
           case "snippet" => calculateSnippets(config)
           case "evaluate" => evaluate(config)
           case "countJar" => countJar(config)
+          case "questionList" => questionList(config)
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -222,6 +226,26 @@ object APIBook extends LazyLogging {
     //buildIndexActor()
     //testGithub()
     //test()
+
+  }
+
+  def questionList(config: Config): Unit = {
+    val nonsenseIds = Seq(
+      216894 // Get an OutputStream into a String
+    )
+    val experimentDb = new StackOverflowMongoDb(config.dbHost, config.dbName)
+    val questions = experimentDb.getExperimentQuestions().filter(q => !nonsenseIds.contains(q.stackOverflowQuestionId))
+
+    if (config.args.nonEmpty) {
+      val outputPath = config.args(0)
+      val writer = CSVWriter.open(outputPath)
+      writer.writeRow(List("Question ID", "Title"))
+      questions.foreach(question => {
+        writer.writeRow(List(question.stackOverflowQuestionId, question.question))
+        logger.info(question.question)
+      })
+      writer.close()
+    }
 
   }
 

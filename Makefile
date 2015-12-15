@@ -37,3 +37,6 @@ evaluate:
 
 countJDK:
 	sbt "core/run countJar java/rt.jar"
+
+questions:
+	sbt "core/run questionList questions.csv"

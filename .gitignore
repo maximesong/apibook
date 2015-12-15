@@ -14,6 +14,7 @@ target
 db.sqlite-journal
 .DS_Store
 out.csv
+questions.csv
 java
 data_backup
 dict
