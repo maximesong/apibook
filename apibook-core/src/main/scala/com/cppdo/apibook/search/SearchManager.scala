@@ -48,6 +48,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
   def getCodeOf(codeMethod: CodeMethod): Option[String] = {
     val classArtifacts = db.getClassArtifacts(codeMethod.typeFullName)
     classArtifacts.flatMap(artifacts => {
+      logger.info(artifacts.toString)
       artifacts.sourceCodeFilePath.flatMap(sourceCodeFilePath => {
         println(sourceCodeFilePath)
         val cu = AstTreeManager.getCompilationUnit(sourceCodeFilePath)
@@ -82,10 +83,15 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
   }
 
   def findUsageSnippetsOfCanonicalName(canonicalName: String, n: Int = 10): Seq[String] = {
+    logger.info(canonicalName)
     val codeMethod = db.getCodeMethod(canonicalName)
+    logger.info(codeMethod.get.fullName)
+    logger.info(codeMethod.get.canonicalName)
     codeMethod.map(codeMethod => {
       val invocations = db.findMethodInvocations(codeMethod.canonicalName)
-      val invokedByMethods = db.getCodeMethods(invocations.map(_.invokedByCanonicalName))
+      logger.info(invocations.size.toString)
+      // FIXME: getExistingCodeMethods should be replaced with getCodeMethods, just workaround for a bug
+      val invokedByMethods = db.getExistingCodeMethods(invocations.map(_.invokedByCanonicalName))
       invokedByMethods.take(n).flatMap(method => {
         getCodeOf(method)
       })

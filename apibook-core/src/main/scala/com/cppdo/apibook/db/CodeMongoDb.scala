@@ -159,6 +159,16 @@ class CodeMongoDb(host: String, dbName: String, classLoader: Option[ClassLoader]
     canonicalNames.map(nameMapping(_))
   }
 
+  def getExistingCodeMethods(canonicalNames: Seq[String]): Seq[CodeMethod] = {
+    val codeMethods = methodCollection.find("canonicalName" $in canonicalNames).toSeq.map(obj => {
+      grater[CodeMethod].asObject(obj)
+    })
+    val nameMapping = codeMethods.map(codeMethod => {
+      codeMethod.canonicalName -> codeMethod
+    }).toMap
+    canonicalNames.filter(nameMapping.contains(_)).map(nameMapping(_))
+  }
+
   def getMethodInfo(fullName: String): Option[MethodInfo] = {
     val query = MongoDBObject(
       "canonicalName" -> fullName

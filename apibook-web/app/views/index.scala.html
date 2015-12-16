@@ -14,12 +14,22 @@
 
         <ul class="list-unstyled list-group">
             <div ng-repeat="item in items" class="row">
-                <div class="api-row">
+                <!--div class="api-row">
                     <span>{{$index+1}}.&nbsp;&nbsp; </span>
                     <a uib-tooltip="{{item.codeMethod.returnType}}">{{item.codeMethod.returnType | simpleName}}</a>
                     <span  uib-tooltip="{{item.codeMethod.fullName}}"><span class="text-muted">{{item.codeMethod.typeFullName | simpleName}}</span>.<strong class="">{{item.codeMethod.fullName | simpleName}}</strong></span>(<a ng-repeat="parameter in item.codeMethod.parameterTypes track by $index" uib-tooltip="{{parameter}}"><span ng-if="!$first">, </span>{{parameter|simpleName}}</a>)
-                    <span><button class="btn btn-default btn-sm" ng-click="findCodeSnippets(item.codeMethod.canonicalName, item)">find snippets</button></span>
+                    <span><button class="btn btn-default btn-sm" ng-click="findCodeSnippets(item.codeMethod.canonicalName, item)">Show Example</button></span>
                     <span class="pull-right">{{item.score}}</span>
+                </div-->
+                <div class="api-row">
+                    <span>{{$index+1}}.&nbsp;&nbsp; </span>
+                    <a uib-tooltip="{{item.codeMethod.returnType}}">{{item.codeMethod.returnType | simpleName}}</a>
+                    <span uib-tooltip="{{item.codeMethod.fullName}}"><strong class="text-warning">{{item.codeMethod.typeFullName | simpleName}}</strong>.<strong class="text-success">{{item.codeMethod.fullName | simpleName}}</strong></span>(<a ng-repeat="parameter in item.codeMethod.parameterTypes track by $index" uib-tooltip="{{parameter}}"><span ng-if="!$first">, </span>{{parameter|simpleName}}</a>)
+                    <span><button class="btn btn-default btn-sm" ng-click="findCodeSnippets(item.codeMethod.canonicalName, item)">Show Example</button></span>
+                    <div class="pull-right">
+                        <span class="badge" uib-tooltip="methodScore({{item.score.methodScore}}), methodTypesScore({{item.score.methodTypesScore}}), usageScore({{item.score.usageScore}})">score</span>
+                    </div>
+                    <div class="clearfix"></div>
                 </div>
                 <div>
                     <div ng-repeat="snippet in item.codeSnippets track by $index">
