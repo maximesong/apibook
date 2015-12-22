@@ -125,7 +125,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
   }
 
   def searchGodModeAndReturnJson(queryText: String, types: Seq[String], n: Int = 1000, searchEngine: String, explain: Boolean = false): Seq[JsValue] = {
-    val methodScores = searchGodMode(queryText, types ++ extractPrimitives(types), n, explain = explain)
+    val methodScores = searchGodMode(queryText, types, n, explain = explain)
     methodScores.map(score => {
       Json.parse(db.toJson(score))
     })

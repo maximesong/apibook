@@ -95,11 +95,12 @@ case class ExperimentReview(canonicalName: String, relevance: String)
 case class  ExperimentQuestion(question: String, stackOverflowQuestionId: Int, reviews: Seq[ExperimentReview], tags: Seq[String],
                                shortNameTypes: Seq[String], longNameTypes: Seq[String], primitiveTypes: Seq[String], implicitTypes: Seq[String], arrayTypes: Seq[String]) {
   def typeNum = {
-    shortNameTypes.size + longNameTypes.size + primitiveTypes.size + implicitTypes.size + arrayTypes.count(_ == "array")
+    shortNameTypes.size + longNameTypes.size + primitiveTypes.size + implicitTypes.size + arrayTypes.size
   }
 
   def types = {
-    shortNameTypes ++ longNameTypes ++ primitiveTypes ++ implicitTypes
+    //println(s"-----${arrayTypes}")
+    shortNameTypes ++ longNameTypes ++ primitiveTypes ++ implicitTypes ++ arrayTypes.filter(_ != "array")
   }
 
 }

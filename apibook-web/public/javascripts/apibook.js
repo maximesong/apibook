@@ -126,7 +126,11 @@ angular.module('apibookApp', ["ui.bootstrap"])
             $scope.question = question
             $scope.methodScores = []
             question.relevanceRank = null;
-            var types = question.shortNameTypes.concat(question.longNameTypes).concat(question.implicitTypes).concat(question.primitiveTypes)
+            var types = question.shortNameTypes.concat(question.longNameTypes).concat(
+                question.implicitTypes).concat(question.primitiveTypes).concat(
+                    question.arrayTypes.filter(function(t) {return t !== "array"}))
+             console.log(types);
+             console.log(question.arrayTypes.filter(function(t) {return t !== "array"}))
             $http.post("/api/search/method", {
                 searchText: $scope.question.question,
                 searchEngine: $scope.searchEngine,

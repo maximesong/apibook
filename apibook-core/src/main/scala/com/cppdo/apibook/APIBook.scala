@@ -446,8 +446,13 @@ object APIBook extends LazyLogging {
       }
       if (config.verbose) {
         println(s"No Strong Questions: ${noStrongRelevanceQuestions.size}")
+        Range(10, 110, 10).foreach(topN => {
+          val matchedEvaluations = evaluations.filter(_.strongRank.exists(x => x > topN - 10 && x <= topN))
+          println(s"--- ${topN} ---")
+          matchedEvaluations.foreach(e => println(e.question.question))
+        })
         noStrongRelevanceQuestions.foreach(q => {
-          println(q.question)
+          //println(q.question)
         })
       }
     }}
