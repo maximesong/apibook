@@ -382,7 +382,33 @@ object APIBook extends LazyLogging {
       println("----------------------")
       println(s"Time Millis: ${millis}, Average: ${millis / evaluations.size}")
       println("-------------------------------------------\n")
-
+      // Evaluation by type Num
+      evaluations.groupBy(e => {
+        if (e.question.typeNum > 2) {
+          2
+        } else {
+          e.question.typeNum
+        }
+      }).foreach(group => {
+        println("----------------------")
+        println(s"Type Num: ${group._1}")
+        println("-------------------------------------------\n")
+        topNs.foreach(topN => {
+          val matchedEvaluations = group._2.filter(_.strongRank.exists(_ <= topN))
+          val averageRank = if (matchedEvaluations.nonEmpty) {
+            matchedEvaluations.map(_.strongRank.get).sum.toDouble / matchedEvaluations.size
+          }
+          else {
+            Double.NaN
+          }
+          println(s"Top ${topN} matches: ${matchedEvaluations.size.toDouble / group._2.size}(${matchedEvaluations.size}/${group._2.size}), average rank: ${averageRank}")
+        })
+        println("------FOR GNUPLOT-----")
+        Range(10, 110, 10).foreach(topN => {
+          val matchedEvaluations = group._2.filter(_.strongRank.exists(_ <= topN))
+          println(f"${topN} ${matchedEvaluations.size.toDouble/group._2.size*100}%.1f")
+        })
+      })
     }}
   }
 
