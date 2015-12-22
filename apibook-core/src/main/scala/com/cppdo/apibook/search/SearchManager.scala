@@ -112,10 +112,20 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
       searchV0(queryText, n, explain = explain)
     } else if (searchEngine == "V1") {
       searchV1(queryText, n, explain = explain)
-    } else {
+    } else if (searchEngine == "GodMode") {
+      searchV2(queryText, n, explain = explain)
+    }
+    else {
       logger.warn(s"Engine: ${searchEngine} not known. Use default v2.")
       searchV2(queryText, n, explain = explain)
     }
+    methodScores.map(score => {
+      Json.parse(db.toJson(score))
+    })
+  }
+
+  def searchGodModeAndReturnJson(queryText: String, types: Seq[String], n: Int = 1000, searchEngine: String, explain: Boolean = false): Seq[JsValue] = {
+    val methodScores = searchGodMode(queryText, types ++ extractPrimitives(types), n, explain = explain)
     methodScores.map(score => {
       Json.parse(db.toJson(score))
     })
@@ -238,6 +248,67 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     nounTypes.toSeq
   }
 
+  def extractPrimitives(types: Seq[String]): Seq[String] = {
+    val primitiveTypesMapping = Map(
+      "java.lang.Integer" -> "int",
+      "java.lang.Double" -> "double",
+      "java.lang.Float" -> "float",
+      "java.lang.Byte" -> "byte",
+      "java.lang.Long" -> "long",
+      "java.lang.Character" -> "char"
+    )
+    val primitives = types.filter(primitiveTypesMapping.contains).map(primitiveTypesMapping)
+    primitives
+  }
+  def searchGodMode(searchText: String, types: Seq[String], n: Int = 1000, fetchFactor: Int = 10, explain: Boolean = false) = {
+    println("############## Search GodMode ----------------")
+    val cleanedSearchText = searchText.replaceAll("[?]", "")
+    val fetchCount = n * fetchFactor
+    val posMap = CoreNLP.getPOSMap(cleanedSearchText)
+    val tokens = cleanedSearchText.split(" ")
+    val groupedTokens = groupTokens(tokens, posMap)
+    val filteredTokens = cleanedSearchText.split(" ").filter(token => {
+      groupedTokens.nouns.contains(token) || groupedTokens.verbs.contains(token) || groupedTokens.adjs.contains(token)
+    })
+    val filteredQueryText = filteredTokens.mkString(" ")
+    logger.info(posMap.toString)
+    logger.info(s"Filtered QueryText: ${filteredQueryText}")
+
+    val nounTypes = types ++ extractPrimitives(types)
+    logger.info(nounTypes.toString())
+    logger.info("Searching method types....")
+    val methodTypesScores = methodTypesIndexManager.searchMethodTypes(nounTypes, fetchCount)
+    logger.info("Searching methods....")
+    val methodScores = methodIndexManager.searchMethod(filteredQueryText, fetchCount, explain=explain)
+    var scores = Map[String, Score]()
+    methodTypesScores.foreach(scoredMethod => {
+      val canonicalName = scoredMethod.document.get(FieldName.CanonicalName.toString)
+      if (scores.contains(canonicalName)) {
+        scores += canonicalName -> scores(canonicalName).copy(methodTypesScore = scoredMethod.score)
+      } else {
+        scores += canonicalName -> Score(methodTypesScore = scoredMethod.score)
+      }
+    })
+    methodScores.foreach(scoredMethod => {
+      val canonicalName = scoredMethod.document.get(FieldName.CanonicalName.toString)
+      if (scores.contains(canonicalName)) {
+        scores += canonicalName -> scores(canonicalName).copy(methodScore = scoredMethod.score)
+      } else {
+        scores += canonicalName -> Score(methodScore = scoredMethod.score)
+      }
+    })
+    logger.info("Scoring usages....")
+    db.getUsageCounts(scores.keys.toSeq).foreach { case (canonicalName, count) =>{
+      scores += canonicalName -> scores(canonicalName).copy(usageScore = Math.log10((count + 1).toDouble).toFloat)
+    }}
+    val sortedScores = scores.toSeq.sortBy(-_._2.score)
+    val codeMethods = db.getCodeMethods(sortedScores.map(_._1))
+    codeMethods.zip(sortedScores.map(_._2)).map { case (codeMethod, score) => {
+      MethodDetailScore(codeMethod, score)
+    }
+    }.take(n)
+  }
+
   def searchV2(searchText: String, n: Int = 1000, fetchFactor: Int = 10, explain: Boolean = false): Seq[MethodDetailScore] = {
     println("############## Search V2 ----------------")
     val cleanedSearchText = searchText.replaceAll("[?]", "")
@@ -264,7 +335,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
         Seq("java.lang.String")
       } else if (noun.equals("object")) {
         Seq("java.lang.Object")
-      } else if (noun.equals("file")) {
+      } else if (noun.equals("file1")) {
         Seq("java.io.File")
       } else {
         db.findClassesWithName(noun).map(_.fullName)

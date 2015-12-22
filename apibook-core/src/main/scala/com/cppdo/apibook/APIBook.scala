@@ -51,7 +51,7 @@ object APIBook extends LazyLogging {
   case class Config(mode: String = "", n: Option[Int] = None, outputPath: Option[String] = None, begin: Int = 0,
                    overwrite: Option[Boolean] = None, rebuild: Boolean=false,
                     directory: Option[String] = None, file: Option[String] = None, repository: Option[String] = None,
-                    explain: Boolean = false, append: Boolean = false,
+                    explain: Boolean = false, append: Boolean = false, evaluateTypes: Boolean = false, verbose: Boolean = false,
                      args: Seq[String] = Seq(), dbHost: String = "localhost", dbName: String = "apibook")
   def main(args: Array[String]): Unit = {
     val parser = new scopt.OptionParser[Config]("apibook") {
@@ -90,6 +90,9 @@ object APIBook extends LazyLogging {
       opt[Unit]("explain") action {
         (_, c) => c.copy(explain=true)
       }
+      opt[Unit]('v', "verbose") action {
+        (_, c) => c.copy(verbose=true)
+      }
       opt[String]("dbName") action {
         (dbName, c) => c.copy(dbName=dbName)
       }
@@ -98,6 +101,9 @@ object APIBook extends LazyLogging {
       }
       opt[Unit]('a', "append") action {
         (_, c) => c.copy(append=true)
+      }
+      opt[Unit]("types") action {
+        (_, c) => c.copy(evaluateTypes=true)
       }
       cmd("test") action {
         (_, c) => c.copy(mode="test")
@@ -361,6 +367,8 @@ object APIBook extends LazyLogging {
           searchManager.searchV0(question.question, searchCount)
         } else if (searchEngine == "V1") {
           searchManager.searchV1(question.question, searchCount)
+        } else if (searchEngine == "GodMode") {
+          searchManager.searchGodMode(question.question, question.types, searchCount)
         } else {
           logger.warn(s"Search Engine: ${searchEngine} not found.")
           return
@@ -407,33 +415,41 @@ object APIBook extends LazyLogging {
       println("----------------------")
       println(s"Time Millis: ${millis}, Average: ${millis / evaluations.size}")
       println("-------------------------------------------\n")
-      // Evaluation by type Num
-      evaluations.groupBy(e => {
-        if (e.question.typeNum > 2) {
-          2
-        } else {
-          e.question.typeNum
-        }
-      }).foreach(group => {
-        println("----------------------")
-        println(s"Type Num: ${group._1}")
-        println("-------------------------------------------\n")
-        topNs.foreach(topN => {
-          val matchedEvaluations = group._2.filter(_.strongRank.exists(_ <= topN))
-          val averageRank = if (matchedEvaluations.nonEmpty) {
-            matchedEvaluations.map(_.strongRank.get).sum.toDouble / matchedEvaluations.size
+      if (config.evaluateTypes) {
+        // Evaluation by type Num
+        evaluations.groupBy(e => {
+          if (e.question.typeNum > 2) {
+            2
+          } else {
+            e.question.typeNum
           }
-          else {
-            Double.NaN
-          }
-          println(s"Top ${topN} matches: ${matchedEvaluations.size.toDouble / group._2.size}(${matchedEvaluations.size}/${group._2.size}), average rank: ${averageRank}")
+        }).foreach(group => {
+          println("----------------------")
+          println(s"Type Num: ${group._1}")
+          println("-------------------------------------------\n")
+          topNs.foreach(topN => {
+            val matchedEvaluations = group._2.filter(_.strongRank.exists(_ <= topN))
+            val averageRank = if (matchedEvaluations.nonEmpty) {
+              matchedEvaluations.map(_.strongRank.get).sum.toDouble / matchedEvaluations.size
+            }
+            else {
+              Double.NaN
+            }
+            println(s"Top ${topN} matches: ${matchedEvaluations.size.toDouble / group._2.size}(${matchedEvaluations.size}/${group._2.size}), average rank: ${averageRank}")
+          })
+          println("------FOR GNUPLOT-----")
+          Range(10, 110, 10).foreach(topN => {
+            val matchedEvaluations = group._2.filter(_.strongRank.exists(_ <= topN))
+            println(f"${topN} ${matchedEvaluations.size.toDouble/group._2.size*100}%.1f")
+          })
         })
-        println("------FOR GNUPLOT-----")
-        Range(10, 110, 10).foreach(topN => {
-          val matchedEvaluations = group._2.filter(_.strongRank.exists(_ <= topN))
-          println(f"${topN} ${matchedEvaluations.size.toDouble/group._2.size*100}%.1f")
+      }
+      if (config.verbose) {
+        println(s"No Strong Questions: ${noStrongRelevanceQuestions.size}")
+        noStrongRelevanceQuestions.foreach(q => {
+          println(q.question)
         })
-      })
+      }
     }}
   }
 

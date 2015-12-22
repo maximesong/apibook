@@ -64,7 +64,7 @@ angular.module('apibookApp', ["ui.bootstrap"])
         }
     }])
     .controller('experimentController', ['$scope', '$http', '$uibModal', function($scope, $http, $uibModal) {
-        $scope.searchEngines = ["V0", "V1", "V2"]
+        $scope.searchEngines = ["V0", "V1", "V2", "GodMode"]
 
         $scope.searchEngine = "V2"
         $scope.openNewQuestionModal = function() {
@@ -126,9 +126,11 @@ angular.module('apibookApp', ["ui.bootstrap"])
             $scope.question = question
             $scope.methodScores = []
             question.relevanceRank = null;
+            var types = question.shortNameTypes.concat(question.longNameTypes).concat(question.implicitTypes).concat(question.primitiveTypes)
             $http.post("/api/search/method", {
                 searchText: $scope.question.question,
-                searchEngine: $scope.searchEngine
+                searchEngine: $scope.searchEngine,
+                godModeTypes: types
             }).then(function(res) {
                 console.log(res)
                 $scope.methodScores = res.data.result;
