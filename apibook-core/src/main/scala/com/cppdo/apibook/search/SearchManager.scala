@@ -207,6 +207,37 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     }.take(n)
   }
 
+  def findTypes(searchText: String): Seq[String] = {
+    println("############## Find Types ----------------")
+    val cleanedSearchText = searchText.replaceAll("[?]", "")
+    val posMap = CoreNLP.getPOSMap(cleanedSearchText)
+    val tokens = cleanedSearchText.split(" ")
+    val groupedTokens = groupTokens(tokens, posMap)
+    val filteredTokens = cleanedSearchText.split(" ").filter(token => {
+      groupedTokens.nouns.contains(token) || groupedTokens.verbs.contains(token) || groupedTokens.adjs.contains(token)
+    })
+    val primitiveTypes = Seq("int", "double", "float", "long", "short", "char")
+    val boxedTypes = Seq("java.lang.Integer", "java.lang.Double", "java.lang.Float", "java.lang.Long", "java.lang.Short", "java.lang.Character")
+    val filteredTypes = Seq(
+      "org.apache.tools.ant.taskdefs.Java"
+    )
+    val nounTypes = groupedTokens.nouns.flatMap(noun => {
+      if (primitiveTypes.contains(noun.toLowerCase)) {
+        val i = primitiveTypes.indexOf(noun.toLowerCase )
+        Seq(noun, boxedTypes(i))
+      } else if (noun.equals("string")) { // this may not be reasonable, since query text should write "String"
+        Seq("java.lang.String")
+      } else if (noun.equals("object")) {
+        Seq("java.lang.Object")
+      } else if (noun.equals("file")) {
+        Seq("java.io.File")
+      } else {
+        db.findClassesWithName(noun).map(_.fullName)
+      }
+    })//.filter(!filteredTypes.contains(_))
+    nounTypes
+  }
+
   def searchV2(searchText: String, n: Int = 1000, fetchFactor: Int = 10, explain: Boolean = false): Seq[MethodDetailScore] = {
     println("############## Search V2 ----------------")
     val cleanedSearchText = searchText.replaceAll("[?]", "")
@@ -222,6 +253,9 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     logger.info(s"Filtered QueryText: ${filteredQueryText}")
     val primitiveTypes = Seq("int", "double", "float", "long", "short", "char")
     val boxedTypes = Seq("java.lang.Integer", "java.lang.Double", "java.lang.Float", "java.lang.Long", "java.lang.Short", "java.lang.Character")
+    val filteredTypes = Seq(
+      "org.apache.tools.ant.taskdefs.Java"
+    )
     val nounTypes = groupedTokens.nouns.flatMap(noun => {
       if (primitiveTypes.contains(noun.toLowerCase)) {
         val i = primitiveTypes.indexOf(noun.toLowerCase )
@@ -235,7 +269,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
       } else {
         db.findClassesWithName(noun).map(_.fullName)
       }
-    })
+    })//.filter(!filteredTypes.contains(_))
     logger.info(nounTypes.toString())
     logger.info("Searching method types....")
     val methodTypesScores = methodTypesIndexManager.searchMethodTypes(nounTypes, fetchCount)

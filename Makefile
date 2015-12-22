@@ -1,7 +1,11 @@
 web:
 	sbt "~web/run"
 
-build:
+build: 
+	sbt "core/run classes java/rt.jar java/tools.jar thirdparty/lib/"
+	sbt "core/run extract java/jdk.jar thirdparty/src/"
+
+classes:
 	sbt "core/run classes java/rt.jar thirdparty/lib/"
 
 extract:

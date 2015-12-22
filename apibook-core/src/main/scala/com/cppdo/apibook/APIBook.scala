@@ -165,6 +165,9 @@ object APIBook extends LazyLogging {
       cmd("evaluate") action {
         (_, c) => c.copy(mode="evaluate")
       }
+      cmd("evaluateTypes") action {
+        (_, c) => c.copy(mode="evaluateTypes")
+      }
       cmd("questionList") action {
         (_, c) => c.copy(mode="questionList")
       }
@@ -201,6 +204,7 @@ object APIBook extends LazyLogging {
           case "evaluate" => evaluate(config)
           case "countJar" => countJar(config)
           case "questionList" => questionList(config)
+          case "evaluateTypes" => evaluateTypes(config)
           case _ => parser.reportError("No command") // do nothing
         }
         logger.info("Bye")
@@ -227,6 +231,43 @@ object APIBook extends LazyLogging {
     //testGithub()
     //test()
 
+  }
+
+  def evaluateTypes(config:Config) = {
+    val experimentDb = new StackOverflowMongoDb(config.dbHost, config.dbName)
+    val nonsenseIds = Seq(
+      216894 // Get an OutputStream into a String
+    )
+    val questions = experimentDb.getExperimentQuestions().filter(q => !nonsenseIds.contains(q.stackOverflowQuestionId))
+    val implicitTypeNum = questions.map(_.implicitTypes.size).sum
+    val shortNameTypeNum = questions.map(_.shortNameTypes.size).sum
+    val longNameTypeNum = questions.map(_.longNameTypes.size).sum
+    val primitiveTypeNum = questions.map(_.primitiveTypes.size).sum
+    val arrayTypeNum = questions.map(_.arrayTypes.size).sum
+    val totalTypeNum = implicitTypeNum + shortNameTypeNum + longNameTypeNum + primitiveTypeNum + arrayTypeNum
+
+    val typeNumQuestions = questions.groupBy(_.typeNum)
+    println(s"implicit: ${implicitTypeNum}")
+    println(s"short name: ${shortNameTypeNum}")
+    println(s"long name: ${longNameTypeNum}")
+    println(s"primitives: ${primitiveTypeNum}")
+    println(s"array: ${arrayTypeNum}")
+
+
+    val manager = new SearchManager(config.dbHost, config.dbName)
+    typeNumQuestions.foreach(group => {
+      println(s"${group._1} types: ${group._2.size}")
+    })
+    println("Zero Types:")
+    questions.filter(_.typeNum == 0).foreach(x => println(x.question))
+    println("More than 2 Types:")
+    questions.filter(_.typeNum > 2).foreach(x => println(x.question))
+
+    questions.foreach(question => {
+      val types = manager.findTypes(question.question)
+      //println(question.question)
+      //println(types)
+    })
   }
 
   def questionList(config: Config): Unit = {

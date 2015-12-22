@@ -83,6 +83,44 @@ angular.module('apibookApp', ["ui.bootstrap"])
                $scope.questions.push(newQuestion);
             })
         }
+         $scope.openEditQuestionModal = function(question) {
+                    var modalInstance = $uibModal.open({
+                        templateUrl: "assets/templates/editExperimentModal.html",
+                        resolve: {
+                            question: function() {
+                                return question;
+                            }
+                        },
+                        controller: function ($scope, question) {
+                         console.log("question");
+                         $scope.question = angular.copy(question);
+                         $scope.question.shortNameTypes = question.shortNameTypes.join(',');
+                         $scope.question.longNameTypes = question.longNameTypes.join(',');
+                         $scope.question.primitiveTypes = question.primitiveTypes.join(',');
+                         $scope.question.implicitTypes = question.implicitTypes.join(',');
+                         $scope.question.arrayTypes = question.arrayTypes.join(',');
+                        }
+                    });
+
+                    modalInstance.result.then(function(updated) {
+                        console.log("updated")
+                        console.log(updated)
+                        var removeEmpty = function(value) {
+                            return value !== ""
+                        }
+                        question.stackOverflowQuestionId = updated.stackOverflowQuestionId;
+                        question.question = updated.question;
+                        question.shortNameTypes = updated.shortNameTypes.split(',').filter(removeEmpty);
+                        question.longNameTypes = updated.longNameTypes.split(',').filter(removeEmpty);
+                        question.primitiveTypes = updated.primitiveTypes.split(',').filter(removeEmpty);
+                        question.implicitTypes = updated.implicitTypes.split(',').filter(removeEmpty);
+                        question.arrayTypes = updated.arrayTypes.split(',').filter(removeEmpty);
+                        console.log("question")
+                        console.log(question);
+                        $http.post("/api/stackoverflow/experiment/question", question);
+                        //$scope.questions.push(newQuestion);
+                    })
+                }
 
         $scope.experimentOnQuestion = function(question) {
             $scope.question = question

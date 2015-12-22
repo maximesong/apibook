@@ -3,7 +3,7 @@ package com.cppdo.apibook.forum
 import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.MongoClient
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.JsValue
+import play.api.libs.json.{JsObject, JsValue}
 import scala.collection.JavaConverters._
 
 import com.novus.salat._
@@ -181,6 +181,19 @@ class StackOverflowMongoDb(host: String, dbName: String) extends LazyLogging {
 
   def getExperimentQuestions(): Seq[ExperimentQuestion] = {
     experimentQuestionCollection.find().toSeq.map(obj => {
+      if (!obj.contains("shortNameTypes")) {
+        obj.putAll(Map(
+          "shortNameTypes" -> Seq[String](),
+          "longNameTypes" -> Seq[String](),
+          "primitiveTypes" -> Seq[String](),
+          "implicitTypes" -> Seq[String]()
+        ))
+      }
+      if (!obj.contains("arrayTypes")) {
+        obj.putAll(Map(
+          "arrayTypes" -> Seq[String]()
+        ))
+      }
       grater[ExperimentQuestion].asObject(obj)
     })
   }

@@ -1,0 +1,45 @@
+<div class="modal-content">
+    <div class="modal-header">
+        <button type="button" class="close" ng-click="$dismiss()" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Edit Question</h4>
+    </div>
+    <div class="modal-body">
+        <form name="questionForm">
+            <div class="form-group">
+                <input name="name" class="form-control" type="text" ng-model="question.question" placeholder="Your question here" ng-required="true">
+            </div>
+            <div class="form-group">
+                <input name="questionId" class="form-control" type="number" ng-model="question.stackOverflowQuestionId" placeholder="Question Id" ng-required="true">
+            </div>
+            <div class="form-group">
+                <label>Short Name Types</label>
+                <input class="form-control" ng-model="question.shortNameTypes"
+                       ng-keypress="$event.keyCode == 13 && questionForm.$valid && $close(question)">
+            </div>
+            <div class="form-group">
+                <label>Long Name Types</label>
+                <input class="form-control" ng-model="question.longNameTypes"
+                       ng-keypress="$event.keyCode == 13 && questionForm.$valid && $close(question)">
+            </div>
+            <div class="form-group">
+                <label>Primitive Types</label>
+                <input class="form-control" ng-model="question.primitiveTypes"
+                       ng-keypress="$event.keyCode == 13 && questionForm.$valid && $close(question)">
+            </div>
+            <div class="form-group">
+                <label>Implicit Types</label>
+                <input class="form-control" ng-model="question.implicitTypes"
+                       ng-keypress="$event.keyCode == 13 && questionForm.$valid && $close(question)">
+            </div>
+            <div class="form-group">
+                <label>Array Types</label>
+                <input class="form-control" ng-model="question.arrayTypes"
+                       ng-keypress="$event.keyCode == 13 && questionForm.$valid && $close(question)">
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-default" ng-click="$dismiss()">Cancel</button>
+        <button ng-disabled="questionForm.$invalid" type="button" class="btn btn-primary" ng-click="$close(question)">Save</button>
+    </div>
+</div><!-- /.modal-content -->
