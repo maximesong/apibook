@@ -216,8 +216,8 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     val filteredTokens = cleanedSearchText.split(" ").filter(token => {
       groupedTokens.nouns.contains(token) || groupedTokens.verbs.contains(token) || groupedTokens.adjs.contains(token)
     })
-    val primitiveTypes = Seq("int", "double", "float", "long", "short", "char")
-    val boxedTypes = Seq("java.lang.Integer", "java.lang.Double", "java.lang.Float", "java.lang.Long", "java.lang.Short", "java.lang.Character")
+    val primitiveTypes = Seq("int", "double", "float", "long", "short", "char", "byte")
+    val boxedTypes = Seq("java.lang.Integer", "java.lang.Double", "java.lang.Float", "java.lang.Long", "java.lang.Short", "java.lang.Character", "java.lang.Byte")
     val filteredTypes = Seq(
       "org.apache.tools.ant.taskdefs.Java"
     )
@@ -235,7 +235,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
         db.findClassesWithName(noun).map(_.fullName)
       }
     })//.filter(!filteredTypes.contains(_))
-    nounTypes
+    nounTypes.toSeq
   }
 
   def searchV2(searchText: String, n: Int = 1000, fetchFactor: Int = 10, explain: Boolean = false): Seq[MethodDetailScore] = {

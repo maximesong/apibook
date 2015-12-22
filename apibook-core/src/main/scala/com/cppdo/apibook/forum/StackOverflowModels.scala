@@ -98,4 +98,8 @@ case class  ExperimentQuestion(question: String, stackOverflowQuestionId: Int, r
     shortNameTypes.size + longNameTypes.size + primitiveTypes.size + implicitTypes.size + arrayTypes.count(_ == "array")
   }
 
+  def types = {
+    shortNameTypes ++ longNameTypes ++ primitiveTypes ++ implicitTypes
+  }
+
 }

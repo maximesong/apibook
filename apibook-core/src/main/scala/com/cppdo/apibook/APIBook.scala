@@ -263,11 +263,36 @@ object APIBook extends LazyLogging {
     println("More than 2 Types:")
     questions.filter(_.typeNum > 2).foreach(x => println(x.question))
 
-    questions.foreach(question => {
-      val types = manager.findTypes(question.question)
-      //println(question.question)
-      //println(types)
+    val statistics = questions.map(question => {
+      val typesFound = manager.findTypes(question.question)
+      val shortNameQuestionTypes = question.types.map(_.split("[.]").last)
+      println(shortNameQuestionTypes)
+      val shortNameTypesFound = typesFound.map(_.split("[.]").last)
+      val matchedQuestionTypeCount = question.types.count(typesFound.contains)
+      val recall = if (question.types.size != 0) {
+        matchedQuestionTypeCount.toDouble / question.types.size
+      } else {
+        Double.NaN
+      }
+      val correctTypeMatching = shortNameTypesFound.count(shortNameQuestionTypes.contains)
+      val precision = if (typesFound.size != 0) {
+        correctTypeMatching.toDouble / typesFound.size
+      } else {
+        Double.NaN
+      }
+      println(question.question)
+      println(s"Question Types: ${question.types}")
+      println(s"Found Types: ${typesFound}")
+      println(s"precision: ${precision}, recall: ${recall}")
+      (matchedQuestionTypeCount, question.types.size, correctTypeMatching, typesFound.size)
     })
+    val total = statistics.reduce((x, y) => {
+      (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4)
+    })
+    println(total)
+    val precision = total._1.toDouble / total._2
+    val recall = total._3.toDouble / total._4
+    println(s"total precision:, ${precision}, total recal:${recall}")
   }
 
   def questionList(config: Config): Unit = {

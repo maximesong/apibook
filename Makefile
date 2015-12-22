@@ -37,6 +37,9 @@ assembly:
 evaluate:
 	sbt "core/run evaluate V0 V1 V2"
 
+evaluateTypes:
+	sbt "core/run evaluateTypes"
+
 .PHONY: methodIndex methodNameIndex
 
 countJDK:
@@ -44,3 +47,4 @@ countJDK:
 
 questions:
 	sbt "core/run questionList questions.csv"
+
