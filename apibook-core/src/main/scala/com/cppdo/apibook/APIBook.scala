@@ -266,7 +266,11 @@ object APIBook extends LazyLogging {
     questions.filter(_.typeNum > 2).foreach(x => println(x.question))
 
     val statistics = questions.map(question => {
-      val typesFound = manager.findTypes(question.question)
+      //val typesFound = manager.findTypes(question.question)
+      //short, long, primitives, array, implicit
+      val groupedTypesFound = manager.findGroupedTypes(question.question)
+      val typesFound = groupedTypesFound._1 ++ groupedTypesFound._2 ++ groupedTypesFound._3 ++ groupedTypesFound._4 ++ groupedTypesFound._5
+
       val shortNameQuestionTypes = question.types.map(_.split("[.]").last)
       println(shortNameQuestionTypes)
       val shortNameTypesFound = typesFound.map(_.split("[.]").last)
@@ -277,7 +281,7 @@ object APIBook extends LazyLogging {
         Double.NaN
       }
       val correctTypeMatching = shortNameTypesFound.count(shortNameQuestionTypes.contains)
-      val precision = if (typesFound.size != 0) {
+      val precision = if (typesFound.nonEmpty || groupedTypesFound._3.nonEmpty) {
         correctTypeMatching.toDouble / typesFound.size
       } else {
         Double.NaN
@@ -288,23 +292,38 @@ object APIBook extends LazyLogging {
       if (question.shortNameTypes.exists(t => !typesFound.contains(t))) {
         println(s"!!!!!!!!----- ${question.question}")
       }
+      if (question.primitiveTypes.size > 0) {
+        println(s"?????????-----${question.question}")
+      }
       println(question.question)
       println(s"Question Types: ${question.types}")
       println(s"Found Types: ${typesFound}")
       println(s"precision: ${precision}, recall: ${recall}")
       println(s"Array Types: ${question.arrayTypes.count(typesFound.contains)}")
-
       (matchedQuestionTypeCount, question.types.size, correctTypeMatching, typesFound.size,
         question.shortNameTypes.count(typesFound.contains),
         question.longNameTypes.count(typesFound.contains),
         question.primitiveTypes.count(typesFound.contains),
         question.arrayTypes.count(typesFound.contains),
-        question.implicitTypes.count(typesFound.contains))
+        question.implicitTypes.count(typesFound.contains),
+        groupedTypesFound._1.map(_.split("[.]").last).count(question.shortNameTypes.map(_.split("[.]").last).contains),
+        groupedTypesFound._2.count(question.longNameTypes.contains),
+        2 * groupedTypesFound._3.count(question.primitiveTypes.contains),
+        groupedTypesFound._4.count(question.arrayTypes.contains),
+        groupedTypesFound._5.count(question.implicitTypes.contains),
+        groupedTypesFound._1.size,
+        groupedTypesFound._2.size,
+        groupedTypesFound._3.size,
+        groupedTypesFound._4.size,
+        groupedTypesFound._5.size)
     })
 
     val total = statistics.reduce((x, y) => {
       (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4,
-        x._5 + y._5, x._6 + y._6, x._7 + y._7, x._8 + y._8, x._9 + y._9)
+        x._5 + y._5, x._6 + y._6, x._7 + y._7, x._8 + y._8, x._9 + y._9,
+        x._10 + y._10, x._11 + y._11, x._12 + y._12, x._13 + y._13, x._14 + y._14,
+        x._15 + y._15, x._16 + y._16, x._17 + y._17, x._18 + y._18, x._19 + y._19
+      )
     })
     val shortNameRecall = total._5 / questions.map(_.shortNameTypes.size).sum.toDouble
     val longNameRecall = total._6 / questions.map(_.longNameTypes.size).sum.toDouble
@@ -312,17 +331,25 @@ object APIBook extends LazyLogging {
     val arrayRecall = total._8 / questions.map(_.arrayTypes.size).sum.toDouble
     val implicitRecall = total._9 / questions.map(_.implicitTypes.size).sum.toDouble
 
+    val shortNamePrecision = total._10 / total._15.toDouble
+    val longNamePrecision = total._11 / total._16.toDouble
+    val primitivePrecision = total._12 / total._17.toDouble
+    val arrayPrecision = total._13 / total._18.toDouble
+    val implicitPrecision = total._14 / total._19.toDouble
+
     println(total)
     val recall = total._1.toDouble / total._2
     val precision = total._3.toDouble / total._4
+    val precision2 = (total._10 + total._11 + total._12 + total._13 + total._14) / (total._15 + total._16 + total._17 + total._18 + total._19).toDouble
+
     println(s"implicit: ${implicitTypeNum}")
     println(s"short name: ${shortNameTypeNum}")
     println(s"long name: ${longNameTypeNum}")
     println(s"primitives: ${primitiveTypeNum}")
     println(s"array: ${arrayTypeNum}")
-    println(s"total precision:, ${precision}, total recal:${recall}")
+    println(s"total precision:, ${precision} vs ${precision2}, total recal:${recall}")
     println(s"short recall:, ${shortNameRecall}, long recal:${longNameRecall}, primitiveRecall: ${primitiveRecall}, arrayRecall: ${arrayRecall}, implicitRecall: ${implicitRecall}")
-
+    println(s"short precision:, ${shortNamePrecision}, long precision:${longNamePrecision}, primitivePrecision: ${primitivePrecision}, array precision: ${arrayPrecision}, implicit precision: ${implicitPrecision}")
   }
 
   def questionList(config: Config): Unit = {

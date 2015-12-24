@@ -27,7 +27,7 @@ case class MethodScore(codeMethod: CodeMethod, value: Float)
 class SearchManager(mongoHost: String, mongoDatabase: String,
                     methodNameIndexDirectory: String = "methodNameIndex",
                     methodIndexDirectory: String = "methodIndex", methodTypesIndexDirectory: String = "methodTypeIndex",
-                    classLoader: Option[ClassLoader] = None) extends LazyLogging{
+                    classLoader: Option[ClassLoader] = None) extends LazyLogging {
 
   val db = new CodeMongoDb(mongoHost, mongoDatabase, classLoader = classLoader)
   val indexDirectory = "data"
@@ -98,7 +98,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     }).getOrElse(Seq[String]())
   }
 
-  def searchMethodAndReturnJson(searchText: String, n:Int = 1000): Seq[JsValue] = {
+  def searchMethodAndReturnJson(searchText: String, n: Int = 1000): Seq[JsValue] = {
     val methodScores = searchMethod(searchText, n)
     methodScores.map(score => {
       Json.parse(db.toJson(score))
@@ -152,7 +152,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     val filteredQueryText = filteredTokens.mkString(" ")
     logger.info(posMap.toString)
     logger.info(s"Filtered QueryText: ${filteredQueryText}")
-    val scoredDocuments = methodIndexManager.searchMethod(filteredQueryText, n, explain=explain)
+    val scoredDocuments = methodIndexManager.searchMethod(filteredQueryText, n, explain = explain)
     val canonicalNames = scoredDocuments.map(_.document.get(FieldName.CanonicalName.toString))
     val codeMethods = db.getCodeMethods(canonicalNames)
     val scores = scoredDocuments.map(_.score)
@@ -171,7 +171,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
       groupedTokens.nouns.contains(token) || groupedTokens.verbs.contains(token) || groupedTokens.adjs.contains(token)
     })
     val filteredQueryText = filteredTokens.mkString(" ")
-    val methodScores = methodNameIndexManager.searchMethod(filteredQueryText, n, explain=explain)
+    val methodScores = methodNameIndexManager.searchMethod(filteredQueryText, n, explain = explain)
     var scores = Map[String, Score]()
     methodScores.foreach(scoredMethod => {
       val canonicalName = scoredMethod.document.get(FieldName.CanonicalName.toString)
@@ -199,7 +199,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
       groupedTokens.nouns.contains(token) || groupedTokens.verbs.contains(token) || groupedTokens.adjs.contains(token)
     })
     val filteredQueryText = filteredTokens.mkString(" ")
-    val methodScores = methodIndexManager.searchMethod(filteredQueryText, n, explain=explain)
+    val methodScores = methodIndexManager.searchMethod(filteredQueryText, n, explain = explain)
     var scores = Map[String, Score]()
     methodScores.foreach(scoredMethod => {
       val canonicalName = scoredMethod.document.get(FieldName.CanonicalName.toString)
@@ -217,7 +217,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     }.take(n)
   }
 
-  def findTypes(searchText: String): Seq[String] = {
+  def findGroupedTypes(searchText: String): (Seq[String], Seq[String], Seq[String], Seq[String], Seq[String]) = {
     println("############## Find Types ----------------")
     val cleanedSearchText = searchText.replaceAll("[?]", "")
     val posMap = CoreNLP.getPOSMap(cleanedSearchText)
@@ -229,9 +229,60 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     })
     val primitiveTypes = Seq("int", "double", "float", "long", "short", "char", "byte")
     val boxedTypes = Seq("java.lang.Integer", "java.lang.Double", "java.lang.Float", "java.lang.Long", "java.lang.Short", "java.lang.Character", "java.lang.Byte")
-    val filteredTypes = Seq(
-      "org.apache.tools.ant.taskdefs.Java"
-    )
+    val primitivesFound = groupedTokens.nouns.flatMap(noun => {
+      if (primitiveTypes.contains(noun.toLowerCase)) {
+        val i = primitiveTypes.indexOf(noun.toLowerCase)
+        Seq(noun, boxedTypes(i))
+      } else {
+        Seq()
+      }
+    })
+    val shortNamesFound = groupedTokens.nouns.filter(!_.contains(".")).flatMap(noun => {
+      db.findClassesWithName(noun).map(_.fullName)
+    })
+    val longNamesFound = groupedTokens.nouns.filter(_.contains(".")).flatMap(noun => {
+      db.findClassesWithName(noun).map(_.fullName)
+    })
+
+    val implicitFound = groupedTokens.nouns.flatMap(noun => {
+      if (noun.equals("string")) {
+        // this may not be reasonable, since query text should write "String"
+        Seq("java.lang.String")
+      } else if (noun.equals("object")) {
+        Seq("java.lang.Object")
+      } else {
+        Seq()
+      }
+    })
+    val genericTypes = tokens.filter(_.matches(".*[<].*[>].*")).flatMap(genericType => {
+      val containerType = genericType.replaceAll("[<].*[>]", "")
+      logger.info(s"CONTAINER TYPE: ${containerType}")
+      db.findClassesWithName(genericType.replaceAll("[<].*[>]", "")).map(_.fullName)
+    })
+    val arrayTypes = tokens.filter(_.contains("[]")).flatMap(arrayType => {
+      val elementType = arrayType.replaceAll("\\[\\]", "")
+      logger.info(s"ELEMENT TYPE: ${elementType}")
+      val candidateFullNames = db.findClassesWithName(elementType).map(_.fullName)
+      if (candidateFullNames.nonEmpty) {
+        candidateFullNames.map(fullName => s"${fullName}[]")
+      } else {
+        Seq(arrayType)
+      }
+    }).toSeq
+    (shortNamesFound ++ genericTypes, longNamesFound, primitivesFound, arrayTypes, implicitFound)
+  }
+
+  def findTypes(searchText: String): Seq[String] = {
+    println("############## Find Types ----------------")
+    val cleanedSearchText = searchText.replaceAll("[?]", "")
+    val posMap = CoreNLP.getPOSMap(cleanedSearchText)
+    val tokens = cleanedSearchText.split(" ")
+    val groupedTokens = groupTokens(tokens, posMap)
+    val filteredTokens = cleanedSearchText.split(" ").filter(token => {
+      groupedTokens.nouns.contains(token) || groupedTokens.verbs.contains(token) || groupedTokens.adjs.contains(token)
+    })
+    val primitiveTypes = Seq("int", "double", "float", "long", "short", "char", "byte")
+    val boxedTypes = Seq("java.lang.Integer", "java.lang.Double", "java.lang.Float", "java.lang.Long", "java.lang.Short", "java.lang.Character", "java.lang.Byte")
     val nounTypes = groupedTokens.nouns.flatMap(noun => {
       if (primitiveTypes.contains(noun.toLowerCase)) {
         val i = primitiveTypes.indexOf(noun.toLowerCase )
