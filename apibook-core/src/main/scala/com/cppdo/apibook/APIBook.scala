@@ -292,6 +292,7 @@ object APIBook extends LazyLogging {
       println(s"Question Types: ${question.types}")
       println(s"Found Types: ${typesFound}")
       println(s"precision: ${precision}, recall: ${recall}")
+      println(s"Array Types: ${question.arrayTypes.count(typesFound.contains)}")
 
       (matchedQuestionTypeCount, question.types.size, correctTypeMatching, typesFound.size,
         question.shortNameTypes.count(typesFound.contains),
@@ -885,6 +886,7 @@ object APIBook extends LazyLogging {
   }
 
   def test() = {
+    println("ArrayList<String>".matches(".*[<].*[>].*"))
   }
 
   def stackoverflow(config: Config): Unit = {

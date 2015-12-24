@@ -245,8 +245,23 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
       } else {
         db.findClassesWithName(noun).map(_.fullName)
       }
-    }) ++ tokens.filter(_.contains("[]"))//.filter(!filteredTypes.contains(_))
-    nounTypes.toSeq
+    })//.filter(!filteredTypes.contains(_))
+    val genericTypes = tokens.filter(_.matches(".*[<].*[>].*")).flatMap(genericType => {
+        val containerType = genericType.replaceAll("[<].*[>]", "")
+        logger.info(s"CONTAINER TYPE: ${containerType}")
+        db.findClassesWithName(genericType.replaceAll("[<].*[>]", "")).map(_.fullName)
+      })
+    val arrayTypes = tokens.filter(_.contains("[]")).flatMap(arrayType => {
+      val elementType = arrayType.replaceAll("\\[\\]", "")
+      logger.info(s"ELEMENT TYPE: ${elementType}")
+      val candidateFullNames = db.findClassesWithName(elementType).map(_.fullName)
+      if (candidateFullNames.nonEmpty) {
+        candidateFullNames.map(fullName => s"${fullName}[]")
+      } else {
+        Seq(arrayType)
+      }
+    })
+    nounTypes ++ genericTypes ++ arrayTypes
   }
 
   def extractPrimitives(types: Seq[String]): Seq[String] = {
@@ -341,10 +356,26 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
       } else {
         db.findClassesWithName(noun).map(_.fullName)
       }
-    }) ++ tokens.filter(_.contains("[]"))//.filter(!filteredTypes.contains(_))
-    logger.info(nounTypes.toString())
+    })
+    val genericTypes = tokens.filter(_.matches(".*[<].*[>].*")).flatMap(genericType => {
+      val containerType = genericType.replaceAll("[<].*[>]", "")
+      logger.info(s"CONTAINER TYPE: ${containerType}")
+      db.findClassesWithName(genericType.replaceAll("[<].*[>]", "")).map(_.fullName)
+    })
+    val arrayTypes = tokens.filter(_.contains("[]")).flatMap(arrayType => {
+      val elementType = arrayType.replaceAll("\\[\\]", "")
+      logger.info(s"ELEMENT TYPE: ${elementType}")
+      val candidateFullNames = db.findClassesWithName(elementType).map(_.fullName)
+      if (candidateFullNames.nonEmpty) {
+        candidateFullNames.map(fullName => s"${fullName}[]")
+      } else {
+        Seq(arrayType)
+      }
+    })
+    val allTypes = nounTypes ++ genericTypes ++ arrayTypes
+    logger.info(allTypes.toString())
     logger.info("Searching method types....")
-    val methodTypesScores = methodTypesIndexManager.searchMethodTypes(nounTypes, fetchCount)
+    val methodTypesScores = methodTypesIndexManager.searchMethodTypes(allTypes, fetchCount)
     logger.info("Searching methods....")
     val methodScores = methodIndexManager.searchMethod(filteredQueryText, fetchCount, explain=explain)
     var scores = Map[String, Score]()
