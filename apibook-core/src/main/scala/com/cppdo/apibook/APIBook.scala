@@ -253,11 +253,7 @@ object APIBook extends LazyLogging {
     val totalTypeNum = implicitTypeNum + shortNameTypeNum + longNameTypeNum + primitiveTypeNum + arrayTypeNum
 
     val typeNumQuestions = questions.groupBy(_.typeNum)
-    println(s"implicit: ${implicitTypeNum}")
-    println(s"short name: ${shortNameTypeNum}")
-    println(s"long name: ${longNameTypeNum}")
-    println(s"primitives: ${primitiveTypeNum}")
-    println(s"array: ${arrayTypeNum}")
+
 
 
     val manager = new SearchManager(config.dbHost, config.dbName)
@@ -290,15 +286,36 @@ object APIBook extends LazyLogging {
       println(s"Question Types: ${question.types}")
       println(s"Found Types: ${typesFound}")
       println(s"precision: ${precision}, recall: ${recall}")
-      (matchedQuestionTypeCount, question.types.size, correctTypeMatching, typesFound.size)
+
+      (matchedQuestionTypeCount, question.types.size, correctTypeMatching, typesFound.size,
+        question.shortNameTypes.count(typesFound.contains),
+        question.longNameTypes.count(typesFound.contains),
+        question.primitiveTypes.count(typesFound.contains),
+        question.arrayTypes.count(typesFound.contains),
+        question.implicitTypes.count(typesFound.contains))
     })
+
     val total = statistics.reduce((x, y) => {
-      (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4)
+      (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4,
+        x._5 + y._5, x._6 + y._6, x._7 + y._7, x._8 + y._8, x._9 + y._9)
     })
+    val shortNameRecall = total._5 / questions.map(_.shortNameTypes.size).sum.toDouble
+    val longNameRecall = total._6 / questions.map(_.longNameTypes.size).sum.toDouble
+    val primitiveRecall = total._7 / questions.map(_.primitiveTypes.size).sum.toDouble
+    val arrayRecall = total._8 / questions.map(_.arrayTypes.size).sum.toDouble
+    val implicitRecall = total._9 / questions.map(_.implicitTypes.size).sum.toDouble
+
     println(total)
     val precision = total._1.toDouble / total._2
     val recall = total._3.toDouble / total._4
+    println(s"implicit: ${implicitTypeNum}")
+    println(s"short name: ${shortNameTypeNum}")
+    println(s"long name: ${longNameTypeNum}")
+    println(s"primitives: ${primitiveTypeNum}")
+    println(s"array: ${arrayTypeNum}")
     println(s"total precision:, ${precision}, total recal:${recall}")
+    println(s"short recall:, ${shortNameRecall}, long recal:${longNameRecall}, primitiveRecall: ${primitiveRecall}, arrayRecall: ${arrayRecall}, implicitRecall: ${implicitRecall}")
+
   }
 
   def questionList(config: Config): Unit = {
