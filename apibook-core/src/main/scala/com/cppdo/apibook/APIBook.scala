@@ -312,8 +312,8 @@ object APIBook extends LazyLogging {
     val implicitRecall = total._9 / questions.map(_.implicitTypes.size).sum.toDouble
 
     println(total)
-    val precision = total._1.toDouble / total._2
-    val recall = total._3.toDouble / total._4
+    val recall = total._1.toDouble / total._2
+    val precision = total._3.toDouble / total._4
     println(s"implicit: ${implicitTypeNum}")
     println(s"short name: ${shortNameTypeNum}")
     println(s"long name: ${longNameTypeNum}")

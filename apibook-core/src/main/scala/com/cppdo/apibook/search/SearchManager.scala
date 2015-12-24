@@ -223,6 +223,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
     val posMap = CoreNLP.getPOSMap(cleanedSearchText)
     val tokens = cleanedSearchText.split(" ")
     val groupedTokens = groupTokens(tokens, posMap)
+    logger.info(groupedTokens.toString)
     val filteredTokens = cleanedSearchText.split(" ").filter(token => {
       groupedTokens.nouns.contains(token) || groupedTokens.verbs.contains(token) || groupedTokens.adjs.contains(token)
     })
@@ -244,7 +245,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
       } else {
         db.findClassesWithName(noun).map(_.fullName)
       }
-    })//.filter(!filteredTypes.contains(_))
+    }) ++ tokens.filter(_.contains("[]"))//.filter(!filteredTypes.contains(_))
     nounTypes.toSeq
   }
 
@@ -340,7 +341,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
       } else {
         db.findClassesWithName(noun).map(_.fullName)
       }
-    })//.filter(!filteredTypes.contains(_))
+    }) ++ tokens.filter(_.contains("[]"))//.filter(!filteredTypes.contains(_))
     logger.info(nounTypes.toString())
     logger.info("Searching method types....")
     val methodTypesScores = methodTypesIndexManager.searchMethodTypes(nounTypes, fetchCount)
