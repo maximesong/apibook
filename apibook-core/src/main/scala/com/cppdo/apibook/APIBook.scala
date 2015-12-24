@@ -282,6 +282,12 @@ object APIBook extends LazyLogging {
       } else {
         Double.NaN
       }
+      if (question.primitiveTypes.exists(t => !typesFound.contains(t))) {
+        println(s"!!!!!!!!----- ${question.question}")
+      }
+      if (question.shortNameTypes.exists(t => !typesFound.contains(t))) {
+        println(s"!!!!!!!!----- ${question.question}")
+      }
       println(question.question)
       println(s"Question Types: ${question.types}")
       println(s"Found Types: ${typesFound}")
