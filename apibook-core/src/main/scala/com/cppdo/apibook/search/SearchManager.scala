@@ -64,7 +64,7 @@ class SearchManager(mongoHost: String, mongoDatabase: String,
             methodDeclaration.toString
           })
         })
-        codeSnippet
+          codeSnippet
       })
     })
   }

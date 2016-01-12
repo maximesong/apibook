@@ -41,12 +41,21 @@ angular.module('apibookApp', ["ui.bootstrap"])
             */
         };
 
+        function getRandomInt(min, max) {
+          return Math.floor(Math.random() * (max - min)) + min;
+        }
+
         $scope.findCodeSnippets = function(canonicalName, item) {
             $http.post("/api/search/snippets", {
                 "canonicalName": canonicalName
             }).then(function (resp) {
                 if (resp.status == 200) {
                     item.codeSnippets = resp.data.result
+                    if (item.codeSnippets.length > 0) {
+                        var randomIndex = getRandomInt(0, item.codeSnippets.length)
+                        item.codeSnippets = [item.codeSnippets[randomIndex]];
+                    }
+                    //console.log(item.codeSnippets);
                     $timeout(function() {
                         $('pre code').each(function(i, block) {
                            hljs.highlightBlock(block);
